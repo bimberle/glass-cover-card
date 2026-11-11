@@ -50,7 +50,7 @@
 - [x] Buttongruppen-Konfiguration als Release `v1.5.0` veroeffentlichen.
 - [x] Abstands- und Bildgroessenkorrektur als Release `v1.6.0` veroeffentlichen.
 - [x] Glass Button Card und Mehrkartenpaket als Release `v1.7.0` veroeffentlichen.
-- [ ] Ressourcen- und Marketplace-Bildkorrektur als Release `v1.8.0` veroeffentlichen.
+- [x] Ressourcen- und Marketplace-Bildkorrektur als Release `v1.8.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
