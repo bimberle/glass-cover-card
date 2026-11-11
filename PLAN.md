@@ -25,6 +25,8 @@
 - [x] Positionsslider in der Kompaktansicht sichtbar lassen.
 - [x] Groessenregler fuer Ueberschrift sowie Bild/Prozentanzeige hinzufuegen.
 - [x] Original `designvorlage.png` in die Marketplace-Beschreibung aufnehmen.
+- [x] Im Kompaktmodus mehr Abstand vor dem Positionsslider lassen.
+- [x] Vierten Hauptbutton fuer geschlossen plus Lamellen 50 % ergaenzen.
 
 ## Marketplace / HACS
 
@@ -34,6 +36,7 @@
 - [x] Oeffentliches GitHub-Repository `bimberle/glass-cover-card` und Release `v1.0.0` erstellen.
 - [x] Aenderungen als Release `v1.1.0` veroeffentlichen.
 - [x] Folgeaenderungen als Release `v1.2.0` veroeffentlichen.
+- [ ] Kompaktabstand und vierten Steuerbutton als Release `v1.3.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz

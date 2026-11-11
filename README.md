@@ -1,6 +1,6 @@
 # Glass Cover Card
 
-Eine responsive Home-Assistant-Lovelace-Karte zur Steuerung einer Jalousie. Sie zeigt die Position, bietet Hoch/Stopp/Runter und ein Schnellwahlmenue. Der Lamellenregler kann in der Kartenkonfiguration ausgeblendet werden.
+Eine responsive Home-Assistant-Lovelace-Karte zur Steuerung einer Jalousie. Sie zeigt die Position, bietet Hoch/Stopp/Runter sowie „geschlossen mit Lamellen auf 50 %“ und ein Schnellwahlmenue. Der Lamellenregler kann in der Kartenkonfiguration ausgeblendet werden.
 
 ![Vorschau der Glass Cover Card](designvorlage.png)
 
@@ -9,7 +9,7 @@ Eine responsive Home-Assistant-Lovelace-Karte zur Steuerung einer Jalousie. Sie 
 Das GitHub-Repository muss **oeffentlich** sein und exakt `glass-cover-card` heissen. HACS erkennt Dashboard-Karten daran, dass eine JavaScript-Datei denselben Namen wie das Repository traegt. Die Datei `glass-cover-card.js` und `hacs.json` liegen deshalb im Repository-Hauptverzeichnis.
 
 1. Das oeffentliche Repository [bimberle/glass-cover-card](https://github.com/bimberle/glass-cover-card) ist vorbereitet. Fuer ein eigenes Fork muss der Repo-Name `glass-cover-card` lauten und eine kurze Beschreibung sowie die Topics `home-assistant`, `lovelace`, `dashboard` und `hacs` gesetzt sein.
-2. HACS verwendet die neueste GitHub-Release als installierbare Version. Aktuell ist `v1.2.0` veroeffentlicht.
+2. HACS verwendet die neueste GitHub-Release als installierbare Version. Aktuell ist `v1.3.0` veroeffentlicht.
 3. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 4. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
 5. Fuege `https://github.com/bimberle/glass-cover-card` hinzu und waehle den Typ **Dashboard**.
@@ -58,6 +58,6 @@ Alternativ kann die Karte im Dashboard-Editor unter **Benutzerdefinierte Karten*
 | `preview_size` | `5` | Gemeinsame Groesse von Jalousienbild und Prozentanzeige von `1` (klein) bis `5` (Vorlagengroesse) |
 | `tilt_entity` | `entity` | Optionale Cover-Entitaet fuer die Lamellenposition |
 
-Das vertikal ausfahrende Schnellwahlmenue oben rechts enthaelt **ganz auf**, **ganz zu** und **ganz zu mit Lamellenposition 50 %**. Die kombinierte Aktion ruft erst `cover.close_cover` und danach `cover.set_cover_tilt_position` auf. Beim Setzen einer Position bleibt ein hohler Kreis am Slider als Zielmarkierung stehen, bis die Jalousie die Zielposition erreicht.
+Die Steuerbuttons enthalten **hoch**, **stopp**, **runter** und **100 % geschlossen mit Lamellenposition 50 %**. Das vertikal ausfahrende Schnellwahlmenue oben rechts bietet zusaetzlich **ganz auf**, **ganz zu** und **ganz zu mit Lamellenposition 50 %**. Die kombinierte Aktion ruft erst `cover.close_cover` und danach `cover.set_cover_tilt_position` auf. Beim Setzen einer Position bleibt ein hohler Kreis am Slider als Zielmarkierung stehen, bis die Jalousie die Zielposition erreicht. In der kompakten Ansicht bleibt zwischen Ueberschrift und Positionsslider zusaetzlicher Abstand.
 
 Die Cover-Integration muss die jeweiligen Home-Assistant-Dienste und Attribute unterstuetzen. Die Karte hat keine externen Abhaengigkeiten.

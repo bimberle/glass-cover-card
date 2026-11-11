@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.3.0";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -144,6 +144,7 @@ class GlassCoverCard extends HTMLElement {
     this.shadowRoot.querySelector(".raise")?.addEventListener("click", () => this._call("open_cover"));
     this.shadowRoot.querySelector(".stop")?.addEventListener("click", () => this._call("stop_cover"));
     this.shadowRoot.querySelector(".lower")?.addEventListener("click", () => this._call("close_cover"));
+    this.shadowRoot.querySelector(".close-tilt")?.addEventListener("click", () => this._quickAction("close-tilt"));
     this.shadowRoot.querySelector(".position")?.addEventListener("change", (event) => this._setPosition(event.target.value));
     this.shadowRoot.querySelector(".tilt")?.addEventListener("input", (event) => this._setTilt(event.target.value));
   }
@@ -206,10 +207,9 @@ class GlassCoverCard extends HTMLElement {
         input[type=range]::-moz-range-thumb { width:clamp(22px,4vw,30px); height:clamp(22px,4vw,30px); border:0; border-radius:50%; background:#ff8b2b; box-shadow:0 2px 8px #0008; }
         .position-control { position:relative; display:flex; align-items:center; }
         .target-marker { position:absolute; left:var(--target); top:50%; width:clamp(22px,4vw,30px); aspect-ratio:1; border:2px solid #ff8b2b; border-radius:50%; background:#17191d; box-shadow:0 0 0 2px rgba(255,139,43,.18); transform:translate(-50%,-50%); pointer-events:none; }
-        .controls { display:grid; grid-template-columns:repeat(3,1fr); align-items:center; justify-items:center; gap:10px; margin:clamp(26px,5vw,40px) 7% clamp(23px,4vw,32px); }
-        .round { width:var(--control-size); aspect-ratio:1; padding:0; color:#e4e4e8; }
-        .round svg { width:clamp(18px,calc(var(--control-size) * .56),54px); height:clamp(18px,calc(var(--control-size) * .56),54px); }
-        .round svg { width:100%; height:100%; }
+        .controls { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); align-items:center; justify-items:center; gap:10px; margin:clamp(26px,5vw,40px) 0 clamp(23px,4vw,32px); }
+        .round { width:min(var(--control-size),100%); aspect-ratio:1; padding:0; color:#e4e4e8; }
+        .round svg { width:65%; height:65%; }
         .stop { width:var(--stop-size); border:3px solid #ff8b2b; color:#ff8b2b; background:radial-gradient(circle,#38251a,#17191d 74%); }
         .stop svg { width:clamp(12px,calc(var(--stop-size) * .32),38px); height:clamp(12px,calc(var(--stop-size) * .32),38px); fill:currentColor; }
         .divider { height:1px; margin:0 0 20px; background:#303239; }
@@ -220,6 +220,7 @@ class GlassCoverCard extends HTMLElement {
         .tilt-row input[type=range]::-moz-range-thumb { width:var(--tilt-thumb); height:var(--tilt-thumb); }
         .tilt-row[hidden] { display:none; }
         .compact .visual { display:none; }
+        .compact .range-row { margin-top:clamp(24px,6vw,42px); }
         @media (max-width:380px) { .card { padding:18px; } .visual { grid-template-columns:1fr .75fr; gap:13px; } .range-row { gap:8px; } .tilt-row { grid-template-columns:var(--tilt-icon-size) minmax(65px,.65fr) minmax(75px,1.35fr); gap:var(--tilt-gap); } }
         @media (prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none !important; } }
       </style>
@@ -243,6 +244,7 @@ class GlassCoverCard extends HTMLElement {
           <button class="round raise" aria-label="Hochfahren" title="Hochfahren">${this._icon("up")}</button>
           <button class="round stop" aria-label="Stoppen" title="Stoppen">${this._icon("stop")}</button>
           <button class="round lower" aria-label="Runterfahren" title="Runterfahren">${this._icon("down")}</button>
+          <button class="round close-tilt" aria-label="100 Prozent geschlossen, Lamellen 50 Prozent" title="100 % geschlossen, Lamellen 50 %">${this._icon("half")}</button>
         </nav>
         <div class="divider" ${showTilt ? "" : "hidden"}></div>
         <div class="tilt-row" ${showTilt ? "" : "hidden"}>
