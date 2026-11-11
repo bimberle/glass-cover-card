@@ -56,7 +56,7 @@
 - [x] Button-Smoke-Test auf Einzelbutton-Konfiguration umstellen.
 - [x] Einzelbutton- und Farbauswahl (Orange standardmaessig, Weiss oder Grau) als Release `v1.9.0` veroeffentlichen.
 - [x] Option fuer rahmenlose Buttondarstellung in Stacks mit nur Kreis/Icon ergaenzen.
-- [ ] Rahmenlose Darstellung als Release `v1.10.0` veroeffentlichen.
+- [x] Rahmenlose Darstellung als Release `v1.10.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
