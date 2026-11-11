@@ -54,7 +54,7 @@
 - [x] Glass Button Card auf genau einen Button pro Karte umstellen.
 - [x] Orange als Standard sowie Weiss und Grau als Akzentfarben anbieten.
 - [x] Button-Smoke-Test auf Einzelbutton-Konfiguration umstellen.
-- [ ] Einzelbutton- und Farbauswahl (Orange standardmaessig, Weiss oder Grau) als Release `v1.9.0` veroeffentlichen.
+- [x] Einzelbutton- und Farbauswahl (Orange standardmaessig, Weiss oder Grau) als Release `v1.9.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
