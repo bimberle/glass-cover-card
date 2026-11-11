@@ -40,37 +40,24 @@ preview_size: 5
 
 ![Vorschau der Glass Button Card](https://raw.githubusercontent.com/bimberle/glass-cover-card/main/glass-button-card-preview.jpg)
 
-Zeigt mehrere runde Buttons nebeneinander. Pro Button sind Entitaet, Icon, Text und Aktion einstellbar. Die Icon-Auswahl enthaelt unter anderem Sofa, Licht, Jalousie und Fernseher.
+Jede Karte zeigt genau einen grossen runden Button. Fuer mehrere Bedienelemente fuegst du mehrere Glass Button Cards nebeneinander ins Dashboard ein. Entitaet, Icon, Text, Aktion, Groesse und Akzentfarbe sind pro Karte einstellbar.
 
 ```yaml
 type: custom:glass-button-card
+entity: light.wohnzimmer
+name: Wohnzimmer
+icon: mdi:sofa-outline
+action: toggle
 button_size: 5
-columns: 4
 show_name: true
-buttons:
-  - entity: light.wohnzimmer
-    name: Wohnzimmer
-    icon: mdi:sofa-outline
-    action: toggle
-  - entity: light.deckenlampe
-    name: Licht
-    icon: mdi:lightbulb-outline
-    action: toggle
-  - entity: cover.wohnzimmer
-    name: Jalousie
-    icon: mdi:blinds-horizontal
-    action: toggle
-  - entity: media_player.fernseher
-    name: Fernsehen
-    icon: mdi:television
-    action: more-info
+color: orange
 ```
 
-In Home Assistant kann die Liste im visuellen Karteneditor bearbeitet werden: Buttons hinzufuegen/entfernen, Entitaet auswaehlen, Icon aus der Liste waehlen, Text setzen und zwischen Ein-/Ausschalten und Mehr-Informationen waehlen.
+Im visuellen Editor waehlst du Entitaet, Icon, Text, Aktion und Farbe aus. Fuer mehrere Buttons legst du mehrere einzelne Karten im Dashboard-Raster nebeneinander an.
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert beide Karten. Die aktuelle Repository-Version ist `v1.8.0`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert beide Karten. Die aktuelle Repository-Version ist `v1.9.0`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
@@ -83,7 +70,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 installiert?** Aktualisiere auf v1.8.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter. Falls du vorerst bei v1.7.0 bleibst, musst du zusaetzlich die Button-Ressource registrieren: `/local/community/glass-cover-card/glass-button-card.js` (Home Assistant 2026.11+) oder `/hacsfiles/glass-button-card.js` (aelteres HACS). Beide Ressourcen muessen als **JavaScript-Modul** eingetragen sein.
+**Schon v1.7.0 oder v1.8.0 installiert?** Aktualisiere auf v1.9.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
@@ -95,13 +82,15 @@ Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/
 
 | Option | Standard | Beschreibung |
 | --- | --- | --- |
-| `buttons` | `[]` | Liste der Buttons mit `entity`, optional `name`, `icon` und `action` |
-| `button_size` | `5` | Groesse von `1` (ein Drittel) bis `5` (entspricht den grossen Jalousiebuttons) |
-| `columns` | `4` | Maximale Buttons pro Reihe (1 bis 8); auf schmalen Displays wird automatisch auf 2 oder 1 Spalte gewechselt |
-| `show_name` | `true` | Buttontexte ein- oder ausblenden |
+| `entity` | erforderlich | Entitaet, die der Button schaltet oder deren Details eroeffnet |
+| `icon` | `mdi:gesture-tap-button` | Ein MDI-Icon, z. B. `mdi:sofa-outline`, `mdi:lightbulb-outline` oder `mdi:television` |
+| `name` | Friendly Name | Buttontext; kann mit `show_name: false` ausgeblendet werden |
 | `action` | `toggle` | `toggle` schaltet die Entitaet; `more-info` oeffnet deren Detaildialog |
+| `button_size` | `5` | Groesse von `1` (ein Drittel) bis `5` (entspricht den grossen Jalousiebuttons) |
+| `show_name` | `true` | Buttontexte ein- oder ausblenden |
+| `color` | `orange` | Akzentfarbe `orange`, `white` oder `gray` |
 
-Pro Button kann `icon` auf ein MDI-Icon gesetzt werden, zum Beispiel `mdi:sofa-outline`, `mdi:lightbulb-outline`, `mdi:blinds-horizontal` oder `mdi:television`. Ist `name` leer, wird der Friendly Name der Entitaet verwendet.
+Orange ist die Standardfarbe. Mit `color: white` oder `color: gray` kannst du das Design aendern.
 
 ### Glass Cover Card
 

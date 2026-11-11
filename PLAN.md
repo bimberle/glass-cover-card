@@ -51,6 +51,10 @@
 - [x] Abstands- und Bildgroessenkorrektur als Release `v1.6.0` veroeffentlichen.
 - [x] Glass Button Card und Mehrkartenpaket als Release `v1.7.0` veroeffentlichen.
 - [x] Ressourcen- und Marketplace-Bildkorrektur als Release `v1.8.0` veroeffentlichen.
+- [x] Glass Button Card auf genau einen Button pro Karte umstellen.
+- [x] Orange als Standard sowie Weiss und Grau als Akzentfarben anbieten.
+- [x] Button-Smoke-Test auf Einzelbutton-Konfiguration umstellen.
+- [ ] Einzelbutton- und Farbauswahl (Orange standardmaessig, Weiss oder Grau) als Release `v1.9.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
