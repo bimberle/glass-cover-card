@@ -6,11 +6,11 @@ Eine responsive Home-Assistant-Lovelace-Karte zur Steuerung einer Jalousie. Sie 
 
 Das GitHub-Repository muss **oeffentlich** sein und exakt `glass-cover-card` heissen. HACS erkennt Dashboard-Karten daran, dass eine JavaScript-Datei denselben Namen wie das Repository traegt. Die Datei `glass-cover-card.js` und `hacs.json` liegen deshalb im Repository-Hauptverzeichnis.
 
-1. Erstelle ein oeffentliches GitHub-Repository mit dem Namen `glass-cover-card`, einer kurzen Beschreibung wie `Responsive Home Assistant blind cover card` und den Topics `home-assistant`, `lovelace`, `dashboard` und `hacs`; lade den Inhalt dieses Projekts hoch.
-2. Erstelle eine GitHub-Release mit dem Tag `v1.0.0`. HACS verwendet die neueste Release als installierbare Version.
+1. Das oeffentliche Repository [bimberle/glass-cover-card](https://github.com/bimberle/glass-cover-card) ist vorbereitet. Fuer ein eigenes Fork muss der Repo-Name `glass-cover-card` lauten und eine kurze Beschreibung sowie die Topics `home-assistant`, `lovelace`, `dashboard` und `hacs` gesetzt sein.
+2. HACS verwendet die neueste GitHub-Release als installierbare Version. Aktuell ist `v1.0.0` veroeffentlicht.
 3. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 4. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
-5. Fuege `https://github.com/<dein-github-name>/glass-cover-card` hinzu und waehle den Typ **Dashboard**.
+5. Fuege `https://github.com/bimberle/glass-cover-card` hinzu und waehle den Typ **Dashboard**.
 6. Suche im Marketplace/HACS nach **Glass Cover Card**, oeffne den Eintrag und installiere ihn.
 7. Fuege die Karte im Dashboard-Editor als benutzerdefinierte Karte hinzu oder verwende die YAML-Konfiguration unten.
 
