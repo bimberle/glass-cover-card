@@ -30,6 +30,10 @@
 - [x] Vierten Hauptbutton ueber `show_close_tilt` optional schaltbar machen.
 - [x] Standardbuttons ueber `show_main_controls` optional schaltbar machen und Zeile bei deaktivierten Gruppen ausblenden.
 - [x] Abstand unter der Buttonreihe vor die Lamellen-Trennlinie verschieben und Repo-Vorschaubild kleiner anzeigen.
+- [x] Repository in getrennte Quellenordner pro Karte strukturieren.
+- [x] Glass Button Card mit Buttonliste, Entity-/Icon-/Text-/Aktionauswahl, Größenstufen und Spaltenoption erstellen.
+- [x] HACS-kompatiblen Build nach `dist/` sowie Smoke-Tests für beide Karten ergänzen.
+- [x] README mit Buttonkartenbeispiel, Iconauswahl und Mehrkarten-Ressourcen aktualisieren.
 
 ## Marketplace / HACS
 
@@ -43,6 +47,7 @@
 - [x] Optionalen vierten Steuerbutton als Release `v1.4.0` veroeffentlichen.
 - [x] Buttongruppen-Konfiguration als Release `v1.5.0` veroeffentlichen.
 - [x] Abstands- und Bildgroessenkorrektur als Release `v1.6.0` veroeffentlichen.
+- [ ] Glass Button Card und Mehrkartenpaket als Release `v1.7.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz

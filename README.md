@@ -1,30 +1,23 @@
-# Glass Cover Card
+# Glass Cover Cards
 
-Eine responsive Home-Assistant-Lovelace-Karte zur Steuerung einer Jalousie. Sie zeigt die Position, bietet Hoch/Stopp/Runter sowie „geschlossen mit Lamellen auf 50 %“ und ein Schnellwahlmenue. Der Lamellenregler kann in der Kartenkonfiguration ausgeblendet werden.
+Eine Sammlung responsiver Home-Assistant-Lovelace-Karten. Die Kartenquellen liegen getrennt unter `cards/<kartenname>/`; `npm run build` legt die HACS-Dateien gemeinsam in `dist/` ab.
 
-<img src="designvorlage.png" alt="Vorschau der Glass Cover Card" width="560">
+## Entwicklung
 
-## Installation ueber Marketplace / HACS
+```sh
+npm run build
+npm test
+```
 
-Das GitHub-Repository muss **oeffentlich** sein und exakt `glass-cover-card` heissen. HACS erkennt Dashboard-Karten daran, dass eine JavaScript-Datei denselben Namen wie das Repository traegt. Die Datei `glass-cover-card.js` und `hacs.json` liegen deshalb im Repository-Hauptverzeichnis.
+`cards/glass-cover-card/` und `cards/glass-button-card/` enthalten die jeweiligen Quellen. Die gebauten `dist/*.js`-Dateien werden mit versioniert, damit HACS sie direkt aus einer GitHub-Release installieren kann.
 
-1. Das oeffentliche Repository [bimberle/glass-cover-card](https://github.com/bimberle/glass-cover-card) ist vorbereitet. Fuer ein eigenes Fork muss der Repo-Name `glass-cover-card` lauten und eine kurze Beschreibung sowie die Topics `home-assistant`, `lovelace`, `dashboard` und `hacs` gesetzt sein.
-2. HACS verwendet die neueste GitHub-Release als installierbare Version. Aktuell ist `v1.6.0` veroeffentlicht.
-3. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
-4. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
-5. Fuege `https://github.com/bimberle/glass-cover-card` hinzu und waehle den Typ **Dashboard**.
-6. Suche im Marketplace/HACS nach **Glass Cover Card**, oeffne den Eintrag und installiere ihn.
-7. Fuege die Karte im Dashboard-Editor als benutzerdefinierte Karte hinzu oder verwende die YAML-Konfiguration unten.
+## Karten
 
-Ab Home Assistant 2026.11 werden Dashboard-Ressourcen aus `/local/community/` bereitgestellt. Falls Home Assistant die Ressource nicht automatisch registriert, fuege unter **Einstellungen > Dashboards > Ressourcen** `/local/community/glass-cover-card/glass-cover-card.js` als **JavaScript-Modul** hinzu. Bei aelteren HACS-Versionen lautet der Ressourcenpfad normalerweise `/hacsfiles/glass-cover-card.js`.
+### Glass Cover Card
 
-## Manuelle Installation
+![Vorschau der Glass Cover Card](designvorlage.png)
 
-Alternativ kannst du `glass-cover-card.js` nach `/config/www/glass-cover-card.js` kopieren und unter **Einstellungen > Dashboards > Ressourcen** den Pfad `/local/glass-cover-card.js` als **JavaScript-Modul** registrieren.
-
-## Kartenkonfiguration
-
-Fuege die Karte im Dashboard-Editor hinzu:
+Steuert eine Jalousie mit Positionsregler, Hoch/Stopp/Runter, optionaler Lamellenleiste und Schnellwahl.
 
 ```yaml
 type: custom:glass-cover-card
@@ -39,13 +32,76 @@ invert_position: false
 button_size: 5
 title_size: 5
 preview_size: 5
-# Optional, falls die Lamellenposition von einer anderen Cover-Entitaet stammt:
+# Optional: getrennte Entitaet fuer die Lamellenposition
 # tilt_entity: cover.wohnzimmer_lamellen
 ```
 
-Alternativ kann die Karte im Dashboard-Editor unter **Benutzerdefinierte Karten** ausgewaehlt und dort konfiguriert werden.
+### Glass Button Card
+
+![Vorschau der Glass Button Card](glass-button-card-preview.jpg)
+
+Zeigt mehrere runde Buttons nebeneinander. Pro Button sind Entitaet, Icon, Text und Aktion einstellbar. Die Icon-Auswahl enthaelt unter anderem Sofa, Licht, Jalousie und Fernseher.
+
+```yaml
+type: custom:glass-button-card
+button_size: 5
+columns: 4
+show_name: true
+buttons:
+  - entity: light.wohnzimmer
+    name: Wohnzimmer
+    icon: mdi:sofa-outline
+    action: toggle
+  - entity: light.deckenlampe
+    name: Licht
+    icon: mdi:lightbulb-outline
+    action: toggle
+  - entity: cover.wohnzimmer
+    name: Jalousie
+    icon: mdi:blinds-horizontal
+    action: toggle
+  - entity: media_player.fernseher
+    name: Fernsehen
+    icon: mdi:television
+    action: more-info
+```
+
+In Home Assistant kann die Liste im visuellen Karteneditor bearbeitet werden: Buttons hinzufuegen/entfernen, Entitaet auswaehlen, Icon aus der Liste waehlen, Text setzen und zwischen Ein-/Ausschalten und Mehr-Informationen waehlen.
+
+## Installation ueber Marketplace / HACS
+
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die Karte `glass-button-card.js` wird aus demselben `dist/`-Ordner mitinstalliert. Die aktuelle Repository-Version ist `v1.7.0`.
+
+1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
+2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
+3. Fuege `https://github.com/bimberle/glass-cover-card` hinzu und waehle den Typ **Dashboard**.
+4. Suche nach **Glass Cover Cards**, oeffne den Eintrag und installiere ihn.
+5. Fuege beide JavaScript-Ressourcen hinzu, falls sie nicht automatisch registriert wurden:
+
+  - Home Assistant 2026.11+: `/local/community/glass-cover-card/glass-cover-card.js` und `/local/community/glass-cover-card/glass-button-card.js`
+  - Aeltere HACS-Versionen: `/hacsfiles/glass-cover-card.js` und `/hacsfiles/glass-button-card.js`
+
+Beide Ressourcen muessen als **JavaScript-Modul** eingetragen sein. Die Karten koennen danach im Dashboard-Editor als benutzerdefinierte Karten hinzugefuegt werden.
+
+## Manuelle Installation
+
+Kopiere beide Dateien aus `dist/` nach `/config/www/` und registriere `/local/glass-cover-card.js` sowie `/local/glass-button-card.js` unter **Einstellungen > Dashboards > Ressourcen** jeweils als **JavaScript-Modul**.
 
 ## Optionen
+
+### Glass Button Card
+
+| Option | Standard | Beschreibung |
+| --- | --- | --- |
+| `buttons` | `[]` | Liste der Buttons mit `entity`, optional `name`, `icon` und `action` |
+| `button_size` | `5` | Groesse von `1` (ein Drittel) bis `5` (entspricht den grossen Jalousiebuttons) |
+| `columns` | `4` | Maximale Buttons pro Reihe (1 bis 8); auf schmalen Displays wird automatisch auf 2 oder 1 Spalte gewechselt |
+| `show_name` | `true` | Buttontexte ein- oder ausblenden |
+| `action` | `toggle` | `toggle` schaltet die Entitaet; `more-info` oeffnet deren Detaildialog |
+
+Pro Button kann `icon` auf ein MDI-Icon gesetzt werden, zum Beispiel `mdi:sofa-outline`, `mdi:lightbulb-outline`, `mdi:blinds-horizontal` oder `mdi:television`. Ist `name` leer, wird der Friendly Name der Entitaet verwendet.
+
+### Glass Cover Card
 
 | Option | Standard | Beschreibung |
 | --- | --- | --- |
@@ -55,15 +111,11 @@ Alternativ kann die Karte im Dashboard-Editor unter **Benutzerdefinierte Karten*
 | `show_tilt` | `true` | Lamellen-Schieberegler anzeigen oder ausblenden |
 | `show_main_controls` | `true` | Buttons Hoch, Stopp und Runter anzeigen oder ausblenden |
 | `show_close_tilt` | `true` | Vierten Button fuer „100 % geschlossen und Lamellen 50 %“ anzeigen oder ausblenden |
-| `show_preview` | `true` | Jalousien-Vorschaubild und Prozentwert anzeigen; der Auf/Zu-Positionsslider bleibt auch bei `false` sichtbar |
-| `invert_position` | `false` | Kehrt Slider-Richtung und Prozentbedeutung um. Standard: links/0 % offen, rechts/100 % geschlossen |
-| `button_size` | `5` | Groesse der Steuerbuttons von `1` (ein Drittel) bis `5` (Vorlagengroesse). Die Symbole bleiben auch bei kleinen Stufen gut erkennbar; Kopfbutton und Schnellwahlbuttons skalieren gemeinsam. Die Lamellenzeile skaliert mit; Stufe `1` entspricht der frueheren Stufe `2` |
-| `title_size` | `5` | Groesse der Ueberschrift von `1` (klein) bis `5` (Vorlagengroesse) |
-| `preview_size` | `5` | Gemeinsame Groesse von Jalousienbild und Prozentanzeige von `1` (klein) bis `5` (Vorlagengroesse) |
+| `show_preview` | `true` | Vorschaubild und Prozentwert anzeigen; Positionsslider bleibt sichtbar |
+| `invert_position` | `false` | Slider-Richtung und Prozentbedeutung umkehren |
+| `button_size` | `5` | Groesse der Steuerbuttons von `1` bis `5` |
+| `title_size` | `5` | Groesse der Ueberschrift von `1` bis `5` |
+| `preview_size` | `5` | Groesse von Jalousienbild und Prozentanzeige von `1` bis `5` |
 | `tilt_entity` | `entity` | Optionale Cover-Entitaet fuer die Lamellenposition |
 
-Die Steuerbuttons enthalten **hoch**, **stopp**, **runter** und **100 % geschlossen mit Lamellenposition 50 %**. Das vertikal ausfahrende Schnellwahlmenue oben rechts bietet zusaetzlich **ganz auf**, **ganz zu** und **ganz zu mit Lamellenposition 50 %**. Die kombinierte Aktion ruft erst `cover.close_cover` und danach `cover.set_cover_tilt_position` auf. Beim Setzen einer Position bleibt ein hohler Kreis am Slider als Zielmarkierung stehen, bis die Jalousie die Zielposition erreicht. In der kompakten Ansicht bleibt zwischen Ueberschrift und Positionsslider zusaetzlicher Abstand.
-
-Die drei Standardbuttons und der Sonderbutton lassen sich unabhaengig schalten. Wenn `show_main_controls` und `show_close_tilt` beide `false` sind, wird die gesamte Buttonzeile ausgeblendet.
-
-Die Cover-Integration muss die jeweiligen Home-Assistant-Dienste und Attribute unterstuetzen. Die Karte hat keine externen Abhaengigkeiten.
+Die Cover-Integration muss die jeweiligen Home-Assistant-Dienste und Attribute unterstuetzen. Es gibt keine externen Build-Abhaengigkeiten; zum Erzeugen von `dist/` wird Node.js benoetigt.
