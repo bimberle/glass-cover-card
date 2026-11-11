@@ -2,14 +2,14 @@
 
 Eine responsive Home-Assistant-Lovelace-Karte zur Steuerung einer Jalousie. Sie zeigt die Position, bietet Hoch/Stopp/Runter sowie „geschlossen mit Lamellen auf 50 %“ und ein Schnellwahlmenue. Der Lamellenregler kann in der Kartenkonfiguration ausgeblendet werden.
 
-![Vorschau der Glass Cover Card](designvorlage.png)
+<img src="designvorlage.png" alt="Vorschau der Glass Cover Card" width="560">
 
 ## Installation ueber Marketplace / HACS
 
 Das GitHub-Repository muss **oeffentlich** sein und exakt `glass-cover-card` heissen. HACS erkennt Dashboard-Karten daran, dass eine JavaScript-Datei denselben Namen wie das Repository traegt. Die Datei `glass-cover-card.js` und `hacs.json` liegen deshalb im Repository-Hauptverzeichnis.
 
 1. Das oeffentliche Repository [bimberle/glass-cover-card](https://github.com/bimberle/glass-cover-card) ist vorbereitet. Fuer ein eigenes Fork muss der Repo-Name `glass-cover-card` lauten und eine kurze Beschreibung sowie die Topics `home-assistant`, `lovelace`, `dashboard` und `hacs` gesetzt sein.
-2. HACS verwendet die neueste GitHub-Release als installierbare Version. Aktuell ist `v1.5.0` veroeffentlicht.
+2. HACS verwendet die neueste GitHub-Release als installierbare Version. Aktuell ist `v1.6.0` veroeffentlicht.
 3. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 4. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
 5. Fuege `https://github.com/bimberle/glass-cover-card` hinzu und waehle den Typ **Dashboard**.

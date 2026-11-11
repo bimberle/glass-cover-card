@@ -29,6 +29,7 @@
 - [x] Vierten Hauptbutton fuer geschlossen plus Lamellen 50 % ergaenzen.
 - [x] Vierten Hauptbutton ueber `show_close_tilt` optional schaltbar machen.
 - [x] Standardbuttons ueber `show_main_controls` optional schaltbar machen und Zeile bei deaktivierten Gruppen ausblenden.
+- [x] Abstand unter der Buttonreihe vor die Lamellen-Trennlinie verschieben und Repo-Vorschaubild kleiner anzeigen.
 
 ## Marketplace / HACS
 
@@ -41,6 +42,7 @@
 - [x] Kompaktabstand und vierten Steuerbutton als Release `v1.3.0` veroeffentlichen.
 - [x] Optionalen vierten Steuerbutton als Release `v1.4.0` veroeffentlichen.
 - [x] Buttongruppen-Konfiguration als Release `v1.5.0` veroeffentlichen.
+- [ ] Abstands- und Bildgroessenkorrektur als Release `v1.6.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
