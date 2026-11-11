@@ -21,6 +21,10 @@
 - [x] Slider-Zielposition als offenen Marker bis zur gemeldeten Istposition anzeigen.
 - [x] Button-Groesse 1 bis 5, skalierte Lamellenleiste und kompakte Ansicht ergaenzen.
 - [x] Vertikales, animiertes Schnellwahlmenue und HACS-Vorschaubild ergaenzen.
+- [x] Lamellen-Mindestgroesse, erkennbare Icons und skalierenden Kopf-/Schnellwahlbutton nachjustieren.
+- [x] Positionsslider in der Kompaktansicht sichtbar lassen.
+- [x] Groessenregler fuer Ueberschrift sowie Bild/Prozentanzeige hinzufuegen.
+- [x] Original `designvorlage.png` in die Marketplace-Beschreibung aufnehmen.
 
 ## Marketplace / HACS
 
@@ -29,6 +33,7 @@
 - [x] Manifest, Dateinamen und JavaScript lokal validieren.
 - [x] Oeffentliches GitHub-Repository `bimberle/glass-cover-card` und Release `v1.0.0` erstellen.
 - [x] Aenderungen als Release `v1.1.0` veroeffentlichen.
+- [ ] Folgeaenderungen als Release `v1.2.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
