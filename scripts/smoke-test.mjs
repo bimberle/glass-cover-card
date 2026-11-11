@@ -107,8 +107,10 @@ buttonCard.setConfig({
   icon: "mdi:sofa-outline",
   button_size: 1,
   show_name: false,
+  show_card_frame: false,
 });
 assert.match(buttonCard.shadowRoot.innerHTML, /--button-size:clamp\(24px,5vw,38px\)/);
+assert.match(buttonCard.shadowRoot.innerHTML, /class="card no-frame"/);
 assert.doesNotMatch(buttonCard.shadowRoot.innerHTML, /class="name"/);
 
 const editor = new buttonModule.Editor();
@@ -119,6 +121,7 @@ assert.match(editor.innerHTML, /Icon/);
 assert.match(editor.innerHTML, /Orange/);
 assert.match(editor.innerHTML, /Weiss/);
 assert.match(editor.innerHTML, /Grau/);
+assert.match(editor.innerHTML, /Kartenrahmen anzeigen/);
 
 const coverModule = await loadCard("dist/glass-cover-card.js", "glass-cover-card", "glass-cover-card-editor");
 const coverCard = new coverModule.Card();

@@ -51,13 +51,29 @@ action: toggle
 button_size: 5
 show_name: true
 color: orange
+show_card_frame: true
 ```
 
 Im visuellen Editor waehlst du Entitaet, Icon, Text, Aktion und Farbe aus. Fuer mehrere Buttons legst du mehrere einzelne Karten im Dashboard-Raster nebeneinander an.
 
+Fuer einen Button ohne Kartenrahmen, z. B. in einem `horizontal-stack`, setze `show_card_frame: false`. Dann bleiben nur der Kreis und das Icon sichtbar; der Text wird in dieser Ansicht ausgeblendet.
+
+```yaml
+type: horizontal-stack
+cards:
+  - type: custom:glass-button-card
+    entity: light.wohnzimmer
+    icon: mdi:sofa-outline
+    show_card_frame: false
+  - type: custom:glass-button-card
+    entity: light.deckenlampe
+    icon: mdi:lightbulb-outline
+    show_card_frame: false
+```
+
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert beide Karten. Die aktuelle Repository-Version ist `v1.9.0`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert beide Karten. Die aktuelle Repository-Version ist `v1.10.0`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
@@ -70,7 +86,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 oder v1.8.0 installiert?** Aktualisiere auf v1.9.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.9.0 installiert?** Aktualisiere auf v1.10.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
@@ -87,8 +103,9 @@ Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/
 | `name` | Friendly Name | Buttontext; kann mit `show_name: false` ausgeblendet werden |
 | `action` | `toggle` | `toggle` schaltet die Entitaet; `more-info` oeffnet deren Detaildialog |
 | `button_size` | `5` | Groesse von `1` (ein Drittel) bis `5` (entspricht den grossen Jalousiebuttons) |
-| `show_name` | `true` | Buttontexte ein- oder ausblenden |
+| `show_name` | `true` | Buttontext ein- oder ausblenden, solange der Kartenrahmen sichtbar ist |
 | `color` | `orange` | Akzentfarbe `orange`, `white` oder `gray` |
+| `show_card_frame` | `true` | Kartenrahmen, Hintergrund und Außenabstand anzeigen; `false` zeigt nur Kreis und Icon und blendet den Text aus |
 
 Orange ist die Standardfarbe. Mit `color: white` oder `color: gray` kannst du das Design aendern.
 

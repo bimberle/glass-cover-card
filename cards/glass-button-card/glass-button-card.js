@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.1.0";
+const CARD_VERSION = "1.3.0";
 const BUTTON_COLORS = {
   orange: "#ff8b2b",
   white: "#f2f2f4",
@@ -57,6 +57,7 @@ class GlassButtonCard extends HTMLElement {
       action: "toggle",
       button_size: 5,
       show_name: true,
+      show_card_frame: true,
       color: "orange",
       ...config,
     };
@@ -84,6 +85,7 @@ class GlassButtonCard extends HTMLElement {
     return {
       button_size: 5,
       show_name: true,
+      show_card_frame: true,
       entity: "light.wohnzimmer",
       name: "Wohnzimmer",
       icon: "mdi:sofa-outline",
@@ -115,6 +117,7 @@ class GlassButtonCard extends HTMLElement {
     const level = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
     const scale = 1 / 3 + ((level - 1) / 4) * (2 / 3);
     const showName = this._config.show_name !== false;
+    const showCardFrame = this._config.show_card_frame !== false;
     const color = BUTTON_COLORS[this._config.color] ? this._config.color : "orange";
     const state = this._hass?.states?.[this._config.entity];
     const isActive = state && !["off", "closed", "idle", "standby", "unavailable", "unknown", "not_home"].includes(state.state);
@@ -126,6 +129,8 @@ class GlassButtonCard extends HTMLElement {
         :host { display:block; width:100%; color:var(--primary-text-color,#f3f3f5); font-family:var(--paper-font-body1_-_font-family,"Arial",sans-serif); }
         * { box-sizing:border-box; }
         .card { width:100%; padding:clamp(16px,3vw,30px); border:1px solid rgba(255,255,255,.1); border-radius:28px; background:radial-gradient(ellipse at 50% 0,#22252a 0,#15171a 62%,#101214 100%); box-shadow:inset 0 1px 1px rgba(255,255,255,.06),0 12px 30px rgba(0,0,0,.2); }
+        .card.no-frame { padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
+        .no-frame .name { display:none; }
         .button-wrap { display:flex; flex-direction:column; align-items:center; gap:clamp(12px,2vw,20px); }
         .button { display:grid; width:var(--button-size); aspect-ratio:1; place-items:center; padding:0; border:2px solid color-mix(in srgb,var(--accent) 78%,#414348); border-radius:50%; background:linear-gradient(145deg,#222428,#131518); color:var(--accent); box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 8px 18px rgba(0,0,0,.28); transition:border-color .18s ease,color .18s ease,background .18s ease,box-shadow .18s ease,transform .18s ease; cursor:pointer; -webkit-tap-highlight-color:transparent; }
         .button:hover { transform:translateY(-2px); border-color:var(--accent); }
@@ -134,7 +139,7 @@ class GlassButtonCard extends HTMLElement {
         .name { max-width:100%; color:#e4e4e7; font-size:clamp(13px,2.2vw,20px); line-height:1.2; text-align:center; overflow-wrap:anywhere; }
         @media (prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none !important; } }
       </style>
-      <article class="card" style="--accent:${BUTTON_COLORS[color]};--button-size:clamp(${72 * scale}px,${15 * scale}vw,${114 * scale}px);--icon-size:clamp(${Math.min(16, 72 * scale * .48)}px,${15 * scale * .48}vw,${114 * scale * .48}px)">
+      <article class="card ${showCardFrame ? "" : "no-frame"}" style="--accent:${BUTTON_COLORS[color]};--button-size:clamp(${72 * scale}px,${15 * scale}vw,${114 * scale}px);--icon-size:clamp(${Math.min(16, 72 * scale * .48)}px,${15 * scale * .48}vw,${114 * scale * .48}px)">
         <div class="button-wrap">
           <button class="button ${isActive ? "active" : ""}" aria-label="${escapeHtml(name)}" title="${escapeHtml(name)}">
             <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
@@ -155,6 +160,7 @@ class GlassButtonCardEditor extends HTMLElement {
       action: "toggle",
       button_size: 5,
       show_name: true,
+      show_card_frame: true,
       color: "orange",
       ...config,
     };
@@ -203,6 +209,7 @@ class GlassButtonCardEditor extends HTMLElement {
         <label>Farbe<select data-setting="color"><option value="orange" ${!BUTTON_COLORS[this._config.color] || this._config.color === "orange" ? "selected" : ""}>Orange</option><option value="white" ${this._config.color === "white" ? "selected" : ""}>Weiss</option><option value="gray" ${this._config.color === "gray" ? "selected" : ""}>Grau</option></select></label>
         <label>Button-Groesse (${size})<input data-setting="button_size" type="range" min="1" max="5" step="1" value="${size}"></label>
         <label class="check"><input data-setting="show_name" type="checkbox" ${this._config.show_name !== false ? "checked" : ""}> Buttontexte anzeigen</label>
+        <label class="check"><input data-setting="show_card_frame" type="checkbox" ${this._config.show_card_frame !== false ? "checked" : ""}> Kartenrahmen anzeigen</label>
       </div>`;
 
     this.querySelectorAll("[data-setting]").forEach((input) => input.addEventListener("change", (event) => {
