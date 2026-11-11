@@ -33,7 +33,7 @@
 - [x] Manifest, Dateinamen und JavaScript lokal validieren.
 - [x] Oeffentliches GitHub-Repository `bimberle/glass-cover-card` und Release `v1.0.0` erstellen.
 - [x] Aenderungen als Release `v1.1.0` veroeffentlichen.
-- [ ] Folgeaenderungen als Release `v1.2.0` veroeffentlichen.
+- [x] Folgeaenderungen als Release `v1.2.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
