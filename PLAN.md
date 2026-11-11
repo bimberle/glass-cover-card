@@ -28,6 +28,7 @@
 - [x] Im Kompaktmodus mehr Abstand vor dem Positionsslider lassen.
 - [x] Vierten Hauptbutton fuer geschlossen plus Lamellen 50 % ergaenzen.
 - [x] Vierten Hauptbutton ueber `show_close_tilt` optional schaltbar machen.
+- [x] Standardbuttons ueber `show_main_controls` optional schaltbar machen und Zeile bei deaktivierten Gruppen ausblenden.
 
 ## Marketplace / HACS
 
@@ -39,6 +40,7 @@
 - [x] Folgeaenderungen als Release `v1.2.0` veroeffentlichen.
 - [x] Kompaktabstand und vierten Steuerbutton als Release `v1.3.0` veroeffentlichen.
 - [x] Optionalen vierten Steuerbutton als Release `v1.4.0` veroeffentlichen.
+- [ ] Buttongruppen-Konfiguration als Release `v1.5.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
