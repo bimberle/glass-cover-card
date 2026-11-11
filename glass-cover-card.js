@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.0.0";
+const CARD_VERSION = "1.1.0";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -8,10 +8,9 @@ class GlassCoverCard extends HTMLElement {
     this._config = null;
     this._hass = null;
     this._menuOpen = false;
-    this._pendingPosition = null;
     this._pendingTilt = null;
-    this._pendingPositionTimer = null;
     this._pendingTiltTimer = null;
+    this._targetPosition = null;
   }
 
   setConfig(config) {
@@ -21,6 +20,9 @@ class GlassCoverCard extends HTMLElement {
     this._config = {
       name: "",
       show_tilt: true,
+      show_preview: true,
+      invert_position: false,
+      button_size: 5,
       title: "Beschattung",
       ...config,
     };
@@ -30,9 +32,8 @@ class GlassCoverCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     const position = Number(hass.states?.[this._config?.entity]?.attributes?.current_position);
-    if (this._pendingPosition !== null && position === this._pendingPosition) {
-      window.clearTimeout(this._pendingPositionTimer);
-      this._pendingPosition = null;
+    if (this._targetPosition !== null && Math.abs(position - this._targetPosition) <= 1) {
+      this._targetPosition = null;
     }
     const tiltEntity = this._config?.tilt_entity || this._config?.entity;
     const tilt = Number(hass.states?.[tiltEntity]?.attributes?.current_tilt_position);
@@ -48,7 +49,7 @@ class GlassCoverCard extends HTMLElement {
   }
 
   getCardSize() {
-    return this._config?.show_tilt ? 5 : 4;
+    return (this._config?.show_preview !== false ? 4 : 2) + (this._config?.show_tilt !== false ? 1 : 0);
   }
 
   static getConfigElement() {
@@ -56,7 +57,7 @@ class GlassCoverCard extends HTMLElement {
   }
 
   static getStubConfig() {
-    return { entity: "cover.living_room", name: "Wohnzimmer", show_tilt: true };
+    return { entity: "cover.living_room", name: "Wohnzimmer", show_tilt: true, show_preview: true, button_size: 5 };
   }
 
   _state() {
@@ -81,14 +82,15 @@ class GlassCoverCard extends HTMLElement {
   }
 
   _setPosition(value) {
-    this._pendingPosition = clamp(value);
-    window.clearTimeout(this._pendingPositionTimer);
-    this._pendingPositionTimer = window.setTimeout(() => {
-      this._pendingPosition = null;
-      this._render();
-    }, 3000);
-    this._call("set_cover_position", { position: this._pendingPosition });
+    const uiPosition = clamp(value);
+    const position = this._config.invert_position ? uiPosition : 100 - uiPosition;
+    this._setTargetPosition(position);
+    this._call("set_cover_position", { position });
     this._render();
+  }
+
+  _setTargetPosition(position) {
+    this._targetPosition = clamp(position);
   }
 
   _setTilt(value) {
@@ -106,27 +108,18 @@ class GlassCoverCard extends HTMLElement {
   _quickAction(action) {
     this._menuOpen = false;
     if (action === "open") {
-      this._setPendingPosition(100);
+      this._setTargetPosition(100);
       this._call("open_cover");
     } else if (action === "close") {
-      this._setPendingPosition(0);
+      this._setTargetPosition(0);
       this._call("close_cover");
     } else {
-      this._setPendingPosition(0);
+      this._setTargetPosition(0);
       this._setPendingTilt(50);
       this._call("close_cover");
       window.setTimeout(() => this._setTilt(50), 700);
     }
     this._render();
-  }
-
-  _setPendingPosition(value) {
-    this._pendingPosition = clamp(value);
-    window.clearTimeout(this._pendingPositionTimer);
-    this._pendingPositionTimer = window.setTimeout(() => {
-      this._pendingPosition = null;
-      this._render();
-    }, 3000);
   }
 
   _setPendingTilt(value) {
@@ -149,25 +142,28 @@ class GlassCoverCard extends HTMLElement {
     this.shadowRoot.querySelector(".raise")?.addEventListener("click", () => this._call("open_cover"));
     this.shadowRoot.querySelector(".stop")?.addEventListener("click", () => this._call("stop_cover"));
     this.shadowRoot.querySelector(".lower")?.addEventListener("click", () => this._call("close_cover"));
-    this.shadowRoot.querySelector(".position")?.addEventListener("input", (event) => this._setPosition(event.target.value));
+    this.shadowRoot.querySelector(".position")?.addEventListener("change", (event) => this._setPosition(event.target.value));
     this.shadowRoot.querySelector(".tilt")?.addEventListener("input", (event) => this._setTilt(event.target.value));
   }
 
   _render() {
     if (!this._config) return;
-    const position = this._pendingPosition ?? this._position();
+    const position = this._position();
+    const invertPosition = this._config.invert_position === true;
+    const uiPosition = invertPosition ? position : 100 - position;
+    const displayedPosition = Math.round(uiPosition);
+    const targetUiPosition = this._targetPosition === null ? null : (invertPosition ? this._targetPosition : 100 - this._targetPosition);
     const tilt = this._pendingTilt ?? this._tilt();
     const title = this._escape(this._config.title || "Beschattung");
     const name = this._escape(this._config.name || this._state()?.attributes?.friendly_name || this._config.entity);
-    const isOpen = this._state()?.state === "open" || position > 0;
     const showTilt = this._config.show_tilt !== false;
+    const showPreview = this._config.show_preview !== false;
+    const buttonLevel = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
+    const buttonScale = 1 / 3 + ((buttonLevel - 1) / 4) * (2 / 3);
+    const tiltScale = 0.5 + ((buttonLevel - 1) / 4) * 0.5;
+    const controlsStyle = `--control-size:clamp(${72 * buttonScale}px,${15 * buttonScale}vw,${114 * buttonScale}px);--stop-size:clamp(${78 * buttonScale}px,${16 * buttonScale}vw,${120 * buttonScale}px);--quick-size:clamp(${48 * buttonScale}px,${10 * buttonScale}vw,${64 * buttonScale}px);--tilt-icon-size:${35 * tiltScale}px;--tilt-gap:${14 * tiltScale}px;--tilt-font:clamp(${14 * tiltScale}px,${2.7 * tiltScale}vw,${21 * tiltScale}px);--tilt-track:${9 * tiltScale}px;--tilt-thumb:${30 * tiltScale}px`;
     const slats = Array.from({ length: 7 }, (_, index) => `<i style="--i:${index}"></i>`).join("");
-    const menu = this._menuOpen ? `
-      <div class="quick-menu" role="group" aria-label="Schnellwahl">
-        <button class="quick" data-action="open" title="Ganz hoch" aria-label="Ganz hoch">${this._icon("up")}</button>
-        <button class="quick" data-action="close" title="Ganz runter" aria-label="Ganz runter">${this._icon("down")}</button>
-        <button class="quick" data-action="close-tilt" title="Ganz runter, Lamellen 50 %" aria-label="Ganz runter, Lamellen 50 Prozent">${this._icon("half")}</button>
-      </div>` : "";
+    const targetMarker = targetUiPosition === null || Math.abs(targetUiPosition - uiPosition) <= 1 ? "" : `<span class="target-marker" style="--target:${targetUiPosition}%" aria-label="Zielposition ${Math.round(targetUiPosition)} Prozent"></span>`;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -182,15 +178,16 @@ class GlassCoverCard extends HTMLElement {
         .menu-toggle,.round { display:grid; place-items:center; border-radius:50%; background:linear-gradient(145deg,#272a30,#17191d); border:2px solid #303239; box-shadow:0 6px 15px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05); }
         .menu-toggle { width:clamp(56px,11vw,88px); aspect-ratio:1; color:#ff8b2b; }
         .menu-toggle svg { width:46%; height:46%; }
-        .quick-menu { position:absolute; right:0; top:calc(100% + 10px); display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:9px; border:1px solid #34363c; border-radius:20px; background:#17191d; box-shadow:0 10px 24px rgba(0,0,0,.42); }
-        .quick { display:grid; place-items:center; width:clamp(48px,10vw,64px); aspect-ratio:1; padding:12px; border:1px solid #34363c; border-radius:50%; background:#23252a; color:#ff8b2b; }
+        .quick-menu { position:absolute; z-index:3; top:calc(100% + 10px); right:0; display:flex; flex-direction:column; align-items:center; gap:8px; max-height:0; padding:0 9px; overflow:hidden; opacity:0; transform:translateY(-12px) scaleY(.85); transform-origin:top; pointer-events:none; border:1px solid transparent; border-radius:24px; background:#17191d; box-shadow:0 10px 24px transparent; transition:max-height .32s ease,padding .32s ease,opacity .22s ease,transform .32s ease,border-color .22s ease,box-shadow .32s ease; }
+        .quick-menu.open { max-height:280px; padding:10px 9px; opacity:1; transform:translateY(0) scaleY(1); pointer-events:auto; border-color:#34363c; box-shadow:0 10px 24px rgba(0,0,0,.42); }
+        .quick { display:grid; place-items:center; width:var(--quick-size); aspect-ratio:1; padding:24%; border:1px solid #34363c; border-radius:50%; background:#23252a; color:#ff8b2b; flex:none; }
         .quick svg { width:100%; height:100%; }
         .visual { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(110px,.85fr); align-items:center; gap:clamp(15px,4vw,36px); margin:clamp(22px,5vw,36px) 0 25px; }
         .window { position:relative; width:100%; aspect-ratio:1.14; padding:12px 8px 9px; border:7px solid #25262a; border-top-width:17px; border-bottom-width:9px; border-radius:4px; background:linear-gradient(180deg,rgba(23,25,29,.22),rgba(255,145,67,.1)),linear-gradient(130deg,#d9b78c,#6c665b 48%,#ead0a5); box-shadow:0 8px 16px #0008,inset 0 0 0 2px #090a0b; }
         .window::before { content:""; position:absolute; z-index:1; top:-18px; left:-9px; right:-9px; height:clamp(12px,2.5vw,20px); border:1px solid #4a4b51; border-radius:2px; background:linear-gradient(#303238,#191a1f); box-shadow:0 3px 8px #0008; }
         .glass { position:absolute; inset:12px 7px 8px; overflow:hidden; border:2px solid #d5b591; background:radial-gradient(ellipse at 22% 35%,#fff5cd 0 3%,transparent 23%),linear-gradient(180deg,#b8ab92,#d8bb94 52%,#87674e); }
         .glass::after { content:""; position:absolute; inset:0; opacity:.42; background:linear-gradient(100deg,transparent 35%,#fff8df 49%,transparent 62%); }
-        .slats { position:absolute; z-index:2; top:0; left:0; right:0; height:var(--position); overflow:hidden; transition:height .25s ease; }
+        .slats { position:absolute; z-index:2; top:0; left:0; right:0; height:calc(100% - var(--position)); overflow:hidden; transition:height .25s ease; }
         .slats i { position:absolute; left:0; right:0; top:calc(var(--i) * 13%); height:11%; border:1px solid #4b4140; border-top-color:#77706d; background:linear-gradient(180deg,#343237,#17181b 60%,#51413a); box-shadow:0 2px 3px #0008; transform:skewY(calc((var(--tilt) - 50) * .035deg)); }
         .readout { min-width:0; }
         .value { font-size:clamp(48px,10vw,82px); line-height:.95; font-weight:700; letter-spacing:-.04em; white-space:nowrap; }
@@ -200,28 +197,40 @@ class GlassCoverCard extends HTMLElement {
         input[type=range] { --fill:50%; width:100%; height:9px; margin:0; appearance:none; border-radius:10px; outline:none; background:linear-gradient(to right,#ff8827 0 var(--fill),#373a41 var(--fill) 100%); cursor:pointer; }
         input[type=range]::-webkit-slider-thumb { width:clamp(22px,4vw,30px); height:clamp(22px,4vw,30px); appearance:none; border:0; border-radius:50%; background:#ff8b2b; box-shadow:0 2px 8px #0008; }
         input[type=range]::-moz-range-thumb { width:clamp(22px,4vw,30px); height:clamp(22px,4vw,30px); border:0; border-radius:50%; background:#ff8b2b; box-shadow:0 2px 8px #0008; }
+        .position-control { position:relative; display:flex; align-items:center; }
+        .target-marker { position:absolute; left:var(--target); top:50%; width:clamp(22px,4vw,30px); aspect-ratio:1; border:2px solid #ff8b2b; border-radius:50%; background:#17191d; box-shadow:0 0 0 2px rgba(255,139,43,.18); transform:translate(-50%,-50%); pointer-events:none; }
         .controls { display:grid; grid-template-columns:repeat(3,1fr); align-items:center; justify-items:center; gap:10px; margin:clamp(26px,5vw,40px) 7% clamp(23px,4vw,32px); }
-        .round { width:clamp(72px,15vw,114px); aspect-ratio:1; padding:24%; color:#e4e4e8; }
+        .round { width:var(--control-size); aspect-ratio:1; padding:24%; color:#e4e4e8; }
         .round svg { width:100%; height:100%; }
-        .stop { width:clamp(78px,16vw,120px); border:3px solid #ff8b2b; color:#ff8b2b; background:radial-gradient(circle,#38251a,#17191d 74%); }
+        .stop { width:var(--stop-size); border:3px solid #ff8b2b; color:#ff8b2b; background:radial-gradient(circle,#38251a,#17191d 74%); }
         .stop svg { width:38%; height:38%; fill:currentColor; }
         .divider { height:1px; margin:0 0 20px; background:#303239; }
-        .tilt-row { display:grid; grid-template-columns:42px minmax(80px,.65fr) minmax(90px,1.35fr); align-items:center; gap:14px; color:#c2c3ca; font-size:clamp(14px,2.7vw,21px); }
-        .tilt-icon { width:35px; height:35px; color:#c2c3ca; }
+        .tilt-row { display:grid; grid-template-columns:var(--tilt-icon-size) minmax(80px,.65fr) minmax(90px,1.35fr); align-items:center; gap:var(--tilt-gap); color:#c2c3ca; font-size:var(--tilt-font); }
+        .tilt-icon { width:var(--tilt-icon-size); height:var(--tilt-icon-size); color:#c2c3ca; }
+        .tilt-row input[type=range] { height:var(--tilt-track); }
+        .tilt-row input[type=range]::-webkit-slider-thumb { width:var(--tilt-thumb); height:var(--tilt-thumb); }
+        .tilt-row input[type=range]::-moz-range-thumb { width:var(--tilt-thumb); height:var(--tilt-thumb); }
         .tilt-row[hidden] { display:none; }
-        @media (max-width:380px) { .card { padding:18px; } .visual { grid-template-columns:1fr .75fr; gap:13px; } .range-row { gap:8px; } .tilt-row { grid-template-columns:28px minmax(65px,.65fr) minmax(75px,1.35fr); gap:9px; } .tilt-icon { width:27px; height:27px; } }
+        .compact .visual,.compact .range-row,.compact .controls { display:none; }
+        @media (max-width:380px) { .card { padding:18px; } .visual { grid-template-columns:1fr .75fr; gap:13px; } .range-row { gap:8px; } .tilt-row { grid-template-columns:var(--tilt-icon-size) minmax(65px,.65fr) minmax(75px,1.35fr); gap:var(--tilt-gap); } }
         @media (prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none !important; } }
       </style>
-      <article class="card">
+      <article class="card ${showPreview ? "" : "compact"}" style="${controlsStyle}">
         <header class="header">
           <div><div class="eyebrow">${title}</div><h2>${name}</h2></div>
-          <div class="menu-wrap"><button class="menu-toggle" aria-label="Schnellwahl anzeigen" aria-expanded="${this._menuOpen}">${this._icon("blinds")}</button>${menu}</div>
+          <div class="menu-wrap"><button class="menu-toggle" aria-label="Schnellwahl anzeigen" aria-expanded="${this._menuOpen}">${this._icon("blinds")}</button>
+            <div class="quick-menu ${this._menuOpen ? "open" : ""}" role="group" aria-label="Schnellwahl" aria-hidden="${!this._menuOpen}">
+              <button class="quick" data-action="open" title="Ganz auf" aria-label="Ganz auf">${this._icon("up")}</button>
+              <button class="quick" data-action="close" title="Ganz zu" aria-label="Ganz zu">${this._icon("down")}</button>
+              <button class="quick" data-action="close-tilt" title="Ganz zu, Lamellen 50 Prozent (durchsichtig)" aria-label="Ganz zu, Lamellen 50 Prozent">${this._icon("half")}</button>
+            </div>
+          </div>
         </header>
         <section class="visual" aria-label="Jalousienposition">
           <div class="window" style="--position:${position}%;--tilt:${tilt}"><div class="glass"></div><div class="slats">${slats}</div></div>
-          <div class="readout"><div class="value">${Math.round(position)}<small> %</small></div><div class="state">${isOpen ? "geöffnet" : "geschlossen"}</div></div>
+          <div class="readout"><div class="value">${displayedPosition}<small> %</small></div><div class="state">${invertPosition ? "geöffnet" : "geschlossen"}</div></div>
         </section>
-        <div class="range-row"><span>Zu</span><input class="position" type="range" min="0" max="100" step="1" value="${position}" aria-label="Jalousienposition" style="--fill:${position}%"><span>Auf</span></div>
+        <div class="range-row"><span>${invertPosition ? "Zu" : "Auf"}</span><div class="position-control"><input class="position" type="range" min="0" max="100" step="1" value="${uiPosition}" aria-label="Jalousienposition" style="--fill:${uiPosition}%">${targetMarker}</div><span>${invertPosition ? "Auf" : "Zu"}</span></div>
         <nav class="controls" aria-label="Jalousiensteuerung">
           <button class="round raise" aria-label="Hochfahren" title="Hochfahren">${this._icon("up")}</button>
           <button class="round stop" aria-label="Stoppen" title="Stoppen">${this._icon("stop")}</button>
@@ -267,6 +276,7 @@ class GlassCoverCardEditor extends HTMLElement {
   _render() {
     if (!this._config || !this._hass) return;
     const entities = Object.keys(this._hass.states).filter((entity) => entity.startsWith("cover."));
+    const size = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
     this.innerHTML = `
       <style>
         .form { display:grid; gap:12px; padding:12px 0; }
@@ -279,10 +289,13 @@ class GlassCoverCardEditor extends HTMLElement {
         <label>Anzeigename<input data-field="name" value="${this._escape(this._config.name || "")}" placeholder="Wohnzimmer"></label>
         <label>Lamellen-Entitaet (optional)<select data-field="tilt_entity"><option value="">Gleiche Entitaet verwenden</option>${entities.map((entity) => `<option value="${entity}" ${this._config.tilt_entity === entity ? "selected" : ""}>${entity}</option>`).join("")}</select></label>
         <label class="check"><input data-field="show_tilt" type="checkbox" ${this._config.show_tilt !== false ? "checked" : ""}> Lamellenregler anzeigen</label>
+        <label class="check"><input data-field="show_preview" type="checkbox" ${this._config.show_preview !== false ? "checked" : ""}> Vorschau und Prozentanzeige anzeigen</label>
+        <label class="check"><input data-field="invert_position" type="checkbox" ${this._config.invert_position === true ? "checked" : ""}> Slider und Prozentanzeige umkehren</label>
+        <label>Button-Groesse (${size})<input data-field="button_size" type="range" min="1" max="5" step="1" value="${size}"></label>
       </div>`;
     this.querySelectorAll("[data-field]").forEach((input) => input.addEventListener("change", (event) => {
       const field = event.target.dataset.field;
-      const value = event.target.type === "checkbox" ? event.target.checked : event.target.value;
+      const value = event.target.type === "checkbox" ? event.target.checked : (event.target.type === "range" ? Number(event.target.value) : event.target.value);
       this._config = { ...this._config, [field]: value };
       this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
     }));

@@ -17,6 +17,10 @@
 - [x] Responsives Layout und deutsche Beschriftungen umsetzen.
 - [x] README mit Installation, YAML-Konfiguration und Voraussetzungen verfassen.
 - [x] JavaScript-Syntax und Service-Aufrufe lokal pruefen.
+- [x] Prozent-/Slider-Richtung invertierbar machen und Standard auf Prozent geschlossen setzen.
+- [x] Slider-Zielposition als offenen Marker bis zur gemeldeten Istposition anzeigen.
+- [x] Button-Groesse 1 bis 5, skalierte Lamellenleiste und kompakte Ansicht ergaenzen.
+- [x] Vertikales, animiertes Schnellwahlmenue und HACS-Vorschaubild ergaenzen.
 
 ## Marketplace / HACS
 
@@ -24,6 +28,7 @@
 - [x] Anleitung fuer ein benutzerspezifisches Marketplace-/HACS-Repository dokumentieren.
 - [x] Manifest, Dateinamen und JavaScript lokal validieren.
 - [x] Oeffentliches GitHub-Repository `bimberle/glass-cover-card` und Release `v1.0.0` erstellen.
+- [ ] Aenderungen als Release `v1.1.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
