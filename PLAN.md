@@ -34,6 +34,8 @@
 - [x] Glass Button Card mit Buttonliste, Entity-/Icon-/Text-/Aktionauswahl, Größenstufen und Spaltenoption erstellen.
 - [x] HACS-kompatiblen Build nach `dist/` sowie Smoke-Tests für beide Karten ergänzen.
 - [x] README mit Buttonkartenbeispiel, Iconauswahl und Mehrkarten-Ressourcen aktualisieren.
+- [x] Beide Karten ueber die automatisch erkannte HACS-Einstiegsressource registrieren und Mehrfachregistrierungen verhindern.
+- [x] Marketplace-Bildlinks auf absolute Raw-GitHub-URLs umstellen und Updatehinweis fuer v1.7.0 ergaenzen.
 
 ## Marketplace / HACS
 
@@ -48,6 +50,7 @@
 - [x] Buttongruppen-Konfiguration als Release `v1.5.0` veroeffentlichen.
 - [x] Abstands- und Bildgroessenkorrektur als Release `v1.6.0` veroeffentlichen.
 - [x] Glass Button Card und Mehrkartenpaket als Release `v1.7.0` veroeffentlichen.
+- [ ] Ressourcen- und Marketplace-Bildkorrektur als Release `v1.8.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz

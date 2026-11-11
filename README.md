@@ -15,7 +15,7 @@ npm test
 
 ### Glass Cover Card
 
-![Vorschau der Glass Cover Card](designvorlage.png)
+![Vorschau der Glass Cover Card](https://raw.githubusercontent.com/bimberle/glass-cover-card/main/designvorlage.png)
 
 Steuert eine Jalousie mit Positionsregler, Hoch/Stopp/Runter, optionaler Lamellenleiste und Schnellwahl.
 
@@ -38,7 +38,7 @@ preview_size: 5
 
 ### Glass Button Card
 
-![Vorschau der Glass Button Card](glass-button-card-preview.jpg)
+![Vorschau der Glass Button Card](https://raw.githubusercontent.com/bimberle/glass-cover-card/main/glass-button-card-preview.jpg)
 
 Zeigt mehrere runde Buttons nebeneinander. Pro Button sind Entitaet, Icon, Text und Aktion einstellbar. Die Icon-Auswahl enthaelt unter anderem Sofa, Licht, Jalousie und Fernseher.
 
@@ -70,22 +70,24 @@ In Home Assistant kann die Liste im visuellen Karteneditor bearbeitet werden: Bu
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die Karte `glass-button-card.js` wird aus demselben `dist/`-Ordner mitinstalliert. Die aktuelle Repository-Version ist `v1.7.0`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert beide Karten. Die aktuelle Repository-Version ist `v1.8.0`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
 3. Fuege `https://github.com/bimberle/glass-cover-card` hinzu und waehle den Typ **Dashboard**.
 4. Suche nach **Glass Cover Cards**, oeffne den Eintrag und installiere ihn.
-5. Fuege beide JavaScript-Ressourcen hinzu, falls sie nicht automatisch registriert wurden:
+5. Lade die Dashboard-Ressource neu. Die Ressource `glass-cover-card.js` registriert sowohl `custom:glass-cover-card` als auch `custom:glass-button-card`.
 
-  - Home Assistant 2026.11+: `/local/community/glass-cover-card/glass-cover-card.js` und `/local/community/glass-cover-card/glass-button-card.js`
-  - Aeltere HACS-Versionen: `/hacsfiles/glass-cover-card.js` und `/hacsfiles/glass-button-card.js`
+  - Home Assistant 2026.11+: `/local/community/glass-cover-card/glass-cover-card.js`
+  - Aeltere HACS-Versionen: `/hacsfiles/glass-cover-card.js`
 
-Beide Ressourcen muessen als **JavaScript-Modul** eingetragen sein. Die Karten koennen danach im Dashboard-Editor als benutzerdefinierte Karten hinzugefuegt werden.
+Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
+
+**Schon v1.7.0 installiert?** Aktualisiere auf v1.8.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter. Falls du vorerst bei v1.7.0 bleibst, musst du zusaetzlich die Button-Ressource registrieren: `/local/community/glass-cover-card/glass-button-card.js` (Home Assistant 2026.11+) oder `/hacsfiles/glass-button-card.js` (aelteres HACS). Beide Ressourcen muessen als **JavaScript-Modul** eingetragen sein.
 
 ## Manuelle Installation
 
-Kopiere beide Dateien aus `dist/` nach `/config/www/` und registriere `/local/glass-cover-card.js` sowie `/local/glass-button-card.js` unter **Einstellungen > Dashboards > Ressourcen** jeweils als **JavaScript-Modul**.
+Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/local/glass-cover-card.js` unter **Einstellungen > Dashboards > Ressourcen** als **JavaScript-Modul**. Die Datei enthaelt beide Karten. Optional kann fuer eine isolierte Buttonkarten-Installation stattdessen nur `glass-button-card.js` kopiert und `/local/glass-button-card.js` registriert werden.
 
 ## Optionen
 

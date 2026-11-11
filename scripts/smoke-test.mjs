@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 
-async function loadCard(filePath, className, editorName) {
+async function loadCard(filePath, cardTag, editorTag) {
   const definitions = new Map();
   const customCards = [];
   const dispatchedEvents = [];
@@ -52,14 +52,16 @@ async function loadCard(filePath, className, editorName) {
 
   vm.runInNewContext(await readFile(filePath, "utf8"), context, { filename: filePath });
   return {
-    Card: vm.runInContext(className, context),
-    Editor: vm.runInContext(editorName, context),
+    Card: definitions.get(cardTag),
+    Editor: definitions.get(editorTag),
+    definitions,
     customCards,
     dispatchedEvents,
+    runSource: (source, filename) => vm.runInNewContext(source, context, { filename }),
   };
 }
 
-const buttonModule = await loadCard("dist/glass-button-card.js", "GlassButtonCard", "GlassButtonCardEditor");
+const buttonModule = await loadCard("dist/glass-button-card.js", "glass-button-card", "glass-button-card-editor");
 const buttonCard = new buttonModule.Card();
 const serviceCalls = [];
 buttonCard.setConfig({
@@ -107,7 +109,7 @@ assert.match(editor.innerHTML, /Buttons pro Reihe/);
 assert.match(editor.innerHTML, /Icon/);
 assert.match(editor.innerHTML, /Button hinzufuegen/);
 
-const coverModule = await loadCard("dist/glass-cover-card.js", "GlassCoverCard", "GlassCoverCardEditor");
+const coverModule = await loadCard("dist/glass-cover-card.js", "glass-cover-card", "glass-cover-card-editor");
 const coverCard = new coverModule.Card();
 coverCard.setConfig({ entity: "cover.office", show_preview: false });
 coverCard.hass = {
@@ -118,4 +120,11 @@ assert.match(coverCard.shadowRoot.innerHTML, /range-row/);
 assert.match(coverCard.shadowRoot.innerHTML, /class="controls"/);
 assert.equal(coverModule.customCards[0].type, "glass-cover-card");
 
-console.log("OK: both cards load; button render, toggle/more-info, editor options, and cover card remain available");
+const marketplaceEntry = await loadCard("dist/glass-cover-card.js", "glass-cover-card", "glass-cover-card-editor");
+assert.ok(marketplaceEntry.definitions.has("glass-button-card"));
+assert.ok(marketplaceEntry.definitions.has("glass-button-card-editor"));
+assert.deepEqual(marketplaceEntry.customCards.map((card) => card.type).sort(), ["glass-button-card", "glass-cover-card"]);
+await marketplaceEntry.runSource(await readFile("dist/glass-button-card.js", "utf8"), "dist/glass-button-card.js");
+assert.equal(marketplaceEntry.customCards.length, 2, "Loading both resources must not register duplicate card entries");
+
+console.log("OK: primary Marketplace resource registers both cards; button render/actions/editor and duplicate loads pass");

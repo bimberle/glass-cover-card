@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.7.0";
+const CARD_VERSION = "1.8.0";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -330,4 +330,6 @@ if (!customElements.get("glass-cover-card")) customElements.define("glass-cover-
 if (!customElements.get("glass-cover-card-editor")) customElements.define("glass-cover-card-editor", GlassCoverCardEditor);
 
 window.customCards = window.customCards || [];
-window.customCards.push({ type: "glass-cover-card", name: "Glass Cover Card", description: "Responsive Jalousiensteuerung mit optionaler Lamellensteuerung.", preview: true, version: CARD_VERSION });
+if (!window.customCards.some((card) => card.type === "glass-cover-card")) {
+  window.customCards.push({ type: "glass-cover-card", name: "Glass Cover Card", description: "Responsive Jalousiensteuerung mit optionaler Lamellensteuerung.", preview: true, version: CARD_VERSION });
+}

@@ -247,4 +247,6 @@ if (!customElements.get("glass-button-card")) customElements.define("glass-butto
 if (!customElements.get("glass-button-card-editor")) customElements.define("glass-button-card-editor", GlassButtonCardEditor);
 
 window.customCards = window.customCards || [];
-window.customCards.push({ type: "glass-button-card", name: "Glass Button Card", description: "Runde, nebeneinander angeordnete Home Assistant Buttons mit Icon-Auswahl.", preview: true, version: CARD_VERSION });
+if (!window.customCards.some((card) => card.type === "glass-button-card")) {
+  window.customCards.push({ type: "glass-button-card", name: "Glass Button Card", description: "Runde, nebeneinander angeordnete Home Assistant Buttons mit Icon-Auswahl.", preview: true, version: CARD_VERSION });
+}
