@@ -38,7 +38,7 @@
 - [x] Aenderungen als Release `v1.1.0` veroeffentlichen.
 - [x] Folgeaenderungen als Release `v1.2.0` veroeffentlichen.
 - [x] Kompaktabstand und vierten Steuerbutton als Release `v1.3.0` veroeffentlichen.
-- [ ] Optionalen vierten Steuerbutton als Release `v1.4.0` veroeffentlichen.
+- [x] Optionalen vierten Steuerbutton als Release `v1.4.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
