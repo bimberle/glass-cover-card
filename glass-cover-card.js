@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.3.0";
+const CARD_VERSION = "1.4.0";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -20,6 +20,7 @@ class GlassCoverCard extends HTMLElement {
     this._config = {
       name: "",
       show_tilt: true,
+      show_close_tilt: true,
       show_preview: true,
       invert_position: false,
       button_size: 5,
@@ -160,6 +161,7 @@ class GlassCoverCard extends HTMLElement {
     const title = this._escape(this._config.title || "Beschattung");
     const name = this._escape(this._config.name || this._state()?.attributes?.friendly_name || this._config.entity);
     const showTilt = this._config.show_tilt !== false;
+    const showCloseTilt = this._config.show_close_tilt !== false;
     const showPreview = this._config.show_preview !== false;
     const buttonLevel = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
     const titleLevel = Math.min(5, Math.max(1, Number(this._config.title_size) || 5));
@@ -244,7 +246,7 @@ class GlassCoverCard extends HTMLElement {
           <button class="round raise" aria-label="Hochfahren" title="Hochfahren">${this._icon("up")}</button>
           <button class="round stop" aria-label="Stoppen" title="Stoppen">${this._icon("stop")}</button>
           <button class="round lower" aria-label="Runterfahren" title="Runterfahren">${this._icon("down")}</button>
-          <button class="round close-tilt" aria-label="100 Prozent geschlossen, Lamellen 50 Prozent" title="100 % geschlossen, Lamellen 50 %">${this._icon("half")}</button>
+          ${showCloseTilt ? `<button class="round close-tilt" aria-label="100 Prozent geschlossen, Lamellen 50 Prozent" title="100 % geschlossen, Lamellen 50 %">${this._icon("half")}</button>` : ""}
         </nav>
         <div class="divider" ${showTilt ? "" : "hidden"}></div>
         <div class="tilt-row" ${showTilt ? "" : "hidden"}>
@@ -274,7 +276,7 @@ class GlassCoverCard extends HTMLElement {
 
 class GlassCoverCardEditor extends HTMLElement {
   setConfig(config) {
-    this._config = { show_tilt: true, ...config };
+    this._config = { show_tilt: true, show_close_tilt: true, ...config };
     this._render();
   }
 
@@ -301,6 +303,7 @@ class GlassCoverCardEditor extends HTMLElement {
         <label>Anzeigename<input data-field="name" value="${this._escape(this._config.name || "")}" placeholder="Wohnzimmer"></label>
         <label>Lamellen-Entitaet (optional)<select data-field="tilt_entity"><option value="">Gleiche Entitaet verwenden</option>${entities.map((entity) => `<option value="${entity}" ${this._config.tilt_entity === entity ? "selected" : ""}>${entity}</option>`).join("")}</select></label>
         <label class="check"><input data-field="show_tilt" type="checkbox" ${this._config.show_tilt !== false ? "checked" : ""}> Lamellenregler anzeigen</label>
+        <label class="check"><input data-field="show_close_tilt" type="checkbox" ${this._config.show_close_tilt !== false ? "checked" : ""}> Button „geschlossen + Lamellen 50 %“ anzeigen</label>
         <label class="check"><input data-field="show_preview" type="checkbox" ${this._config.show_preview !== false ? "checked" : ""}> Vorschau und Prozentanzeige anzeigen</label>
         <label class="check"><input data-field="invert_position" type="checkbox" ${this._config.invert_position === true ? "checked" : ""}> Slider und Prozentanzeige umkehren</label>
         <label>Button-Groesse (${size})<input data-field="button_size" type="range" min="1" max="5" step="1" value="${size}"></label>

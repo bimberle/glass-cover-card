@@ -27,6 +27,7 @@
 - [x] Original `designvorlage.png` in die Marketplace-Beschreibung aufnehmen.
 - [x] Im Kompaktmodus mehr Abstand vor dem Positionsslider lassen.
 - [x] Vierten Hauptbutton fuer geschlossen plus Lamellen 50 % ergaenzen.
+- [x] Vierten Hauptbutton ueber `show_close_tilt` optional schaltbar machen.
 
 ## Marketplace / HACS
 
@@ -37,6 +38,7 @@
 - [x] Aenderungen als Release `v1.1.0` veroeffentlichen.
 - [x] Folgeaenderungen als Release `v1.2.0` veroeffentlichen.
 - [x] Kompaktabstand und vierten Steuerbutton als Release `v1.3.0` veroeffentlichen.
+- [ ] Optionalen vierten Steuerbutton als Release `v1.4.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
