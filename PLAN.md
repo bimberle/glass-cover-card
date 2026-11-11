@@ -28,7 +28,7 @@
 - [x] Anleitung fuer ein benutzerspezifisches Marketplace-/HACS-Repository dokumentieren.
 - [x] Manifest, Dateinamen und JavaScript lokal validieren.
 - [x] Oeffentliches GitHub-Repository `bimberle/glass-cover-card` und Release `v1.0.0` erstellen.
-- [ ] Aenderungen als Release `v1.1.0` veroeffentlichen.
+- [x] Aenderungen als Release `v1.1.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
