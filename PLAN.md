@@ -72,7 +72,7 @@
 - [x] Panel-Unterüberschrift mit Größenregler `title_size` von 1 bis 5 ergänzen.
 - [x] Panel-Titelgrößenregler als Release `v1.16.0` veröffentlichen.
 - [x] Panel-Kopfzeile typografisch und geometrisch an die Cover-Kopfzeile angleichen.
-- [ ] Kopfzeilenangleichung als Release `v1.17.0` veröffentlichen.
+- [x] Kopfzeilenangleichung als Release `v1.17.0` veröffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
