@@ -1,5 +1,5 @@
 (() => {
-const CARD_VERSION = "1.10.0";
+const CARD_VERSION = "1.11.0";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -12,6 +12,7 @@ class GlassCoverCard extends HTMLElement {
     this._pendingTilt = null;
     this._pendingTiltTimer = null;
     this._targetPosition = null;
+    this._hassRenderKey = null;
   }
 
   setConfig(config) {
@@ -46,7 +47,18 @@ class GlassCoverCard extends HTMLElement {
       window.clearTimeout(this._pendingTiltTimer);
       this._pendingTilt = null;
     }
-    this._render();
+    const coverState = hass.states?.[this._config?.entity];
+    const tiltState = hass.states?.[tiltEntity];
+    const renderKey = JSON.stringify([
+      coverState?.state,
+      coverState?.attributes?.current_position,
+      coverState?.attributes?.friendly_name,
+      tiltState?.attributes?.current_tilt_position,
+    ]);
+    if (renderKey !== this._hassRenderKey) {
+      this._hassRenderKey = renderKey;
+      this._render();
+    }
   }
 
   get hass() {
@@ -57,8 +69,38 @@ class GlassCoverCard extends HTMLElement {
     return (this._config?.show_preview !== false ? 4 : 2) + (this._config?.show_tilt !== false ? 1 : 0);
   }
 
-  static getConfigElement() {
-    return document.createElement("glass-cover-card-editor");
+  static getConfigForm() {
+    const schema = [
+      { name: "entity", required: true, selector: { entity: { filter: { domain: "cover" } } } },
+      { name: "name", selector: { text: {} } },
+      { name: "title", default: "Beschattung", selector: { text: {} } },
+      { name: "tilt_entity", selector: { entity: { filter: { domain: "cover" } } } },
+      { name: "show_tilt", default: true, selector: { boolean: {} } },
+      { name: "show_main_controls", default: true, selector: { boolean: {} } },
+      { name: "show_close_tilt", default: true, selector: { boolean: {} } },
+      { name: "show_preview", default: true, selector: { boolean: {} } },
+      { name: "invert_position", default: false, selector: { boolean: {} } },
+      { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+      { name: "title_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+      { name: "preview_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+    ];
+    return {
+      schema,
+      computeLabel: (field) => ({
+        entity: "Jalousie",
+        name: "Anzeigename",
+        title: "Überschrift",
+        tilt_entity: "Lamellen-Entität",
+        show_tilt: "Lamellenregler anzeigen",
+        show_main_controls: "Hoch/Stopp/Runter anzeigen",
+        show_close_tilt: "Schließen-und-Lamellen-Button anzeigen",
+        show_preview: "Vorschau und Prozentanzeige anzeigen",
+        invert_position: "Position umkehren",
+        button_size: "Button-Größe",
+        title_size: "Überschrift-Größe",
+        preview_size: "Bild- und Prozentgröße",
+      })[field.name],
+    };
   }
 
   static getStubConfig() {
@@ -277,58 +319,7 @@ class GlassCoverCard extends HTMLElement {
   }
 }
 
-class GlassCoverCardEditor extends HTMLElement {
-  setConfig(config) {
-    this._config = { show_tilt: true, show_main_controls: true, show_close_tilt: true, ...config };
-    this._render();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    this._render();
-  }
-
-  _render() {
-    if (!this._config || !this._hass) return;
-    const entities = Object.keys(this._hass.states).filter((entity) => entity.startsWith("cover."));
-    const size = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
-    const titleSize = Math.min(5, Math.max(1, Number(this._config.title_size) || 5));
-    const previewSize = Math.min(5, Math.max(1, Number(this._config.preview_size) || 5));
-    this.innerHTML = `
-      <style>
-        .form { display:grid; gap:12px; padding:12px 0; }
-        label { display:grid; gap:6px; }
-        input,select { min-height:40px; padding:8px; color:var(--primary-text-color); background:var(--input-fill-color,#202124); border:1px solid var(--divider-color,#555); border-radius:4px; font:inherit; }
-        .check { display:flex; align-items:center; gap:9px; }
-      </style>
-      <div class="form">
-        <label>Jalousie-Entitaet<select data-field="entity"><option value="">Entitaet auswaehlen</option>${entities.map((entity) => `<option value="${entity}" ${this._config.entity === entity ? "selected" : ""}>${entity}</option>`).join("")}</select></label>
-        <label>Anzeigename<input data-field="name" value="${this._escape(this._config.name || "")}" placeholder="Wohnzimmer"></label>
-        <label>Lamellen-Entitaet (optional)<select data-field="tilt_entity"><option value="">Gleiche Entitaet verwenden</option>${entities.map((entity) => `<option value="${entity}" ${this._config.tilt_entity === entity ? "selected" : ""}>${entity}</option>`).join("")}</select></label>
-        <label class="check"><input data-field="show_tilt" type="checkbox" ${this._config.show_tilt !== false ? "checked" : ""}> Lamellenregler anzeigen</label>
-        <label class="check"><input data-field="show_main_controls" type="checkbox" ${this._config.show_main_controls !== false ? "checked" : ""}> Buttons Hoch, Stopp und Runter anzeigen</label>
-        <label class="check"><input data-field="show_close_tilt" type="checkbox" ${this._config.show_close_tilt !== false ? "checked" : ""}> Button „geschlossen + Lamellen 50 %“ anzeigen</label>
-        <label class="check"><input data-field="show_preview" type="checkbox" ${this._config.show_preview !== false ? "checked" : ""}> Vorschau und Prozentanzeige anzeigen</label>
-        <label class="check"><input data-field="invert_position" type="checkbox" ${this._config.invert_position === true ? "checked" : ""}> Slider und Prozentanzeige umkehren</label>
-        <label>Button-Groesse (${size})<input data-field="button_size" type="range" min="1" max="5" step="1" value="${size}"></label>
-        <label>Ueberschrift-Groesse (${titleSize})<input data-field="title_size" type="range" min="1" max="5" step="1" value="${titleSize}"></label>
-        <label>Bild- und Prozentgroesse (${previewSize})<input data-field="preview_size" type="range" min="1" max="5" step="1" value="${previewSize}"></label>
-      </div>`;
-    this.querySelectorAll("[data-field]").forEach((input) => input.addEventListener("change", (event) => {
-      const field = event.target.dataset.field;
-      const value = event.target.type === "checkbox" ? event.target.checked : (event.target.type === "range" ? Number(event.target.value) : event.target.value);
-      this._config = { ...this._config, [field]: value };
-      this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
-    }));
-  }
-
-  _escape(value) {
-    return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[char]);
-  }
-}
-
 if (!customElements.get("glass-cover-card")) customElements.define("glass-cover-card", GlassCoverCard);
-if (!customElements.get("glass-cover-card-editor")) customElements.define("glass-cover-card-editor", GlassCoverCardEditor);
 
 window.customCards = window.customCards || [];
 if (!window.customCards.some((card) => card.type === "glass-cover-card")) {
@@ -337,41 +328,12 @@ if (!window.customCards.some((card) => card.type === "glass-cover-card")) {
 })();
 
 (() => {
-const CARD_VERSION = "1.3.0";
+const CARD_VERSION = "1.4.0";
 const BUTTON_COLORS = {
   orange: "#ff8b2b",
   white: "#f2f2f4",
   gray: "#8f9299",
 };
-const BUTTON_ICONS = [
-  "mdi:sofa-outline",
-  "mdi:lightbulb-outline",
-  "mdi:blinds-horizontal",
-  "mdi:television",
-  "mdi:power",
-  "mdi:fan",
-  "mdi:lock-outline",
-  "mdi:home-outline",
-  "mdi:lamp",
-  "mdi:ceiling-light",
-  "mdi:window-shutter",
-  "mdi:curtains",
-  "mdi:volume-high",
-  "mdi:music",
-  "mdi:play",
-  "mdi:pause",
-  "mdi:weather-sunny",
-  "mdi:weather-night",
-  "mdi:fire",
-  "mdi:water",
-  "mdi:coffee",
-  "mdi:door",
-  "mdi:garage",
-  "mdi:robot-vacuum",
-  "mdi:lightning-bolt",
-  "mdi:air-conditioner",
-];
-
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -416,8 +378,38 @@ class GlassButtonCard extends HTMLElement {
     return this._config?.show_name === false ? 2 : 3;
   }
 
-  static getConfigElement() {
-    return document.createElement("glass-button-card-editor");
+  static getConfigForm() {
+    const schema = [
+      { name: "entity", required: true, selector: { entity: {} } },
+      { name: "icon", selector: { icon: {} } },
+      { name: "name", selector: { text: {} } },
+      {
+        name: "action",
+        default: "toggle",
+        selector: { select: { mode: "dropdown", options: [["toggle", "Ein-/Ausschalten"], ["more-info", "Mehr Informationen anzeigen"]] } },
+      },
+      {
+        name: "color",
+        default: "orange",
+        selector: { select: { mode: "dropdown", options: [["orange", "Orange"], ["white", "Weiß"], ["gray", "Grau"]] } },
+      },
+      { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+      { name: "show_name", default: true, selector: { boolean: {} } },
+      { name: "show_card_frame", default: true, selector: { boolean: {} } },
+    ];
+      return {
+        schema,
+        computeLabel: (field) => ({
+          entity: "Entität",
+          icon: "Icon",
+          name: "Text",
+          action: "Aktion",
+          color: "Farbe",
+          button_size: "Button-Größe",
+          show_name: "Buttontext anzeigen",
+          show_card_frame: "Kartenrahmen anzeigen",
+        })[field.name],
+      };
   }
 
   static getStubConfig() {
@@ -490,77 +482,7 @@ class GlassButtonCard extends HTMLElement {
   }
 }
 
-class GlassButtonCardEditor extends HTMLElement {
-  setConfig(config) {
-    this._config = {
-      entity: "",
-      name: "",
-      icon: "mdi:gesture-tap-button",
-      action: "toggle",
-      button_size: 5,
-      show_name: true,
-      show_card_frame: true,
-      color: "orange",
-      ...config,
-    };
-    this._render();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    this._render();
-  }
-
-  _update(patch) {
-    this._config = { ...this._config, ...patch };
-    this._notify();
-    this._render();
-  }
-
-  _notify() {
-    this.dispatchEvent(new CustomEvent("config-changed", {
-      bubbles: true,
-      composed: true,
-      detail: { config: this._config },
-    }));
-  }
-
-  _render() {
-    if (!this._config || !this._hass) return;
-    const entities = Object.keys(this._hass.states || {}).sort();
-    const size = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
-    const entityOptions = (selected) => `<option value="">Entitaet auswaehlen</option>${entities.map((entity) => `<option value="${escapeHtml(entity)}" ${entity === selected ? "selected" : ""}>${escapeHtml(entity)}</option>`).join("")}`;
-    const iconOptions = (selected) => [...new Set([selected, ...BUTTON_ICONS])].filter(Boolean).map((icon) => `<option value="${escapeHtml(icon)}" ${icon === selected ? "selected" : ""}>${escapeHtml(icon)}</option>`).join("");
-
-    this.innerHTML = `
-      <style>
-        .form { display:grid; gap:14px; padding:12px 0; }
-        label { display:grid; gap:6px; min-width:0; }
-        input,select,button { min-height:40px; padding:8px 10px; color:var(--primary-text-color); background:var(--input-fill-color,#202124); border:1px solid var(--divider-color,#555); border-radius:4px; font:inherit; }
-        .check { display:flex; align-items:center; gap:9px; }
-        .icon-preview { align-self:center; justify-self:start; width:28px; height:28px; --mdc-icon-size:28px; }
-      </style>
-      <div class="form">
-        <label>Entitaet<select data-setting="entity">${entityOptions(this._config.entity)}</select></label>
-        <label>Icon<select data-setting="icon">${iconOptions(this._config.icon || "mdi:gesture-tap-button")}</select><ha-icon class="icon-preview" icon="${escapeHtml(this._config.icon || "mdi:gesture-tap-button")}"></ha-icon></label>
-        <label>Text<input data-setting="name" value="${escapeHtml(this._config.name || "")}" placeholder="Anzeigename oder Friendly Name"></label>
-        <label>Aktion<select data-setting="action"><option value="toggle" ${this._config.action !== "more-info" ? "selected" : ""}>Ein-/Ausschalten</option><option value="more-info" ${this._config.action === "more-info" ? "selected" : ""}>Mehr Informationen anzeigen</option></select></label>
-        <label>Farbe<select data-setting="color"><option value="orange" ${!BUTTON_COLORS[this._config.color] || this._config.color === "orange" ? "selected" : ""}>Orange</option><option value="white" ${this._config.color === "white" ? "selected" : ""}>Weiss</option><option value="gray" ${this._config.color === "gray" ? "selected" : ""}>Grau</option></select></label>
-        <label>Button-Groesse (${size})<input data-setting="button_size" type="range" min="1" max="5" step="1" value="${size}"></label>
-        <label class="check"><input data-setting="show_name" type="checkbox" ${this._config.show_name !== false ? "checked" : ""}> Buttontexte anzeigen</label>
-        <label class="check"><input data-setting="show_card_frame" type="checkbox" ${this._config.show_card_frame !== false ? "checked" : ""}> Kartenrahmen anzeigen</label>
-      </div>`;
-
-    this.querySelectorAll("[data-setting]").forEach((input) => input.addEventListener("change", (event) => {
-      const { setting } = event.target.dataset;
-      const value = event.target.type === "checkbox" ? event.target.checked : (event.target.type === "range" ? Number(event.target.value) : event.target.value);
-      this._update({ [setting]: value });
-    }));
-  }
-}
-
 if (!customElements.get("glass-button-card")) customElements.define("glass-button-card", GlassButtonCard);
-if (!customElements.get("glass-button-card-editor")) customElements.define("glass-button-card-editor", GlassButtonCardEditor);
 
 window.customCards = window.customCards || [];
 if (!window.customCards.some((card) => card.type === "glass-button-card")) {

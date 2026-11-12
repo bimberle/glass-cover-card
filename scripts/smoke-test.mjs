@@ -9,8 +9,17 @@ async function loadCard(filePath, cardTag, editorTag) {
 
   class HTMLElement {
     attachShadow() {
+      const host = this;
+      this._innerHTMLWrites = 0;
       this.shadowRoot = {
-        innerHTML: "",
+        _innerHTML: "",
+        get innerHTML() {
+          return this._innerHTML;
+        },
+        set innerHTML(value) {
+          this._innerHTML = value;
+          host._innerHTMLWrites += 1;
+        },
         querySelector: () => null,
         querySelectorAll: () => [],
       };
@@ -113,15 +122,14 @@ assert.match(buttonCard.shadowRoot.innerHTML, /--button-size:clamp\(24px,5vw,38p
 assert.match(buttonCard.shadowRoot.innerHTML, /class="card no-frame"/);
 assert.doesNotMatch(buttonCard.shadowRoot.innerHTML, /class="name"/);
 
-const editor = new buttonModule.Editor();
-editor.setConfig({ entity: "light.living_room", name: "Wohnzimmer", icon: "mdi:sofa-outline" });
-editor.hass = { states: { "light.living_room": { state: "on", attributes: {} } } };
-assert.match(editor.innerHTML, /Button-Groesse/);
-assert.match(editor.innerHTML, /Icon/);
-assert.match(editor.innerHTML, /Orange/);
-assert.match(editor.innerHTML, /Weiss/);
-assert.match(editor.innerHTML, /Grau/);
-assert.match(editor.innerHTML, /Kartenrahmen anzeigen/);
+const buttonForm = buttonModule.Card.getConfigForm();
+const buttonSchema = Object.fromEntries(buttonForm.schema.map((field) => [field.name, field]));
+assert.equal(buttonSchema.entity.selector.entity !== undefined, true);
+assert.equal(buttonSchema.icon.selector.icon !== undefined, true);
+assert.equal(buttonSchema.color.selector.select.options.map(([value]) => value).join(","), "orange,white,gray");
+assert.equal(buttonSchema.button_size.selector.number.mode, "slider");
+assert.equal(buttonSchema.show_card_frame.selector.boolean !== undefined, true);
+assert.equal(buttonModule.Card.getConfigElement, undefined);
 
 const coverModule = await loadCard("dist/glass-cover-card.js", "glass-cover-card", "glass-cover-card-editor");
 const coverCard = new coverModule.Card();
@@ -133,10 +141,30 @@ coverCard.hass = {
 assert.match(coverCard.shadowRoot.innerHTML, /range-row/);
 assert.match(coverCard.shadowRoot.innerHTML, /class="controls"/);
 assert.equal(coverModule.customCards[0].type, "glass-cover-card");
+const initialCoverRenderCount = coverCard._innerHTMLWrites;
+coverCard.hass = {
+  states: {
+    "cover.office": { state: "open", attributes: { current_position: 45 } },
+    "sensor.unrelated": { state: "12", attributes: {} },
+  },
+  callService: (...args) => serviceCalls.push(args),
+};
+assert.equal(coverCard._innerHTMLWrites, initialCoverRenderCount, "Unrelated HA state changes must not rebuild the cover card DOM");
+coverCard.hass = {
+  states: { "cover.office": { state: "open", attributes: { current_position: 44 } } },
+  callService: (...args) => serviceCalls.push(args),
+};
+assert.equal(coverCard._innerHTMLWrites, initialCoverRenderCount + 1, "Relevant cover updates must refresh the preview");
+const coverForm = coverModule.Card.getConfigForm();
+const coverSchema = Object.fromEntries(coverForm.schema.map((field) => [field.name, field]));
+assert.equal(coverSchema.entity.selector.entity.filter.domain, "cover");
+assert.equal(coverSchema.tilt_entity.selector.entity.filter.domain, "cover");
+assert.equal(coverSchema.button_size.selector.number.mode, "slider");
+assert.equal(coverModule.Card.getConfigElement, undefined);
 
 const marketplaceEntry = await loadCard("dist/glass-cover-card.js", "glass-cover-card", "glass-cover-card-editor");
 assert.ok(marketplaceEntry.definitions.has("glass-button-card"));
-assert.ok(marketplaceEntry.definitions.has("glass-button-card-editor"));
+assert.equal(typeof marketplaceEntry.Card.getConfigForm, "function");
 assert.deepEqual(marketplaceEntry.customCards.map((card) => card.type).sort(), ["glass-button-card", "glass-cover-card"]);
 await marketplaceEntry.runSource(await readFile("dist/glass-button-card.js", "utf8"), "dist/glass-button-card.js");
 assert.equal(marketplaceEntry.customCards.length, 2, "Loading both resources must not register duplicate card entries");
