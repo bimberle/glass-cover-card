@@ -357,6 +357,16 @@ await marketplaceEntry.runSource(await readFile("dist/glass-button-card.js", "ut
 assert.equal(marketplaceEntry.customCards.length, 4, "Loading standalone cards must not register duplicate card entries");
 
 const rgbCard = new (marketplaceEntry.definitions.get("glass-rgb-card"))();
+const rgbUpdateCard = new (marketplaceEntry.definitions.get("glass-rgb-card"))();
+rgbUpdateCard._config = { entity: "light.rgb_tv" };
+let rgbUpdates = 0;
+rgbUpdateCard._sync = () => { rgbUpdates += 1; };
+const rgbUpdateState = { state: "on", attributes: { friendly_name: "Fernseher", supported_color_modes: ["rgb"], hs_color: [10, 100], brightness: 128 } };
+rgbUpdateCard.hass = { states: { "light.rgb_tv": rgbUpdateState } };
+rgbUpdateCard.hass = { states: { "light.rgb_tv": { ...rgbUpdateState, attributes: { ...rgbUpdateState.attributes } }, "sensor.other": { state: "12" } } };
+assert.equal(rgbUpdates, 1, "Unrelated HA updates must not update the RGB card DOM");
+rgbUpdateCard.hass = { states: { "light.rgb_tv": { ...rgbUpdateState, attributes: { ...rgbUpdateState.attributes, brightness: 200 } } } };
+assert.equal(rgbUpdates, 2, "Changes to RGB brightness must update the card");
 rgbCard._config = { entity: "light.rgb_test", show_presets: true };
 rgbCard._hass = { callService: (...args) => serviceCalls.push(args) };
 rgbCard._updateView = () => {};

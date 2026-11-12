@@ -1,5 +1,5 @@
 (() => {
-const CARD_VERSION = "1.19.0";
+const CARD_VERSION = "1.19.1";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -1049,7 +1049,7 @@ if (!window.customCards.some((card) => card.type === "glass-panel-card")) {
 })();
 
 (() => {
-const RGB_CARD_VERSION = "1.0.0";
+const RGB_CARD_VERSION = "1.0.1";
 const RGB_PRESETS = [[40, 35], [325, 75], [25, 100], [115, 80], [185, 100], [210, 100]];
 const escapeRgb = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 
@@ -1059,6 +1059,7 @@ class GlassRgbCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = null;
     this._hass = null;
+    this._stateKey = null;
     this._presets = [];
     this._selected = -1;
     this._hue = 0;
@@ -1095,7 +1096,16 @@ class GlassRgbCard extends HTMLElement {
     this._sync();
   }
 
-  set hass(hass) { this._hass = hass; this._sync(); }
+  set hass(hass) {
+    this._hass = hass;
+    const state = hass?.states?.[this._config?.entity];
+    const attributes = state?.attributes;
+    const stateKey = JSON.stringify([state?.state, attributes?.friendly_name, attributes?.supported_color_modes, attributes?.brightness, attributes?.hs_color, attributes?.color_temp_kelvin, attributes?.min_color_temp_kelvin, attributes?.max_color_temp_kelvin, attributes?.min_mireds, attributes?.max_mireds]);
+    if (stateKey !== this._stateKey) {
+      this._stateKey = stateKey;
+      this._sync();
+    }
+  }
   get hass() { return this._hass; }
   getCardSize() { return 5; }
 
