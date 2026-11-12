@@ -59,7 +59,7 @@
 - [x] Rahmenlose Darstellung als Release `v1.10.0` veroeffentlichen.
 - [x] Beide Karteneditoren auf Home Assistants native Formularfelder umstellen.
 - [x] Editor-DOM-Neuaufbau bei allgemeinen HA-Updates verhindern und Cover-Renders auf relevante Zustandsänderungen begrenzen.
-- [ ] Native Editorformulare und Cover-Renderkorrektur als Release `v1.11.0` veroeffentlichen.
+- [x] Native Editorformulare und Cover-Renderkorrektur als Release `v1.11.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
