@@ -64,7 +64,7 @@
 - [x] Containerkarte in den gemeinsamen Marketplace-Einstieg integrieren und testen.
 - [x] Panel-Editor auf Home Assistant Standard-Card-Picker und Child-Card-Editor umstellen.
 - [x] Panel-Inhalt wie ein vertikaler Stack anordnen; horizontale Reihen ueber die Standardkarte `horizontal-stack` konfigurieren.
-- [ ] Standard-Card-Picker im Panel als Release `v1.13.0` veroeffentlichen.
+- [x] Standard-Card-Picker im Panel als Release `v1.13.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
