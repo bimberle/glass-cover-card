@@ -70,7 +70,7 @@
 - [x] Renderzaehler-Regressionstest fuer fremde und relevante Entityupdates ergaenzen.
 - [x] Renderstabilisierung als Release `v1.15.0` veroeffentlichen.
 - [x] Panel-Unterüberschrift mit Größenregler `title_size` von 1 bis 5 ergänzen.
-- [ ] Panel-Titelgrößenregler als Release `v1.16.0` veröffentlichen.
+- [x] Panel-Titelgrößenregler als Release `v1.16.0` veröffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
