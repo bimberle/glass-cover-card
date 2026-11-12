@@ -1,5 +1,5 @@
 (() => {
-const CARD_VERSION = "1.17.0";
+const CARD_VERSION = "1.17.1";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -508,7 +508,7 @@ if (!window.customCards.some((card) => card.type === "glass-button-card")) {
 })();
 
 (() => {
-const CARD_VERSION = "1.4.0";
+const CARD_VERSION = "1.4.1";
 const escapePanelText = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -648,13 +648,13 @@ class GlassPanelCard extends HTMLElement {
         .subtitle { margin:7px 0 0; color:var(--primary-text-color,#f3f3f5); font-size:var(--subtitle-font); font-weight:700; line-height:1.08; overflow-wrap:anywhere; }
         .header-action { display:grid; flex:none; width:var(--header-action-size); aspect-ratio:1; place-items:center; padding:0; border:2px solid #303239; border-radius:50%; background:linear-gradient(145deg,#272a30,#17191d); color:#ff8b2b; box-shadow:0 6px 15px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05); cursor:pointer; }
         .header-action.active { border-color:#ff8b2b; color:#ff9b4a; box-shadow:inset 0 0 20px rgba(255,139,43,.12),0 0 0 1px rgba(255,139,43,.2),0 6px 15px rgba(0,0,0,.25); }
-        .header-action ha-icon { --mdc-icon-size:var(--header-action-icon-size); }
+        .header-action ha-icon { display:block; --mdc-icon-size:var(--header-action-icon-size); }
         .children { display:block; min-width:0; }
         .children > * { min-width:0; }
         .empty { color:var(--secondary-text-color,#a0a2ad); }
         @media (max-width:360px) { .panel { padding:18px; } }
       </style>
-      <article class="panel" style="--subtitle-font:clamp(${22 * titleScale}px,${4.8 * titleScale}vw,${38 * titleScale}px);--header-action-size:clamp(56px,11vw,88px);--header-action-icon-size:clamp(25.76px,5.06vw,40.48px)">
+      <article class="panel" style="--subtitle-font:clamp(${22 * titleScale}px,${4.8 * titleScale}vw,${38 * titleScale}px);--header-action-size:clamp(56px,11vw,88px);--header-action-icon-size:clamp(26.88px,5.28vw,42.24px)">
         <header class="header">
           <div class="titles">${title ? `<div class="title">${title}</div>` : ""}${subtitle ? `<h2 class="subtitle">${subtitle}</h2>` : ""}</div>
           ${actionVisible ? `<button class="header-action" aria-label="${escapePanelText(this._config.action_entity)}" title="${escapePanelText(this._config.action_entity)}"><ha-icon icon="${escapePanelText(this._config.action_icon || "mdi:gesture-tap-button")}"></ha-icon></button>` : ""}

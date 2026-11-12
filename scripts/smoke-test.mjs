@@ -270,6 +270,8 @@ panelCard.hass = panelHass;
 assert.match(panelCard.shadowRoot.innerHTML, /Aktionen/);
 assert.match(panelCard.shadowRoot.innerHTML, /Wohnzimmer/);
 assert.match(panelCard.shadowRoot.innerHTML, /--header-action-size:clamp\(56px,11vw,88px\)/);
+assert.match(panelCard.shadowRoot.innerHTML, /--header-action-icon-size:clamp\(26\.88px,5\.28vw,42\.24px\)/);
+assert.match(panelCard.shadowRoot.innerHTML, /\.header-action ha-icon \{ display:block; --mdc-icon-size:var\(--header-action-icon-size\); \}/);
 const smallSubtitleFont = Number(panelCard.shadowRoot.innerHTML.match(/--subtitle-font:clamp\(([\d.]+)px/)?.[1]);
 assert.ok(smallSubtitleFont > 14 && smallSubtitleFont < 16);
 assert.equal(panelCard.shadowRoot.querySelector(".children").children.length, 1);

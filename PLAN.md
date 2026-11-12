@@ -73,6 +73,7 @@
 - [x] Panel-Titelgrößenregler als Release `v1.16.0` veröffentlichen.
 - [x] Panel-Kopfzeile typografisch und geometrisch an die Cover-Kopfzeile angleichen.
 - [x] Kopfzeilenangleichung als Release `v1.17.0` veröffentlichen.
+- [x] Panel-Aktionsicon auf Größe und Zentrierung der Glass Button Card angleichen und als Patch-Release `v1.17.1` veröffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
