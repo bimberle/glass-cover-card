@@ -62,7 +62,7 @@
 - [x] Native Editorformulare und Cover-Renderkorrektur als Release `v1.11.0` veroeffentlichen.
 - [x] Glass Panel Card mit Titel, Untertitel, optionalem Aktionsbutton und verschachtelten Karten umsetzen.
 - [x] Containerkarte in den gemeinsamen Marketplace-Einstieg integrieren und testen.
-- [ ] Glass Panel Card als gemeinsame Release `v1.12.0` veroeffentlichen.
+- [x] Glass Panel Card als gemeinsame Release `v1.12.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
