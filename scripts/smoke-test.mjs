@@ -29,6 +29,7 @@ async function loadCard(filePath, cardTag, editorTag) {
         getAttribute(name) { return this.attributes[name]; },
       };
       const nameLabel = { textContent: "" };
+      const form = { addEventListener() {} };
       this.shadowRoot = {
         _innerHTML: "",
         get innerHTML() {
@@ -38,7 +39,7 @@ async function loadCard(filePath, cardTag, editorTag) {
           this._innerHTML = value;
           host._innerHTMLWrites += 1;
         },
-        querySelector: (selector) => selector === ".children" ? childContainer : (selector === ".header-action" ? headerButton : (selector === ".button" ? cardButton : (selector === ".name" ? nameLabel : null))),
+        querySelector: (selector) => selector === "ha-form" ? form : (selector === ".children" ? childContainer : (selector === ".header-action" ? headerButton : (selector === ".button" ? cardButton : (selector === ".name" ? nameLabel : null)))),
         querySelectorAll: () => [],
       };
       return this.shadowRoot;
@@ -261,6 +262,7 @@ await panelCard.setConfig({
   title: "Aktionen",
   subtitle: "Wohnzimmer",
   title_size: 1,
+  button_size: 1,
   show_action_button: true,
   action_entity: "light.living_room",
   action_icon: "mdi:sofa-outline",
@@ -269,9 +271,8 @@ await panelCard.setConfig({
 panelCard.hass = panelHass;
 assert.match(panelCard.shadowRoot.innerHTML, /Aktionen/);
 assert.match(panelCard.shadowRoot.innerHTML, /Wohnzimmer/);
-assert.match(panelCard.shadowRoot.innerHTML, /--header-action-size:clamp\(56px,11vw,88px\)/);
-assert.match(panelCard.shadowRoot.innerHTML, /--header-action-icon-size:clamp\(26\.88px,5\.28vw,42\.24px\)/);
-assert.match(panelCard.shadowRoot.innerHTML, /\.header-action ha-icon \{ display:block; --mdc-icon-size:var\(--header-action-icon-size\); \}/);
+assert.match(panelCard.shadowRoot.innerHTML, /--header-action-size:clamp\(37\.33333333333333px,7\.333333333333333vw,58\.666666666666664px\)/);
+assert.match(panelCard.shadowRoot.innerHTML, /\.header-action ha-icon \{ display:block; width:46%; height:46%; --mdc-icon-size:100%; \}/);
 const smallSubtitleFont = Number(panelCard.shadowRoot.innerHTML.match(/--subtitle-font:clamp\(([\d.]+)px/)?.[1]);
 assert.ok(smallSubtitleFont > 14 && smallSubtitleFont < 16);
 assert.equal(panelCard.shadowRoot.querySelector(".children").children.length, 1);
@@ -291,11 +292,23 @@ assert.equal(serviceCalls.at(-1)[0], "homeassistant");
 assert.equal(serviceCalls.at(-1)[1], "toggle");
 assert.equal(serviceCalls.at(-1)[2].entity_id, "light.wohnzimmer");
 await panelCard.setConfig({ title: "Aktionen", subtitle: "Wohnzimmer", title_size: 5, cards: [] });
+assert.match(panelCard.shadowRoot.innerHTML, /--header-action-size:clamp\(56px,11vw,88px\)/);
 const largeSubtitleFont = Number(panelCard.shadowRoot.innerHTML.match(/--subtitle-font:clamp\(([\d.]+)px/)?.[1]);
 assert.equal(largeSubtitleFont, 22);
+for (const level of [1, 2, 3, 4, 5]) {
+  coverCard.setConfig({ entity: "cover.office", button_size: level });
+  await panelCard.setConfig({ title: "Aktionen", button_size: level, cards: [] });
+  const coverSize = coverCard.shadowRoot.innerHTML.match(/--menu-size:(clamp\([^)]*\))/)?.[1];
+  const panelSize = panelCard.shadowRoot.innerHTML.match(/--header-action-size:(clamp\([^)]*\))/)?.[1];
+  assert.equal(panelSize, coverSize, `Panel and cover buttons must match at size ${level}`);
+}
 
 const panelEditor = await panelCardClass.getConfigElement();
 panelEditor.setConfig({ title: "Aktionen", subtitle: "Wohnzimmer", cards: [] });
+const panelForm = panelEditor.shadowRoot.querySelector("ha-form");
+const panelButtonSize = panelForm.schema.find((field) => field.name === "button_size");
+assert.equal(panelButtonSize.selector.number.mode, "slider");
+assert.equal(panelForm.computeLabel(panelButtonSize), "Button-Größe");
 assert.match(panelEditor.shadowRoot.innerHTML, /ha-form/);
 assert.match(panelEditor.shadowRoot.innerHTML, /hui-card-picker/);
 assert.match(panelEditor.shadowRoot.innerHTML, /hui-card-element-editor/);

@@ -73,7 +73,7 @@ cards:
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle drei Karten. Die Panel-Kopfzeile entspricht der Cover Card; Icongröße und Zentrierung entsprechen der Glass Button Card. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.17.1`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle drei Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.17.2`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
@@ -86,7 +86,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.17.0 installiert?** Aktualisiere auf v1.17.1 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.17.1 installiert?** Aktualisiere auf v1.17.2 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
@@ -148,6 +148,7 @@ Im Bearbeitungsmodus wählst du über **Karte hinzufügen** den normalen Home-As
 | `subtitle` | leer | Größere Überschrift unter dem Titel |
 | `title_size` | `5` | Größe der großen Unterüberschrift wie bei der Cover Card von `1` (klein) bis `5` (Vorlagengröße) |
 | `show_action_button` | `false` | Runden Button rechts oben anzeigen |
+| `button_size` | `5` | Größe des Aktionsbuttons von `1` bis `5`, entsprechend der Cover Card |
 | `action_entity` | keine | Entität für den Aktionsbutton |
 | `action_icon` | `mdi:gesture-tap-button` | Icon des Aktionsbuttons |
 | `action` | `toggle` | Entität umschalten oder mit `more-info` deren Details öffnen |
