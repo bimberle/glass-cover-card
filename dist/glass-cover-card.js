@@ -1,5 +1,5 @@
 (() => {
-const CARD_VERSION = "1.13.0";
+const CARD_VERSION = "1.14.0";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -491,7 +491,7 @@ if (!window.customCards.some((card) => card.type === "glass-button-card")) {
 })();
 
 (() => {
-const CARD_VERSION = "1.1.0";
+const CARD_VERSION = "1.2.0";
 const escapePanelText = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -576,11 +576,13 @@ class GlassPanelCard extends HTMLElement {
       if (!container) return;
       container.replaceChildren();
       this._children = [];
-      for (const config of cardsConfig) {
-        const card = helpers.createCardElement(config);
-        card.hass = this._hass;
-        this._children.push(card);
-        container.append(card);
+      if (cardsConfig.length === 0) {
+        container.innerHTML = `<div class="empty">Keine Karten konfiguriert.</div>`;
+      } else {
+        const stack = helpers.createCardElement({ type: "vertical-stack", cards: cardsConfig });
+        stack.hass = this._hass;
+        this._children = [stack];
+        container.append(stack);
       }
       this._updateActionState();
     } catch (error) {
@@ -626,7 +628,7 @@ class GlassPanelCard extends HTMLElement {
         .header-action { display:grid; flex:none; width:clamp(56px,10vw,76px); aspect-ratio:1; place-items:center; padding:0; border:2px solid #34373d; border-radius:50%; background:linear-gradient(145deg,#24272c,#141619); color:#ff8b2b; box-shadow:0 6px 15px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05); cursor:pointer; }
         .header-action.active { border-color:#ff8b2b; color:#ff9b4a; box-shadow:inset 0 0 20px rgba(255,139,43,.12),0 0 0 1px rgba(255,139,43,.2),0 6px 15px rgba(0,0,0,.25); }
         .header-action ha-icon { --mdc-icon-size:30px; }
-        .children { display:flex; flex-direction:column; align-items:stretch; gap:clamp(12px,2vw,24px); }
+        .children { display:block; min-width:0; }
         .children > * { min-width:0; }
         .empty { color:var(--secondary-text-color,#a0a2ad); }
         @media (max-width:360px) { .panel { padding:18px; } }

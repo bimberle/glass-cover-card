@@ -73,16 +73,37 @@ async function loadCard(filePath, cardTag, editorTag) {
       clearTimeout,
       loadCardHelpers: async () => ({
         createCardElement: (config) => {
+          const element = {
+            config,
+            set hass(value) {
+              this._hass = value;
+              for (const child of this._children || []) child.hass = value;
+            },
+            get hass() { return this._hass; },
+          };
           if (config.type === "vertical-stack" && !definitions.has("hui-vertical-stack-card")) {
-            definitions.set("hui-vertical-stack-card", class {
+            class VerticalStackCard extends HTMLElement {
+              setConfig(stackConfig) {
+                this._config = stackConfig;
+                this._children = stackConfig.cards.map((childConfig) => ({ config: childConfig }));
+              }
+
+              set hass(value) {
+                this._hass = value;
+                for (const child of this._children) child.hass = value;
+              }
+
               static async getConfigElement() {
                 definitions.set("hui-card-picker", class {});
                 definitions.set("hui-card-element-editor", class {});
                 return {};
               }
-            });
+            }
+            definitions.set("hui-vertical-stack-card", VerticalStackCard);
+            Object.setPrototypeOf(element, VerticalStackCard.prototype);
+            element.setConfig(config);
           }
-          return { config, set hass(value) { this._hass = value; }, get hass() { return this._hass; } };
+          return element;
         },
       }),
     },
@@ -218,17 +239,27 @@ await panelCard.setConfig({
   show_action_button: true,
   action_entity: "light.living_room",
   action_icon: "mdi:sofa-outline",
-  cards: [{ type: "custom:glass-button-card", entity: "light.living_room" }],
+  cards: [{ type: "custom:glass-button-card", entity: "light.living_room" }, { type: "custom:glass-button-card", entity: "light.deckenlampe" }],
 });
 panelCard.hass = panelHass;
 assert.match(panelCard.shadowRoot.innerHTML, /Aktionen/);
 assert.match(panelCard.shadowRoot.innerHTML, /Wohnzimmer/);
 assert.equal(panelCard.shadowRoot.querySelector(".children").children.length, 1);
+assert.equal(panelCard.shadowRoot.querySelector(".children").children[0].config.type, "vertical-stack");
+assert.equal(panelCard.shadowRoot.querySelector(".children").children[0].config.cards.length, 2);
 assert.equal(panelCard.shadowRoot.querySelector(".children").children[0].hass, panelHass);
+await panelCard.setConfig({
+  title: "Aktionen",
+  subtitle: "Wohnzimmer",
+  show_action_button: true,
+  action_entity: "light.wohnzimmer",
+  cards: [{ type: "custom:glass-button-card", entity: "light.living_room" }, { type: "custom:glass-button-card", entity: "light.deckenlampe" }],
+});
+assert.equal(panelCard.shadowRoot.querySelector(".children").children.length, 1, "Panel updates must not accumulate nested stacks");
 panelCard._callHeaderAction();
 assert.equal(serviceCalls.at(-1)[0], "homeassistant");
 assert.equal(serviceCalls.at(-1)[1], "toggle");
-assert.equal(serviceCalls.at(-1)[2].entity_id, "light.living_room");
+assert.equal(serviceCalls.at(-1)[2].entity_id, "light.wohnzimmer");
 
 const panelEditor = await panelCardClass.getConfigElement();
 panelEditor.setConfig({ title: "Aktionen", subtitle: "Wohnzimmer", cards: [] });
