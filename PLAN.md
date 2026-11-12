@@ -65,7 +65,7 @@
 - [x] Panel-Editor auf Home Assistant Standard-Card-Picker und Child-Card-Editor umstellen.
 - [x] Panel-Inhalt wie ein vertikaler Stack anordnen; horizontale Reihen ueber die Standardkarte `horizontal-stack` konfigurieren.
 - [x] Panel-Inhalt in einem echten HA-Vertical-Stack rendern und Child-Stack-Akkumulation testen.
-- [ ] Panel-Stack-Groessenfix als Release `v1.14.0` veroeffentlichen.
+- [x] Panel-Stack-Groessenfix als Release `v1.14.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
