@@ -260,6 +260,7 @@ const panelHass = {
 await panelCard.setConfig({
   title: "Aktionen",
   subtitle: "Wohnzimmer",
+  title_size: 1,
   show_action_button: true,
   action_entity: "light.living_room",
   action_icon: "mdi:sofa-outline",
@@ -268,6 +269,8 @@ await panelCard.setConfig({
 panelCard.hass = panelHass;
 assert.match(panelCard.shadowRoot.innerHTML, /Aktionen/);
 assert.match(panelCard.shadowRoot.innerHTML, /Wohnzimmer/);
+const smallSubtitleFont = Number(panelCard.shadowRoot.innerHTML.match(/--subtitle-font:clamp\(([\d.]+)px/)?.[1]);
+assert.ok(smallSubtitleFont > 14 && smallSubtitleFont < 16);
 assert.equal(panelCard.shadowRoot.querySelector(".children").children.length, 1);
 assert.equal(panelCard.shadowRoot.querySelector(".children").children[0].config.type, "vertical-stack");
 assert.equal(panelCard.shadowRoot.querySelector(".children").children[0].config.cards.length, 2);
@@ -284,6 +287,9 @@ panelCard._callHeaderAction();
 assert.equal(serviceCalls.at(-1)[0], "homeassistant");
 assert.equal(serviceCalls.at(-1)[1], "toggle");
 assert.equal(serviceCalls.at(-1)[2].entity_id, "light.wohnzimmer");
+await panelCard.setConfig({ title: "Aktionen", subtitle: "Wohnzimmer", title_size: 5, cards: [] });
+const largeSubtitleFont = Number(panelCard.shadowRoot.innerHTML.match(/--subtitle-font:clamp\(([\d.]+)px/)?.[1]);
+assert.equal(largeSubtitleFont, 23);
 
 const panelEditor = await panelCardClass.getConfigElement();
 panelEditor.setConfig({ title: "Aktionen", subtitle: "Wohnzimmer", cards: [] });

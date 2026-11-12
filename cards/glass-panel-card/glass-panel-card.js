@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.3.0";
 const escapePanelText = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -22,6 +22,7 @@ class GlassPanelCard extends HTMLElement {
     this._config = {
       title: "",
       subtitle: "",
+      title_size: 5,
       show_action_button: false,
       action_icon: "mdi:gesture-tap-button",
       action: "toggle",
@@ -53,6 +54,7 @@ class GlassPanelCard extends HTMLElement {
     return {
       title: "Aktionen",
       subtitle: "Wohnzimmer",
+      title_size: 5,
       show_action_button: true,
       action_entity: "light.wohnzimmer",
       action_icon: "mdi:sofa-outline",
@@ -122,6 +124,8 @@ class GlassPanelCard extends HTMLElement {
   _renderShell() {
     const title = escapePanelText(this._config.title);
     const subtitle = escapePanelText(this._config.subtitle);
+    const titleLevel = Math.min(5, Math.max(1, Number(this._config.title_size) || 5));
+    const titleScale = 0.65 + ((titleLevel - 1) / 4) * 0.35;
     const actionVisible = this._config.show_action_button && this._config.action_entity;
     this.shadowRoot.innerHTML = `
       <style>
@@ -131,7 +135,7 @@ class GlassPanelCard extends HTMLElement {
         .header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:clamp(20px,3vw,30px); }
         .titles { min-width:0; }
         .title { margin:0; color:#9295a0; font-size:clamp(13px,2.1vw,17px); font-weight:700; line-height:1.2; text-transform:uppercase; }
-        .subtitle { margin:7px 0 0; color:var(--primary-text-color,#f3f3f5); font-size:clamp(23px,4vw,34px); font-weight:700; line-height:1.1; overflow-wrap:anywhere; }
+        .subtitle { margin:7px 0 0; color:var(--primary-text-color,#f3f3f5); font-size:var(--subtitle-font); font-weight:700; line-height:1.1; overflow-wrap:anywhere; }
         .header-action { display:grid; flex:none; width:clamp(56px,10vw,76px); aspect-ratio:1; place-items:center; padding:0; border:2px solid #34373d; border-radius:50%; background:linear-gradient(145deg,#24272c,#141619); color:#ff8b2b; box-shadow:0 6px 15px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05); cursor:pointer; }
         .header-action.active { border-color:#ff8b2b; color:#ff9b4a; box-shadow:inset 0 0 20px rgba(255,139,43,.12),0 0 0 1px rgba(255,139,43,.2),0 6px 15px rgba(0,0,0,.25); }
         .header-action ha-icon { --mdc-icon-size:30px; }
@@ -140,7 +144,7 @@ class GlassPanelCard extends HTMLElement {
         .empty { color:var(--secondary-text-color,#a0a2ad); }
         @media (max-width:360px) { .panel { padding:18px; } }
       </style>
-      <article class="panel">
+      <article class="panel" style="--subtitle-font:clamp(${23 * titleScale}px,${4 * titleScale}vw,${34 * titleScale}px)">
         <header class="header">
           <div class="titles">${title ? `<div class="title">${title}</div>` : ""}${subtitle ? `<h2 class="subtitle">${subtitle}</h2>` : ""}</div>
           ${actionVisible ? `<button class="header-action" aria-label="${escapePanelText(this._config.action_entity)}" title="${escapePanelText(this._config.action_entity)}"><ha-icon icon="${escapePanelText(this._config.action_icon || "mdi:gesture-tap-button")}"></ha-icon></button>` : ""}
@@ -154,6 +158,7 @@ class GlassPanelCard extends HTMLElement {
 const PANEL_FORM_SCHEMA = [
   { name: "title", default: "", selector: { text: {} } },
   { name: "subtitle", default: "", selector: { text: {} } },
+  { name: "title_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
   { name: "show_action_button", default: false, selector: { boolean: {} } },
   { name: "action_entity", selector: { entity: {} }, visible: { field: "show_action_button", value: true } },
   { name: "action_icon", selector: { icon: {} }, visible: { field: "show_action_button", value: true } },
@@ -182,6 +187,7 @@ class GlassPanelCardEditor extends HTMLElement {
     this._config = {
       title: "",
       subtitle: "",
+      title_size: 5,
       show_action_button: false,
       action_icon: "mdi:gesture-tap-button",
       action: "toggle",

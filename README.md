@@ -73,7 +73,7 @@ cards:
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle drei Karten. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Karten aktualisieren nur dargestellte Zustände statt bei jedem Home-Assistant-Update das komplette Layout neu aufzubauen. Die aktuelle Repository-Version ist `v1.15.0`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle drei Karten. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Karten aktualisieren nur dargestellte Zustände statt bei jedem Home-Assistant-Update das komplette Layout neu aufzubauen. Die aktuelle Repository-Version ist `v1.16.0`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
@@ -86,7 +86,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.14.0 installiert?** Aktualisiere auf v1.15.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.15.0 installiert?** Aktualisiere auf v1.16.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
@@ -117,6 +117,7 @@ Container mit Titel und Untertitel, optionalem runden Aktionsbutton oben rechts 
 type: custom:glass-panel-card
 title: Aktionen
 subtitle: Wohnzimmer
+title_size: 5
 show_action_button: true
 action_entity: light.wohnzimmer
 action_icon: mdi:sofa-outline
@@ -145,6 +146,7 @@ Im Bearbeitungsmodus wählst du über **Karte hinzufügen** den normalen Home-As
 | --- | --- | --- |
 | `title` | leer | Kleine obere Überschrift, zum Beispiel `AKTIONEN` |
 | `subtitle` | leer | Größere Überschrift unter dem Titel |
+| `title_size` | `5` | Größe der großen Unterüberschrift von `1` (klein) bis `5` (Vorlagengröße) |
 | `show_action_button` | `false` | Runden Button rechts oben anzeigen |
 | `action_entity` | keine | Entität für den Aktionsbutton |
 | `action_icon` | `mdi:gesture-tap-button` | Icon des Aktionsbuttons |
