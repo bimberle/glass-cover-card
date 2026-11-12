@@ -1,4 +1,4 @@
-const RGB_CARD_VERSION = "1.0.1";
+const RGB_CARD_VERSION = "1.0.2";
 const RGB_PRESETS = [[40, 35], [325, 75], [25, 100], [115, 80], [185, 100], [210, 100]];
 const escapeRgb = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 
@@ -194,7 +194,7 @@ class GlassRgbCard extends HTMLElement {
         .subtitle { margin:7px 0 0; color:var(--primary-text-color,#f3f3f5); font-size:var(--subtitle-font); font-weight:700; line-height:1.08; overflow-wrap:anywhere; }
         .header-action { position:relative; display:grid; flex:none; width:var(--header-action-size); aspect-ratio:1; place-items:center; border:2px solid #303239; border-radius:50%; background:linear-gradient(145deg,#272a30,#17191d); color:#ff8b2b; font:inherit; box-shadow:0 6px 15px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05); cursor:pointer; -webkit-tap-highlight-color:transparent; }
         .header-action.active { border-color:#ff8b2b; color:#ff9b4a; box-shadow:inset 0 0 20px rgba(255,139,43,.12),0 0 0 1px rgba(255,139,43,.2),0 6px 15px rgba(0,0,0,.25); }
-        .header-action.inactive { color:#85878b; border-color:#45474b; } .header-action ha-icon { display:block; width:46%; height:46%; --mdc-icon-size:100%; }
+        .header-action.inactive { color:#85878b; border-color:#45474b; } .header-action ha-icon { display:block; width:var(--header-icon-size); height:var(--header-icon-size); --mdc-icon-size:var(--header-icon-size); }
         .action-state { position:absolute; bottom:11%; font-size:clamp(5px,calc(var(--header-action-size) * .15),13px); line-height:1; color:inherit; }
         .controls[hidden],.temperature[hidden],.unavailable[hidden],.storage-error[hidden],.turn-on[hidden] { display:none; }
         .color-control { position:relative; width:min(100%,360px); aspect-ratio:1; margin:0 auto; }
@@ -224,7 +224,7 @@ class GlassRgbCard extends HTMLElement {
         .unavailable,.storage-error { color:var(--secondary-text-color,#a0a2ad); font-size:14px; }
         @media (max-width:380px) { .card { padding:18px; } .presets { gap:6px; } }
       </style>
-      <article class="card" style="--subtitle-font:clamp(${22 * titleScale}px,${4.8 * titleScale}vw,${38 * titleScale}px);--header-action-size:clamp(${56 * menuScale}px,${11 * menuScale}vw,${88 * menuScale}px)">
+      <article class="card" style="--subtitle-font:clamp(${22 * titleScale}px,${4.8 * titleScale}vw,${38 * titleScale}px);--header-action-size:clamp(${56 * menuScale}px,${11 * menuScale}vw,${88 * menuScale}px);--header-icon-size:calc((var(--header-action-size) - 16px) * .46)">
         <header class="header"><div class="titles"><div class="title">${escapeRgb(this._config.title)}</div><h2 class="subtitle"></h2></div><button class="header-action" aria-label="Licht ein- oder ausschalten" title="Licht ein- oder ausschalten"><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}"></ha-icon><span class="action-state"></span></button></header>
         <p class="unavailable" hidden></p>
         <div class="controls" hidden><div class="color-control"><div class="wheel" role="slider" tabindex="0" aria-label="Farbton" aria-valuemin="0" aria-valuemax="359" aria-valuenow="0"><span class="wheel-marker"></span></div><svg class="brightness-arc" viewBox="0 0 100 100" aria-hidden="true"><path class="brightness-track" d="M15 48 A35 35 0 0 1 85 48"/><path class="brightness-progress" d="M15 48 A35 35 0 0 1 85 48" pathLength="100"/><path class="brightness-hit" d="M15 48 A35 35 0 0 1 85 48"/><circle class="brightness-thumb" cx="15" cy="48" r="4"/></svg><div class="readout"><strong class="brightness-number">0 %</strong><span class="brightness-label">Helligkeit</span><input class="brightness" type="range" min="0" max="100" aria-label="Helligkeit"></div><button class="turn-on" type="button" aria-label="Licht mit erstem Preset einschalten" title="Licht einschalten" hidden><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}"></ha-icon><span class="turn-on-label">RGB</span></button></div>
