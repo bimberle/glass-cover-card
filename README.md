@@ -73,20 +73,20 @@ cards:
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert beide Karten. Die Konfiguration verwendet Home Assistants native Formularfelder. Die aktuelle Repository-Version ist `v1.11.0`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle drei Karten. Die Konfiguration verwendet Home Assistants native Formularfelder. Die aktuelle Repository-Version ist `v1.12.0`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
 3. Fuege `https://github.com/bimberle/glass-cover-card` hinzu und waehle den Typ **Dashboard**.
 4. Suche nach **Glass Cover Cards**, oeffne den Eintrag und installiere ihn.
-5. Lade die Dashboard-Ressource neu. Die Ressource `glass-cover-card.js` registriert sowohl `custom:glass-cover-card` als auch `custom:glass-button-card`.
+5. Lade die Dashboard-Ressource neu. Die Ressource `glass-cover-card.js` registriert `custom:glass-cover-card`, `custom:glass-button-card` und `custom:glass-panel-card`.
 
   - Home Assistant 2026.11+: `/local/community/glass-cover-card/glass-cover-card.js`
   - Aeltere HACS-Versionen: `/hacsfiles/glass-cover-card.js`
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.10.0 installiert?** Aktualisiere auf v1.11.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.11.0 installiert?** Aktualisiere auf v1.12.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
@@ -108,6 +108,48 @@ Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/
 | `show_card_frame` | `true` | Kartenrahmen, Hintergrund und Außenabstand anzeigen; `false` zeigt nur Kreis und Icon und blendet den Text aus |
 
 Orange ist die Standardfarbe. Mit `color: white` oder `color: gray` kannst du das Design aendern.
+
+### Glass Panel Card
+
+Container mit Titel und Untertitel, optionalem runden Aktionsbutton oben rechts und einer Liste beliebiger Home-Assistant-Karten. Die enthaltenen Karten koennen direkt als Liste angegeben werden, zum Beispiel mit mehreren Glass Button Cards:
+
+```yaml
+type: custom:glass-panel-card
+title: Aktionen
+subtitle: Wohnzimmer
+show_action_button: true
+action_entity: light.wohnzimmer
+action_icon: mdi:sofa-outline
+action: toggle
+columns: 3
+cards:
+  - type: custom:glass-button-card
+    entity: light.wohnzimmer
+    icon: mdi:sofa-outline
+    show_card_frame: false
+  - type: custom:glass-button-card
+    entity: light.deckenlampe
+    icon: mdi:lightbulb-outline
+    show_card_frame: false
+  - type: custom:glass-button-card
+    entity: media_player.fernseher
+    icon: mdi:television
+    action: more-info
+    show_card_frame: false
+```
+
+Die `cards`-Option nimmt beliebige Lovelace-Kartenkonfigurationen als YAML-Liste an. Auf schmalen Displays reduziert sich das Raster automatisch.
+
+| Option | Standard | Beschreibung |
+| --- | --- | --- |
+| `title` | leer | Kleine obere Überschrift, zum Beispiel `AKTIONEN` |
+| `subtitle` | leer | Größere Überschrift unter dem Titel |
+| `show_action_button` | `false` | Runden Button rechts oben anzeigen |
+| `action_entity` | keine | Entität für den Aktionsbutton |
+| `action_icon` | `mdi:gesture-tap-button` | Icon des Aktionsbuttons |
+| `action` | `toggle` | Entität umschalten oder mit `more-info` deren Details öffnen |
+| `columns` | `3` | Karten pro Reihe; auf schmalen Displays automatisch reduziert |
+| `cards` | `[]` | Liste beliebiger Lovelace-Kartenkonfigurationen |
 
 ### Glass Cover Card
 

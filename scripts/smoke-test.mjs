@@ -11,6 +11,16 @@ async function loadCard(filePath, cardTag, editorTag) {
     attachShadow() {
       const host = this;
       this._innerHTMLWrites = 0;
+      const childContainer = {
+        children: [],
+        replaceChildren() { this.children = []; },
+        append(child) { this.children.push(child); },
+        set textContent(value) { this._textContent = value; },
+      };
+      const headerButton = {
+        classList: { toggle() {} },
+        addEventListener() {},
+      };
       this.shadowRoot = {
         _innerHTML: "",
         get innerHTML() {
@@ -20,7 +30,7 @@ async function loadCard(filePath, cardTag, editorTag) {
           this._innerHTML = value;
           host._innerHTMLWrites += 1;
         },
-        querySelector: () => null,
+        querySelector: (selector) => selector === ".children" ? childContainer : (selector === ".header-action" ? headerButton : null),
         querySelectorAll: () => [],
       };
       return this.shadowRoot;
@@ -54,7 +64,14 @@ async function loadCard(filePath, cardTag, editorTag) {
       get: (name) => definitions.get(name),
       define: (name, value) => definitions.set(name, value),
     },
-    window: { customCards, setTimeout, clearTimeout },
+    window: {
+      customCards,
+      setTimeout,
+      clearTimeout,
+      loadCardHelpers: async () => ({
+        createCardElement: (config) => ({ config, set hass(value) { this._hass = value; }, get hass() { return this._hass; } }),
+      }),
+    },
     document: { createElement: () => ({}) },
     console,
   };
@@ -165,8 +182,35 @@ assert.equal(coverModule.Card.getConfigElement, undefined);
 const marketplaceEntry = await loadCard("dist/glass-cover-card.js", "glass-cover-card", "glass-cover-card-editor");
 assert.ok(marketplaceEntry.definitions.has("glass-button-card"));
 assert.equal(typeof marketplaceEntry.Card.getConfigForm, "function");
-assert.deepEqual(marketplaceEntry.customCards.map((card) => card.type).sort(), ["glass-button-card", "glass-cover-card"]);
+assert.ok(marketplaceEntry.definitions.has("glass-panel-card"));
+assert.deepEqual(marketplaceEntry.customCards.map((card) => card.type).sort(), ["glass-button-card", "glass-cover-card", "glass-panel-card"]);
 await marketplaceEntry.runSource(await readFile("dist/glass-button-card.js", "utf8"), "dist/glass-button-card.js");
-assert.equal(marketplaceEntry.customCards.length, 2, "Loading both resources must not register duplicate card entries");
+assert.equal(marketplaceEntry.customCards.length, 3, "Loading standalone cards must not register duplicate card entries");
 
-console.log("OK: primary Marketplace resource registers both cards; button render/actions/editor and duplicate loads pass");
+const panelCard = new (marketplaceEntry.definitions.get("glass-panel-card"))();
+const panelSchema = Object.fromEntries(marketplaceEntry.definitions.get("glass-panel-card").getConfigForm().schema.map((field) => [field.name, field]));
+assert.equal(panelSchema.cards.selector.object !== undefined, true);
+assert.equal(panelSchema.show_action_button.selector.boolean !== undefined, true);
+assert.equal(panelSchema.title.selector.text !== undefined, true);
+const panelHass = {
+  states: { "light.living_room": { state: "on", attributes: {} } },
+  callService: (...args) => serviceCalls.push(args),
+};
+await panelCard.setConfig({
+  title: "Aktionen",
+  subtitle: "Wohnzimmer",
+  show_action_button: true,
+  action_entity: "light.living_room",
+  action_icon: "mdi:sofa-outline",
+  cards: [{ type: "custom:glass-button-card", entity: "light.living_room" }],
+});
+panelCard.hass = panelHass;
+assert.match(panelCard.shadowRoot.innerHTML, /Aktionen/);
+assert.match(panelCard.shadowRoot.innerHTML, /Wohnzimmer/);
+assert.equal(panelCard.shadowRoot.querySelector(".children").children.length, 1);
+assert.equal(panelCard.shadowRoot.querySelector(".children").children[0].hass, panelHass);
+panelCard._callHeaderAction();
+assert.equal(serviceCalls.at(-1)[0], "homeassistant");
+assert.equal(serviceCalls.at(-1)[1], "toggle");
+
+console.log("OK: Marketplace entry registers all cards; button and panel rendering, actions, forms, and child-card state propagation pass");
