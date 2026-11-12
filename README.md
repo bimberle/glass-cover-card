@@ -54,9 +54,9 @@ color: orange
 show_card_frame: true
 ```
 
-Im visuellen Editor waehlst du Entitaet, Icon, Text, Aktion und Farbe aus. Fuer mehrere Buttons legst du mehrere einzelne Karten im Dashboard-Raster nebeneinander an.
+Im visuellen Editor waehlst du Entitaet, Icon, Text, Aktion und Farbe aus. Dimmbare Lichter zeigen automatisch einen Helligkeitsring: Ziehen am Ring aendert die Helligkeit, ein Klick in der Mitte fuehrt weiterhin die gewaehlte Aktion aus. Beim Einschalten bewegt sich der Ring zur gemeldeten Helligkeit. Mit `show_brightness_slider: false` laesst sich der Ring ausblenden. Fuer mehrere Buttons legst du mehrere einzelne Karten im Dashboard-Raster nebeneinander an.
 
-Fuer einen Button ohne Kartenrahmen, z. B. in einem `horizontal-stack`, setze `show_card_frame: false`. Dann bleiben nur der Kreis und das Icon sichtbar; der Text wird in dieser Ansicht ausgeblendet.
+Fuer einen Button ohne Kartenrahmen, z. B. in einem `horizontal-stack`, setze `show_card_frame: false`. Dann bleiben der Kreis, das Icon und gegebenenfalls der Helligkeitsregler sichtbar; der Buttontext wird in dieser Ansicht ausgeblendet.
 
 ```yaml
 type: horizontal-stack
@@ -73,7 +73,7 @@ cards:
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle drei Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.17.2`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle drei Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.18.0`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
@@ -86,7 +86,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.17.1 installiert?** Aktualisiere auf v1.17.2 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.17.2 installiert?** Aktualisiere auf v1.18.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
@@ -106,8 +106,9 @@ Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/
 | `show_name` | `true` | Buttontext ein- oder ausblenden, solange der Kartenrahmen sichtbar ist |
 | `color` | `orange` | Akzentfarbe `orange`, `white` oder `gray` |
 | `show_card_frame` | `true` | Kartenrahmen, Hintergrund und Außenabstand anzeigen; `false` zeigt nur Kreis und Icon und blendet den Text aus |
+| `show_brightness_slider` | `true` | Helligkeitsring bei dimmbaren Lichtern anzeigen; `false` deaktiviert ihn |
 
-Orange ist die Standardfarbe. Mit `color: white` oder `color: gray` kannst du das Design aendern.
+Orange ist die Standardfarbe. Mit `color: white` oder `color: gray` kannst du das Design aendern. Eingeschaltete Buttons zeigen die gewaehlte Farbe, ausgeschaltete sind grau. Bei Ein/Aus-Entitaeten ohne Helligkeitsring erscheint zusaetzlich der Zustand im Button.
 
 ### Glass Panel Card
 
@@ -147,7 +148,7 @@ Im Bearbeitungsmodus wählst du über **Karte hinzufügen** den normalen Home-As
 | `title` | leer | Kleine obere Überschrift, zum Beispiel `AKTIONEN` |
 | `subtitle` | leer | Größere Überschrift unter dem Titel |
 | `title_size` | `5` | Größe der großen Unterüberschrift wie bei der Cover Card von `1` (klein) bis `5` (Vorlagengröße) |
-| `show_action_button` | `false` | Runden Button rechts oben anzeigen |
+| `show_action_button` | `false` | Runden Button rechts oben anzeigen; bei Ein/Aus-Entitaeten zeigt er den Zustand und ist ausgeschaltet grau |
 | `button_size` | `5` | Größe des Aktionsbuttons von `1` bis `5`, entsprechend der Cover Card |
 | `action_entity` | keine | Entität für den Aktionsbutton |
 | `action_icon` | `mdi:gesture-tap-button` | Icon des Aktionsbuttons |

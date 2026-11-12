@@ -18,9 +18,10 @@ async function loadCard(filePath, cardTag, editorTag) {
         set textContent(value) { this._textContent = value; },
       };
       const headerButton = {
-        classList: { toggle() {} },
+        classList: { toggle(name, value) { this[name] = value; } },
         addEventListener() {},
       };
+      const actionStateLabel = { textContent: "" };
       const cardButton = {
         attributes: {},
         classList: { toggle(name, value) { this[name] = value; } },
@@ -30,6 +31,17 @@ async function loadCard(filePath, cardTag, editorTag) {
       };
       const nameLabel = { textContent: "" };
       const form = { addEventListener() {} };
+      const dimmer = {
+        attributes: {},
+        style: { setProperty(name, value) { this[name] = value; } },
+        classList: { toggle(name, value) { this[name] = value; } },
+        addEventListener() {},
+        setAttribute(name, value) { this.attributes[name] = value; },
+        getAttribute(name) { return this.attributes[name]; },
+        getBoundingClientRect() { return { left: 0, top: 0, width: 100, height: 100 }; },
+      };
+      const brightnessLabel = { textContent: "" };
+      const stateLabel = { textContent: "" };
       this.shadowRoot = {
         _innerHTML: "",
         get innerHTML() {
@@ -39,7 +51,7 @@ async function loadCard(filePath, cardTag, editorTag) {
           this._innerHTML = value;
           host._innerHTMLWrites += 1;
         },
-        querySelector: (selector) => selector === "ha-form" ? form : (selector === ".children" ? childContainer : (selector === ".header-action" ? headerButton : (selector === ".button" ? cardButton : (selector === ".name" ? nameLabel : null)))),
+        querySelector: (selector) => selector === ".action-state" ? actionStateLabel : (selector === ".state-value" ? stateLabel : (selector === ".dimmer" ? dimmer : (selector === ".brightness-value" ? brightnessLabel : (selector === "ha-form" ? form : (selector === ".children" ? childContainer : (selector === ".header-action" ? headerButton : (selector === ".button" ? cardButton : (selector === ".name" ? nameLabel : null)))))))),
         querySelectorAll: () => [],
       };
       return this.shadowRoot;
@@ -152,6 +164,7 @@ buttonCard.hass = {
 assert.match(buttonCard.shadowRoot.innerHTML, /mdi:sofa-outline/);
 assert.equal(buttonCard.shadowRoot.querySelector(".name").textContent, "Wohnzimmer");
 assert.equal(buttonCard.shadowRoot.querySelector(".button").classList.active, true);
+assert.equal(buttonCard.shadowRoot.querySelector(".state-value").textContent, "An");
 assert.match(buttonCard.shadowRoot.innerHTML, /--accent:#ff8b2b/);
 assert.equal((buttonCard.shadowRoot.innerHTML.match(/class="button /g) || []).length, 1);
 const initialButtonRenderCount = buttonCard._innerHTMLWrites;
@@ -169,6 +182,8 @@ buttonCard.hass = {
 };
 assert.equal(buttonCard._innerHTMLWrites, initialButtonRenderCount, "Button entity changes must update in place");
 assert.equal(buttonCard.shadowRoot.querySelector(".button").classList.active, false);
+assert.equal(buttonCard.shadowRoot.querySelector(".button").classList.inactive, true);
+assert.equal(buttonCard.shadowRoot.querySelector(".state-value").textContent, "Aus");
 assert.equal(buttonCard.shadowRoot.querySelector(".button").getAttribute("aria-label"), "Wohnzimmerlampe");
 assert.equal(buttonCard.shadowRoot.querySelector(".name").textContent, "Wohnzimmerlampe");
 buttonCard._callButton();
@@ -209,7 +224,47 @@ assert.equal(buttonSchema.icon.selector.icon !== undefined, true);
 assert.equal(buttonSchema.color.selector.select.options.map(([value]) => value).join(","), "orange,white,gray");
 assert.equal(buttonSchema.button_size.selector.number.mode, "slider");
 assert.equal(buttonSchema.show_card_frame.selector.boolean !== undefined, true);
+assert.equal(buttonSchema.show_brightness_slider.default, true);
 assert.equal(buttonModule.Card.getConfigElement, undefined);
+
+const dimmerCard = new buttonModule.Card();
+dimmerCard.setConfig({ entity: "light.dimmed", button_size: 1 });
+assert.match(dimmerCard.shadowRoot.innerHTML, /\.brightness-value,\.state-value \{ color:inherit;/);
+const dimmerState = (state, attributes) => ({ states: { "light.dimmed": { state, attributes } }, callService: (...args) => serviceCalls.push(args) });
+dimmerCard.hass = dimmerState("off", { supported_color_modes: ["brightness"] });
+const dimmerSlider = dimmerCard.shadowRoot.querySelector(".dimmer");
+assert.equal(dimmerSlider.classList.visible, true);
+assert.equal(dimmerSlider.classList.inactive, true);
+assert.equal(dimmerCard.shadowRoot.querySelector(".state-value").textContent, "");
+assert.equal(dimmerSlider.getAttribute("aria-valuenow"), "0");
+const dimmerRenderCount = dimmerCard._innerHTMLWrites;
+dimmerCard.hass = dimmerState("on", { supported_color_modes: ["brightness"], brightness: 128 });
+assert.equal(dimmerCard._innerHTMLWrites, dimmerRenderCount);
+assert.equal(dimmerSlider.getAttribute("aria-valuenow"), "50");
+assert.equal(dimmerSlider.classList.inactive, false);
+assert.equal(dimmerCard.shadowRoot.querySelector(".brightness-value").textContent, "50 %");
+dimmerCard._brightnessKey({ key: "ArrowRight", preventDefault() {} });
+assert.equal(serviceCalls.at(-1)[0], "light");
+assert.equal(serviceCalls.at(-1)[1], "turn_on");
+assert.equal(serviceCalls.at(-1)[2].brightness_pct, 55);
+dimmerCard.hass = { ...dimmerCard.hass, states: { ...dimmerCard.hass.states, "sensor.other": { state: "on" } } };
+assert.equal(dimmerSlider.getAttribute("aria-valuenow"), "55");
+dimmerCard.hass = dimmerState("on", { supported_color_modes: ["brightness"], brightness: 140 });
+assert.equal(dimmerSlider.getAttribute("aria-valuenow"), "55");
+dimmerCard._brightnessKey({ key: "Home", preventDefault() {} });
+assert.equal(serviceCalls.at(-1)[1], "turn_off");
+dimmerCard._setBrightnessFromPointer({ clientX: 100, clientY: 50 });
+assert.equal(dimmerSlider.getAttribute("aria-valuenow"), "25");
+dimmerCard.setConfig({ entity: "light.dimmed", show_brightness_slider: false });
+assert.equal(dimmerSlider.classList.visible, false);
+dimmerCard.setConfig({ entity: "light.dimmed" });
+dimmerCard.hass = dimmerState("on", { supported_color_modes: ["onoff"] });
+assert.equal(dimmerSlider.classList.visible, false);
+dimmerCard.hass = dimmerState("unavailable", { supported_color_modes: ["brightness"] });
+assert.equal(dimmerSlider.getAttribute("aria-disabled"), "true");
+const callsBeforeUnavailable = serviceCalls.length;
+dimmerCard._brightnessKey({ key: "End", preventDefault() {} });
+assert.equal(serviceCalls.length, callsBeforeUnavailable);
 
 const coverModule = await loadCard("dist/glass-cover-card.js", "glass-cover-card", "glass-cover-card-editor");
 const coverCard = new coverModule.Card();
@@ -268,6 +323,18 @@ await panelCard.setConfig({
   action_icon: "mdi:sofa-outline",
   cards: [{ type: "custom:glass-button-card", entity: "light.living_room" }, { type: "custom:glass-button-card", entity: "light.deckenlampe" }],
 });
+panelCard.hass = panelHass;
+assert.equal(panelCard.shadowRoot.querySelector(".header-action").classList.active, true);
+assert.equal(panelCard.shadowRoot.querySelector(".action-state").textContent, "An");
+const panelRenderCount = panelCard._innerHTMLWrites;
+panelCard.hass = { ...panelHass, states: { "light.living_room": { state: "off", attributes: {} } } };
+assert.equal(panelCard.shadowRoot.querySelector(".header-action").classList.active, false);
+assert.equal(panelCard.shadowRoot.querySelector(".header-action").classList.inactive, true);
+assert.equal(panelCard.shadowRoot.querySelector(".action-state").textContent, "Aus");
+assert.equal(panelCard._innerHTMLWrites, panelRenderCount);
+panelCard.hass = { ...panelHass, states: { "light.living_room": { state: "unknown", attributes: {} } } };
+assert.equal(panelCard.shadowRoot.querySelector(".header-action").classList.inactive, false);
+assert.equal(panelCard.shadowRoot.querySelector(".action-state").textContent, "");
 panelCard.hass = panelHass;
 assert.match(panelCard.shadowRoot.innerHTML, /Aktionen/);
 assert.match(panelCard.shadowRoot.innerHTML, /Wohnzimmer/);
