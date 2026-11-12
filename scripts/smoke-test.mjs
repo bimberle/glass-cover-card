@@ -21,6 +21,14 @@ async function loadCard(filePath, cardTag, editorTag) {
         classList: { toggle() {} },
         addEventListener() {},
       };
+      const cardButton = {
+        attributes: {},
+        classList: { toggle(name, value) { this[name] = value; } },
+        addEventListener() {},
+        setAttribute(name, value) { this.attributes[name] = value; },
+        getAttribute(name) { return this.attributes[name]; },
+      };
+      const nameLabel = { textContent: "" };
       this.shadowRoot = {
         _innerHTML: "",
         get innerHTML() {
@@ -30,7 +38,7 @@ async function loadCard(filePath, cardTag, editorTag) {
           this._innerHTML = value;
           host._innerHTMLWrites += 1;
         },
-        querySelector: (selector) => selector === ".children" ? childContainer : (selector === ".header-action" ? headerButton : null),
+        querySelector: (selector) => selector === ".children" ? childContainer : (selector === ".header-action" ? headerButton : (selector === ".button" ? cardButton : (selector === ".name" ? nameLabel : null))),
         querySelectorAll: () => [],
       };
       return this.shadowRoot;
@@ -130,7 +138,6 @@ const buttonCard = new buttonModule.Card();
 const serviceCalls = [];
 buttonCard.setConfig({
   entity: "light.living_room",
-  name: "Wohnzimmer",
   icon: "mdi:sofa-outline",
   action: "toggle",
   button_size: 5,
@@ -138,14 +145,31 @@ buttonCard.setConfig({
   color: "orange",
 });
 buttonCard.hass = {
-  states: { "light.living_room": { state: "on", attributes: {} } },
+  states: { "light.living_room": { state: "on", attributes: { friendly_name: "Wohnzimmer" } } },
   callService: (...args) => serviceCalls.push(args),
 };
 assert.match(buttonCard.shadowRoot.innerHTML, /mdi:sofa-outline/);
-assert.match(buttonCard.shadowRoot.innerHTML, /Wohnzimmer/);
-assert.match(buttonCard.shadowRoot.innerHTML, /class="button active"/);
+assert.equal(buttonCard.shadowRoot.querySelector(".name").textContent, "Wohnzimmer");
+assert.equal(buttonCard.shadowRoot.querySelector(".button").classList.active, true);
 assert.match(buttonCard.shadowRoot.innerHTML, /--accent:#ff8b2b/);
 assert.equal((buttonCard.shadowRoot.innerHTML.match(/class="button /g) || []).length, 1);
+const initialButtonRenderCount = buttonCard._innerHTMLWrites;
+buttonCard.hass = {
+  states: {
+    "light.living_room": { state: "on", attributes: { friendly_name: "Wohnzimmer" } },
+    "sensor.unrelated": { state: "12", attributes: {} },
+  },
+  callService: (...args) => serviceCalls.push(args),
+};
+assert.equal(buttonCard._innerHTMLWrites, initialButtonRenderCount, "Unrelated HA state changes must not rebuild the button card DOM");
+buttonCard.hass = {
+  states: { "light.living_room": { state: "off", attributes: { friendly_name: "Wohnzimmerlampe" } } },
+  callService: (...args) => serviceCalls.push(args),
+};
+assert.equal(buttonCard._innerHTMLWrites, initialButtonRenderCount, "Button entity changes must update in place");
+assert.equal(buttonCard.shadowRoot.querySelector(".button").classList.active, false);
+assert.equal(buttonCard.shadowRoot.querySelector(".button").getAttribute("aria-label"), "Wohnzimmerlampe");
+assert.equal(buttonCard.shadowRoot.querySelector(".name").textContent, "Wohnzimmerlampe");
 buttonCard._callButton();
 assert.equal(serviceCalls[0][0], "homeassistant");
 assert.equal(serviceCalls[0][1], "toggle");

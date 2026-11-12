@@ -1,5 +1,5 @@
 (() => {
-const CARD_VERSION = "1.14.0";
+const CARD_VERSION = "1.15.0";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -367,7 +367,11 @@ class GlassButtonCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    this._render();
+    if (!this._config || !this.shadowRoot.querySelector(".button")) {
+      this._render();
+      return;
+    }
+    this._syncEntityState();
   }
 
   get hass() {
@@ -441,6 +445,19 @@ class GlassButtonCard extends HTMLElement {
 
   _bindEvents() {
     this.shadowRoot.querySelector(".button")?.addEventListener("click", () => this._callButton());
+  }
+
+  _syncEntityState() {
+    const button = this.shadowRoot.querySelector(".button");
+    if (!button) return;
+    const state = this._hass?.states?.[this._config.entity];
+    const isActive = state && !["off", "closed", "idle", "standby", "unavailable", "unknown", "not_home"].includes(state.state);
+    button.classList.toggle("active", Boolean(isActive));
+    const name = this._config.name || state?.attributes?.friendly_name || this._config.entity || "Button";
+    button.setAttribute("aria-label", name);
+    button.setAttribute("title", name);
+    const label = this.shadowRoot.querySelector(".name");
+    if (label && !this._config.name) label.textContent = name;
   }
 
   _render() {

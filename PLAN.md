@@ -66,6 +66,9 @@
 - [x] Panel-Inhalt wie ein vertikaler Stack anordnen; horizontale Reihen ueber die Standardkarte `horizontal-stack` konfigurieren.
 - [x] Panel-Inhalt in einem echten HA-Vertical-Stack rendern und Child-Stack-Akkumulation testen.
 - [x] Panel-Stack-Groessenfix als Release `v1.14.0` veroeffentlichen.
+- [x] Glass Button Card bei nicht relevanten Stateupdates ohne Shadow-DOM-Neuaufbau aktualisieren.
+- [x] Renderzaehler-Regressionstest fuer fremde und relevante Entityupdates ergaenzen.
+- [ ] Renderstabilisierung als Release `v1.15.0` veroeffentlichen.
 - [ ] Repository im Marketplace/HACS eintragen und Karte im Home-Assistant-Dashboard installieren.
 
 ## Notiz
