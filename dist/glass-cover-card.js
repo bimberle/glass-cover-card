@@ -1,5 +1,5 @@
 (() => {
-const CARD_VERSION = "1.12.0";
+const CARD_VERSION = "1.13.0";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -491,8 +491,7 @@ if (!window.customCards.some((card) => card.type === "glass-button-card")) {
 })();
 
 (() => {
-const CARD_VERSION = "1.0.0";
-const clampColumns = (value) => Math.min(6, Math.max(1, Number(value) || 3));
+const CARD_VERSION = "1.1.0";
 const escapePanelText = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -519,7 +518,6 @@ class GlassPanelCard extends HTMLElement {
       show_action_button: false,
       action_icon: "mdi:gesture-tap-button",
       action: "toggle",
-      columns: 3,
       cards: [],
       ...config,
       cards: Array.isArray(config.cards) ? config.cards : [],
@@ -541,7 +539,7 @@ class GlassPanelCard extends HTMLElement {
   }
 
   getCardSize() {
-    return Math.max(2, Math.ceil(this._config?.cards?.length / clampColumns(this._config?.columns)) + 2);
+    return Math.max(3, (this._config?.cards?.length ?? 0) * 2 + 2);
   }
 
   static getStubConfig() {
@@ -552,40 +550,19 @@ class GlassPanelCard extends HTMLElement {
       action_entity: "light.wohnzimmer",
       action_icon: "mdi:sofa-outline",
       action: "toggle",
-      columns: 3,
       cards: [],
     };
   }
 
-  static getConfigForm() {
-    const schema = [
-      { name: "title", default: "", selector: { text: {} } },
-      { name: "subtitle", default: "", selector: { text: {} } },
-      { name: "show_action_button", default: false, selector: { boolean: {} } },
-      { name: "action_entity", selector: { entity: {} }, visible: { field: "show_action_button", value: true } },
-      { name: "action_icon", selector: { icon: {} }, visible: { field: "show_action_button", value: true } },
-      {
-        name: "action",
-        default: "toggle",
-        selector: { select: { mode: "dropdown", options: [["toggle", "Ein-/Ausschalten"], ["more-info", "Mehr Informationen anzeigen"]] } },
-        visible: { field: "show_action_button", value: true },
-      },
-      { name: "columns", default: 3, selector: { number: { min: 1, max: 6, step: 1, mode: "slider" } } },
-      { name: "cards", default: [], selector: { object: {} } },
-    ];
-    return {
-      schema,
-      computeLabel: (field) => ({
-        title: "Titel",
-        subtitle: "Untertitel",
-        show_action_button: "Button oben rechts anzeigen",
-        action_entity: "Button-Entität",
-        action_icon: "Button-Icon",
-        action: "Button-Aktion",
-        columns: "Karten pro Reihe",
-        cards: "Enthaltene Karten (YAML-Liste)",
-      })[field.name],
-    };
+  static async getConfigElement() {
+    const helpers = await window.loadCardHelpers();
+    helpers.createCardElement({ type: "vertical-stack", cards: [] });
+    await customElements.whenDefined("hui-vertical-stack-card");
+    const stackCard = customElements.get("hui-vertical-stack-card");
+    await stackCard.getConfigElement();
+    await customElements.whenDefined("hui-card-picker");
+    await customElements.whenDefined("hui-card-element-editor");
+    return document.createElement("glass-panel-card-editor");
   }
 
   async _loadChildren() {
@@ -637,7 +614,6 @@ class GlassPanelCard extends HTMLElement {
     const title = escapePanelText(this._config.title);
     const subtitle = escapePanelText(this._config.subtitle);
     const actionVisible = this._config.show_action_button && this._config.action_entity;
-    const columns = clampColumns(this._config.columns);
     this.shadowRoot.innerHTML = `
       <style>
         :host { display:block; width:100%; color:var(--primary-text-color,#f3f3f5); font-family:var(--paper-font-body1_-_font-family,"Arial",sans-serif); }
@@ -650,11 +626,10 @@ class GlassPanelCard extends HTMLElement {
         .header-action { display:grid; flex:none; width:clamp(56px,10vw,76px); aspect-ratio:1; place-items:center; padding:0; border:2px solid #34373d; border-radius:50%; background:linear-gradient(145deg,#24272c,#141619); color:#ff8b2b; box-shadow:0 6px 15px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05); cursor:pointer; }
         .header-action.active { border-color:#ff8b2b; color:#ff9b4a; box-shadow:inset 0 0 20px rgba(255,139,43,.12),0 0 0 1px rgba(255,139,43,.2),0 6px 15px rgba(0,0,0,.25); }
         .header-action ha-icon { --mdc-icon-size:30px; }
-        .children { display:grid; grid-template-columns:repeat(${columns},minmax(0,1fr)); align-items:stretch; gap:clamp(12px,2vw,24px); }
+        .children { display:flex; flex-direction:column; align-items:stretch; gap:clamp(12px,2vw,24px); }
         .children > * { min-width:0; }
         .empty { color:var(--secondary-text-color,#a0a2ad); }
-        @media (max-width:640px) { .children { grid-template-columns:repeat(${Math.min(columns, 2)},minmax(0,1fr)); } }
-        @media (max-width:360px) { .panel { padding:18px; } .children { grid-template-columns:1fr; } }
+        @media (max-width:360px) { .panel { padding:18px; } }
       </style>
       <article class="panel">
         <header class="header">
@@ -667,7 +642,209 @@ class GlassPanelCard extends HTMLElement {
   }
 }
 
+const PANEL_FORM_SCHEMA = [
+  { name: "title", default: "", selector: { text: {} } },
+  { name: "subtitle", default: "", selector: { text: {} } },
+  { name: "show_action_button", default: false, selector: { boolean: {} } },
+  { name: "action_entity", selector: { entity: {} }, visible: { field: "show_action_button", value: true } },
+  { name: "action_icon", selector: { icon: {} }, visible: { field: "show_action_button", value: true } },
+  {
+    name: "action",
+    default: "toggle",
+    selector: { select: { mode: "dropdown", options: [["toggle", "Ein-/Ausschalten"], ["more-info", "Mehr Informationen anzeigen"]] } },
+    visible: { field: "show_action_button", value: true },
+  },
+];
+
+class GlassPanelCardEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._config = null;
+    this._hass = null;
+    this._lovelace = undefined;
+    this._selectedCard = -1;
+    this._showPicker = false;
+    this._renderShell();
+  }
+
+  setConfig(config) {
+    const previousCards = JSON.stringify(this._config?.cards ?? []);
+    this._config = {
+      title: "",
+      subtitle: "",
+      show_action_button: false,
+      action_icon: "mdi:gesture-tap-button",
+      action: "toggle",
+      cards: [],
+      ...config,
+      cards: Array.isArray(config.cards) ? config.cards : [],
+    };
+    const form = this.shadowRoot.querySelector("ha-form");
+    if (form) {
+      form.schema = PANEL_FORM_SCHEMA;
+      form.data = this._config;
+      form.hass = this._hass;
+    }
+    if (previousCards !== JSON.stringify(this._config.cards)) {
+      this._selectedCard = Math.min(this._selectedCard, this._config.cards.length - 1);
+      this._renderCardList();
+    }
+    this._syncCardEditor();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    const form = this.shadowRoot.querySelector("ha-form");
+    const picker = this.shadowRoot.querySelector("hui-card-picker");
+    const cardEditor = this.shadowRoot.querySelector("hui-card-element-editor");
+    if (form) form.hass = hass;
+    if (picker) picker.hass = hass;
+    if (cardEditor) cardEditor.hass = hass;
+  }
+
+  set lovelace(lovelace) {
+    this._lovelace = lovelace;
+    const picker = this.shadowRoot.querySelector("hui-card-picker");
+    const cardEditor = this.shadowRoot.querySelector("hui-card-element-editor");
+    if (picker) picker.lovelace = lovelace;
+    if (cardEditor) cardEditor.lovelace = lovelace;
+  }
+
+  _renderShell() {
+    this.shadowRoot.innerHTML = `
+      <style>
+        .editor { display:grid; gap:20px; }
+        .cards-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        .card-tabs { display:flex; flex:1; min-width:0; gap:6px; overflow-x:auto; }
+        .card-order { display:flex; gap:4px; }
+        button { min-height:40px; padding:8px 12px; color:var(--primary-text-color); background:var(--card-background-color,#202124); border:1px solid var(--divider-color,#555); border-radius:6px; font:inherit; cursor:pointer; }
+        button[aria-pressed="true"] { border-color:var(--primary-color,#ff8b2b); }
+        .card-editor[hidden],.card-picker[hidden] { display:none; }
+        .card-picker { min-height:300px; }
+      </style>
+      <div class="editor">
+        <ha-form></ha-form>
+        <section class="cards-manager">
+          <div class="cards-toolbar">
+            <div class="card-tabs"></div>
+            <div class="card-order">
+              <button type="button" class="move-before" title="Karte nach links verschieben" aria-label="Karte nach links verschieben">←</button>
+              <button type="button" class="move-after" title="Karte nach rechts verschieben" aria-label="Karte nach rechts verschieben">→</button>
+            </div>
+            <button type="button" class="remove-card" title="Ausgewählte Karte entfernen">Entfernen</button>
+            <button type="button" class="add-card">Karte hinzufügen</button>
+          </div>
+          <hui-card-element-editor class="card-editor" hidden></hui-card-element-editor>
+          <hui-card-picker class="card-picker" hide-clipboard hidden></hui-card-picker>
+        </section>
+      </div>`;
+
+    this.shadowRoot.querySelector("ha-form")?.addEventListener("value-changed", (event) => this._handleFormChanged(event));
+    this.shadowRoot.querySelector("hui-card-picker")?.addEventListener("config-changed", (event) => this._handleCardPicked(event));
+    this.shadowRoot.querySelector("hui-card-element-editor")?.addEventListener("config-changed", (event) => this._handleChildChanged(event));
+    this.shadowRoot.querySelector(".add-card")?.addEventListener("click", () => this._togglePicker());
+    this.shadowRoot.querySelector(".remove-card")?.addEventListener("click", () => this._removeSelectedCard());
+    this.shadowRoot.querySelector(".move-before")?.addEventListener("click", () => this._moveSelectedCard(-1));
+    this.shadowRoot.querySelector(".move-after")?.addEventListener("click", () => this._moveSelectedCard(1));
+  }
+
+  _handleFormChanged(event) {
+    this._config = { ...this._config, ...event.detail.value };
+    this._notifyConfig();
+  }
+
+  _handleCardPicked(event) {
+    event.stopPropagation();
+    this._config = { ...this._config, cards: [...this._config.cards, event.detail.config] };
+    this._selectedCard = this._config.cards.length - 1;
+    this._showPicker = false;
+    this._renderCardList();
+    this._syncCardEditor();
+    this._notifyConfig();
+  }
+
+  _handleChildChanged(event) {
+    event.stopPropagation();
+    if (this._selectedCard < 0) return;
+    const cards = [...this._config.cards];
+    cards[this._selectedCard] = event.detail.config ?? event.detail.value;
+    this._config = { ...this._config, cards };
+    this._notifyConfig();
+  }
+
+  _togglePicker() {
+    this._showPicker = !this._showPicker;
+    const picker = this.shadowRoot.querySelector("hui-card-picker");
+    const editor = this.shadowRoot.querySelector("hui-card-element-editor");
+    if (picker) {
+      picker.hidden = !this._showPicker;
+      picker.hass = this._hass;
+      picker.lovelace = this._lovelace;
+    }
+    if (editor) editor.hidden = this._showPicker || this._selectedCard < 0;
+  }
+
+  _removeSelectedCard() {
+    if (this._selectedCard < 0) return;
+    const cards = this._config.cards.filter((_, index) => index !== this._selectedCard);
+    this._config = { ...this._config, cards };
+    this._selectedCard = Math.min(this._selectedCard, cards.length - 1);
+    this._renderCardList();
+    this._syncCardEditor();
+    this._notifyConfig();
+  }
+
+  _moveSelectedCard(offset) {
+    const target = this._selectedCard + offset;
+    if (target < 0 || target >= this._config.cards.length) return;
+    const cards = [...this._config.cards];
+    [cards[this._selectedCard], cards[target]] = [cards[target], cards[this._selectedCard]];
+    this._config = { ...this._config, cards };
+    this._selectedCard = target;
+    this._renderCardList();
+    this._syncCardEditor();
+    this._notifyConfig();
+  }
+
+  _selectCard(index) {
+    this._selectedCard = index;
+    this._showPicker = false;
+    this._renderCardList();
+    this._syncCardEditor();
+  }
+
+  _renderCardList() {
+    const tabs = this.shadowRoot.querySelector(".card-tabs");
+    if (!tabs) return;
+    tabs.innerHTML = this._config.cards.map((card, index) => `<button type="button" data-card-index="${index}" aria-pressed="${index === this._selectedCard}">${escapePanelText(card.type || `Karte ${index + 1}`)}</button>`).join("");
+    tabs.querySelectorAll("[data-card-index]").forEach((button) => button.addEventListener("click", () => this._selectCard(Number(button.dataset.cardIndex))));
+    const picker = this.shadowRoot.querySelector("hui-card-picker");
+    const editor = this.shadowRoot.querySelector("hui-card-element-editor");
+    if (picker) picker.hidden = !this._showPicker;
+    if (editor) editor.hidden = this._showPicker || this._selectedCard < 0;
+  }
+
+  _syncCardEditor() {
+    const editor = this.shadowRoot.querySelector("hui-card-element-editor");
+    if (!editor || this._selectedCard < 0) return;
+    editor.hass = this._hass;
+    editor.lovelace = this._lovelace;
+    editor.value = this._config.cards[this._selectedCard];
+    editor.hidden = this._showPicker;
+  }
+
+  _notifyConfig() {
+    this.dispatchEvent(new CustomEvent("config-changed", {
+      bubbles: true,
+      composed: true,
+      detail: { config: this._config },
+    }));
+  }
+}
+
 if (!customElements.get("glass-panel-card")) customElements.define("glass-panel-card", GlassPanelCard);
+if (!customElements.get("glass-panel-card-editor")) customElements.define("glass-panel-card-editor", GlassPanelCardEditor);
 
 window.customCards = window.customCards || [];
 if (!window.customCards.some((card) => card.type === "glass-panel-card")) {

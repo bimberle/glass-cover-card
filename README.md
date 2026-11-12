@@ -73,7 +73,7 @@ cards:
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle drei Karten. Die Konfiguration verwendet Home Assistants native Formularfelder. Die aktuelle Repository-Version ist `v1.12.0`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle drei Karten. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker. Die aktuelle Repository-Version ist `v1.13.0`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
@@ -86,7 +86,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.11.0 installiert?** Aktualisiere auf v1.12.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.12.0 installiert?** Aktualisiere auf v1.13.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
@@ -121,24 +121,25 @@ show_action_button: true
 action_entity: light.wohnzimmer
 action_icon: mdi:sofa-outline
 action: toggle
-columns: 3
 cards:
-  - type: custom:glass-button-card
-    entity: light.wohnzimmer
-    icon: mdi:sofa-outline
-    show_card_frame: false
-  - type: custom:glass-button-card
-    entity: light.deckenlampe
-    icon: mdi:lightbulb-outline
-    show_card_frame: false
-  - type: custom:glass-button-card
-    entity: media_player.fernseher
-    icon: mdi:television
-    action: more-info
-    show_card_frame: false
+  - type: vertical-stack
+    cards:
+      - type: custom:glass-button-card
+        entity: light.wohnzimmer
+        icon: mdi:sofa-outline
+        show_card_frame: false
+      - type: custom:glass-button-card
+        entity: light.deckenlampe
+        icon: mdi:lightbulb-outline
+        show_card_frame: false
+      - type: custom:glass-button-card
+        entity: media_player.fernseher
+        icon: mdi:television
+        action: more-info
+        show_card_frame: false
 ```
 
-Die `cards`-Option nimmt beliebige Lovelace-Kartenkonfigurationen als YAML-Liste an. Auf schmalen Displays reduziert sich das Raster automatisch.
+Im Bearbeitungsmodus wählst du über **Karte hinzufügen** den normalen Home-Assistant-Kartenpicker. Dort stehen alle Standard- und Custom Cards zur Auswahl. Die ausgewählte Karte lässt sich danach mit ihrem Standardeditor konfigurieren; Karten können entfernt, ausgewählt und sortiert werden. Der Panelinhalt ist vertikal gestapelt. Für nebeneinanderliegende Karten fügst du darin einen normalen `horizontal-stack` oder `grid` ein.
 
 | Option | Standard | Beschreibung |
 | --- | --- | --- |
@@ -148,7 +149,6 @@ Die `cards`-Option nimmt beliebige Lovelace-Kartenkonfigurationen als YAML-Liste
 | `action_entity` | keine | Entität für den Aktionsbutton |
 | `action_icon` | `mdi:gesture-tap-button` | Icon des Aktionsbuttons |
 | `action` | `toggle` | Entität umschalten oder mit `more-info` deren Details öffnen |
-| `columns` | `3` | Karten pro Reihe; auf schmalen Displays automatisch reduziert |
 | `cards` | `[]` | Liste beliebiger Lovelace-Kartenkonfigurationen |
 
 ### Glass Cover Card

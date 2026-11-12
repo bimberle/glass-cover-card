@@ -63,16 +63,33 @@ async function loadCard(filePath, cardTag, editorTag) {
     customElements: {
       get: (name) => definitions.get(name),
       define: (name, value) => definitions.set(name, value),
+      whenDefined: async (name) => {
+        if (!definitions.has(name)) throw new Error(`Custom element not registered: ${name}`);
+      },
     },
     window: {
       customCards,
       setTimeout,
       clearTimeout,
       loadCardHelpers: async () => ({
-        createCardElement: (config) => ({ config, set hass(value) { this._hass = value; }, get hass() { return this._hass; } }),
+        createCardElement: (config) => {
+          if (config.type === "vertical-stack" && !definitions.has("hui-vertical-stack-card")) {
+            definitions.set("hui-vertical-stack-card", class {
+              static async getConfigElement() {
+                definitions.set("hui-card-picker", class {});
+                definitions.set("hui-card-element-editor", class {});
+                return {};
+              }
+            });
+          }
+          return { config, set hass(value) { this._hass = value; }, get hass() { return this._hass; } };
+        },
       }),
     },
-    document: { createElement: () => ({}) },
+    document: { createElement: (name) => {
+      const Element = definitions.get(name);
+      return Element ? new Element() : {};
+    } },
     console,
   };
 
@@ -188,10 +205,9 @@ await marketplaceEntry.runSource(await readFile("dist/glass-button-card.js", "ut
 assert.equal(marketplaceEntry.customCards.length, 3, "Loading standalone cards must not register duplicate card entries");
 
 const panelCard = new (marketplaceEntry.definitions.get("glass-panel-card"))();
-const panelSchema = Object.fromEntries(marketplaceEntry.definitions.get("glass-panel-card").getConfigForm().schema.map((field) => [field.name, field]));
-assert.equal(panelSchema.cards.selector.object !== undefined, true);
-assert.equal(panelSchema.show_action_button.selector.boolean !== undefined, true);
-assert.equal(panelSchema.title.selector.text !== undefined, true);
+const panelCardClass = marketplaceEntry.definitions.get("glass-panel-card");
+assert.equal(typeof panelCardClass.getConfigElement, "function");
+assert.equal(panelCardClass.getConfigForm, undefined);
 const panelHass = {
   states: { "light.living_room": { state: "on", attributes: {} } },
   callService: (...args) => serviceCalls.push(args),
@@ -212,5 +228,18 @@ assert.equal(panelCard.shadowRoot.querySelector(".children").children[0].hass, p
 panelCard._callHeaderAction();
 assert.equal(serviceCalls.at(-1)[0], "homeassistant");
 assert.equal(serviceCalls.at(-1)[1], "toggle");
+assert.equal(serviceCalls.at(-1)[2].entity_id, "light.living_room");
 
-console.log("OK: Marketplace entry registers all cards; button and panel rendering, actions, forms, and child-card state propagation pass");
+const panelEditor = await panelCardClass.getConfigElement();
+panelEditor.setConfig({ title: "Aktionen", subtitle: "Wohnzimmer", cards: [] });
+assert.match(panelEditor.shadowRoot.innerHTML, /ha-form/);
+assert.match(panelEditor.shadowRoot.innerHTML, /hui-card-picker/);
+assert.match(panelEditor.shadowRoot.innerHTML, /hui-card-element-editor/);
+panelEditor._handleCardPicked({
+  stopPropagation() {},
+  detail: { config: { type: "custom:glass-button-card", entity: "light.deckenlampe" } },
+});
+assert.equal(panelEditor._config.cards.length, 1);
+assert.equal(panelEditor._config.cards[0].entity, "light.deckenlampe");
+
+console.log("OK: Marketplace entry registers all cards; standard card picker, nested-card editing, actions, and panel rendering pass");
