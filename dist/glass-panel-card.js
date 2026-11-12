@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.3.0";
+const CARD_VERSION = "1.4.0";
 const escapePanelText = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -132,19 +132,19 @@ class GlassPanelCard extends HTMLElement {
         :host { display:block; width:100%; color:var(--primary-text-color,#f3f3f5); font-family:var(--paper-font-body1_-_font-family,"Arial",sans-serif); }
         * { box-sizing:border-box; }
         .panel { width:100%; padding:clamp(20px,4vw,36px); border:1px solid rgba(255,255,255,.1); border-radius:28px; background:radial-gradient(ellipse at 48% 0,#22252a 0,#15171a 62%,#101214 100%); box-shadow:inset 0 1px 1px rgba(255,255,255,.06),0 12px 30px rgba(0,0,0,.2); }
-        .header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:clamp(20px,3vw,30px); }
+        .header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:clamp(20px,3vw,30px); }
         .titles { min-width:0; }
-        .title { margin:0; color:#9295a0; font-size:clamp(13px,2.1vw,17px); font-weight:700; line-height:1.2; text-transform:uppercase; }
-        .subtitle { margin:7px 0 0; color:var(--primary-text-color,#f3f3f5); font-size:var(--subtitle-font); font-weight:700; line-height:1.1; overflow-wrap:anywhere; }
-        .header-action { display:grid; flex:none; width:clamp(56px,10vw,76px); aspect-ratio:1; place-items:center; padding:0; border:2px solid #34373d; border-radius:50%; background:linear-gradient(145deg,#24272c,#141619); color:#ff8b2b; box-shadow:0 6px 15px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05); cursor:pointer; }
+        .title { color:#9295a0; font-size:clamp(11px,2.1vw,15px); font-weight:700; letter-spacing:.12em; line-height:normal; text-transform:uppercase; }
+        .subtitle { margin:7px 0 0; color:var(--primary-text-color,#f3f3f5); font-size:var(--subtitle-font); font-weight:700; line-height:1.08; overflow-wrap:anywhere; }
+        .header-action { display:grid; flex:none; width:var(--header-action-size); aspect-ratio:1; place-items:center; padding:0; border:2px solid #303239; border-radius:50%; background:linear-gradient(145deg,#272a30,#17191d); color:#ff8b2b; box-shadow:0 6px 15px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05); cursor:pointer; }
         .header-action.active { border-color:#ff8b2b; color:#ff9b4a; box-shadow:inset 0 0 20px rgba(255,139,43,.12),0 0 0 1px rgba(255,139,43,.2),0 6px 15px rgba(0,0,0,.25); }
-        .header-action ha-icon { --mdc-icon-size:30px; }
+        .header-action ha-icon { --mdc-icon-size:var(--header-action-icon-size); }
         .children { display:block; min-width:0; }
         .children > * { min-width:0; }
         .empty { color:var(--secondary-text-color,#a0a2ad); }
         @media (max-width:360px) { .panel { padding:18px; } }
       </style>
-      <article class="panel" style="--subtitle-font:clamp(${23 * titleScale}px,${4 * titleScale}vw,${34 * titleScale}px)">
+      <article class="panel" style="--subtitle-font:clamp(${22 * titleScale}px,${4.8 * titleScale}vw,${38 * titleScale}px);--header-action-size:clamp(56px,11vw,88px);--header-action-icon-size:clamp(25.76px,5.06vw,40.48px)">
         <header class="header">
           <div class="titles">${title ? `<div class="title">${title}</div>` : ""}${subtitle ? `<h2 class="subtitle">${subtitle}</h2>` : ""}</div>
           ${actionVisible ? `<button class="header-action" aria-label="${escapePanelText(this._config.action_entity)}" title="${escapePanelText(this._config.action_entity)}"><ha-icon icon="${escapePanelText(this._config.action_icon || "mdi:gesture-tap-button")}"></ha-icon></button>` : ""}

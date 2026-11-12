@@ -269,6 +269,7 @@ await panelCard.setConfig({
 panelCard.hass = panelHass;
 assert.match(panelCard.shadowRoot.innerHTML, /Aktionen/);
 assert.match(panelCard.shadowRoot.innerHTML, /Wohnzimmer/);
+assert.match(panelCard.shadowRoot.innerHTML, /--header-action-size:clamp\(56px,11vw,88px\)/);
 const smallSubtitleFont = Number(panelCard.shadowRoot.innerHTML.match(/--subtitle-font:clamp\(([\d.]+)px/)?.[1]);
 assert.ok(smallSubtitleFont > 14 && smallSubtitleFont < 16);
 assert.equal(panelCard.shadowRoot.querySelector(".children").children.length, 1);
@@ -289,7 +290,7 @@ assert.equal(serviceCalls.at(-1)[1], "toggle");
 assert.equal(serviceCalls.at(-1)[2].entity_id, "light.wohnzimmer");
 await panelCard.setConfig({ title: "Aktionen", subtitle: "Wohnzimmer", title_size: 5, cards: [] });
 const largeSubtitleFont = Number(panelCard.shadowRoot.innerHTML.match(/--subtitle-font:clamp\(([\d.]+)px/)?.[1]);
-assert.equal(largeSubtitleFont, 23);
+assert.equal(largeSubtitleFont, 22);
 
 const panelEditor = await panelCardClass.getConfigElement();
 panelEditor.setConfig({ title: "Aktionen", subtitle: "Wohnzimmer", cards: [] });
