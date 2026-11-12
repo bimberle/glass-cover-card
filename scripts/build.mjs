@@ -28,7 +28,7 @@ if (!outputs.includes("glass-cover-card.js")) {
   throw new Error("HACS erwartet glass-cover-card.js als Einstieg passend zum Repository-Namen.");
 }
 
-const entrypointCards = ["glass-cover-card.js", "glass-button-card.js", "glass-panel-card.js"];
+const entrypointCards = ["glass-cover-card.js", "glass-button-card.js", "glass-panel-card.js", "glass-rgb-card.js"];
 for (const fileName of entrypointCards) {
   if (!sources.has(fileName)) throw new Error(`Fehlende Einstiegskarte: ${fileName}`);
 }

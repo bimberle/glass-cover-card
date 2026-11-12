@@ -73,24 +73,24 @@ cards:
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle drei Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.18.0`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle vier Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.19.0`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
 3. Fuege `https://github.com/bimberle/glass-cover-card` hinzu und waehle den Typ **Dashboard**.
 4. Suche nach **Glass Cover Cards**, oeffne den Eintrag und installiere ihn.
-5. Lade die Dashboard-Ressource neu. Die Ressource `glass-cover-card.js` registriert `custom:glass-cover-card`, `custom:glass-button-card` und `custom:glass-panel-card`.
+5. Lade die Dashboard-Ressource neu. Die Ressource `glass-cover-card.js` registriert `custom:glass-cover-card`, `custom:glass-button-card`, `custom:glass-panel-card` und `custom:glass-rgb-card`.
 
   - Home Assistant 2026.11+: `/local/community/glass-cover-card/glass-cover-card.js`
   - Aeltere HACS-Versionen: `/hacsfiles/glass-cover-card.js`
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.17.2 installiert?** Aktualisiere auf v1.18.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.18.0 installiert?** Aktualisiere auf v1.19.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
-Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/local/glass-cover-card.js` unter **Einstellungen > Dashboards > Ressourcen** als **JavaScript-Modul**. Die Datei enthaelt beide Karten. Optional kann fuer eine isolierte Buttonkarten-Installation stattdessen nur `glass-button-card.js` kopiert und `/local/glass-button-card.js` registriert werden.
+Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/local/glass-cover-card.js` unter **Einstellungen > Dashboards > Ressourcen** als **JavaScript-Modul**. Die Datei enthaelt alle vier Karten. Optional kann fuer eine isolierte Buttonkarten-Installation stattdessen nur `glass-button-card.js` kopiert und `/local/glass-button-card.js` registriert werden.
 
 ## Optionen
 
@@ -100,15 +100,58 @@ Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/
 | --- | --- | --- |
 | `entity` | erforderlich | Entitaet, die der Button schaltet oder deren Details eroeffnet |
 | `icon` | `mdi:gesture-tap-button` | Ein MDI-Icon, z. B. `mdi:sofa-outline`, `mdi:lightbulb-outline` oder `mdi:television` |
+| `icon_active` | `icon` | Icon des aktiven Zustands bei `binary_sensor` |
+| `icon_inactive` | `icon` | Icon des inaktiven Zustands bei `binary_sensor` |
+| `color_active` | `color` | Farbe des aktiven Zustands bei `binary_sensor` |
+| `color_inactive` | `gray` | Farbe des inaktiven Zustands bei `binary_sensor` |
+| `binary_sensor_active_state` | `on` | Aktiver Zustand bei `binary_sensor`: `on` (offen) oder `off` (geschlossen) |
 | `name` | Friendly Name | Buttontext; kann mit `show_name: false` ausgeblendet werden |
 | `action` | `toggle` | `toggle` schaltet die Entitaet; `more-info` oeffnet deren Detaildialog |
 | `button_size` | `5` | Groesse von `1` (ein Drittel) bis `5` (entspricht den grossen Jalousiebuttons) |
 | `show_name` | `true` | Buttontext ein- oder ausblenden, solange der Kartenrahmen sichtbar ist |
-| `color` | `orange` | Akzentfarbe `orange`, `white` oder `gray` |
+| `color` | `orange` | Akzentfarbe `orange`, `white`, `gray`, `green` oder `red` |
 | `show_card_frame` | `true` | Kartenrahmen, Hintergrund und Außenabstand anzeigen; `false` zeigt nur Kreis und Icon und blendet den Text aus |
 | `show_brightness_slider` | `true` | Helligkeitsring bei dimmbaren Lichtern anzeigen; `false` deaktiviert ihn |
 
-Orange ist die Standardfarbe. Mit `color: white` oder `color: gray` kannst du das Design aendern. Eingeschaltete Buttons zeigen die gewaehlte Farbe, ausgeschaltete sind grau. Bei Ein/Aus-Entitaeten ohne Helligkeitsring erscheint zusaetzlich der Zustand im Button.
+Orange ist die Standardfarbe. Eingeschaltete Buttons zeigen die gewaehlte Farbe, ausgeschaltete sind grau. Bei Ein/Aus-Entitaeten ohne Helligkeitsring erscheint zusaetzlich der Zustand im Button.
+
+Fuer einen Tuer- oder Fensterkontakt zeigt `on` offen und `off` geschlossen an. Die Binary-Sensor-Einstellungen sind im Editor bei allen Entitaeten sichtbar, wirken aber nur bei `binary_sensor`. Andere Sensortypen koennen `on` und `off` anders interpretieren. Fuer Sensoren eignet sich `more-info` als Aktion:
+
+```yaml
+type: custom:glass-button-card
+entity: binary_sensor.haustuer
+icon_active: mdi:door-open
+color_active: red
+icon_inactive: mdi:door-closed
+color_inactive: green
+binary_sensor_active_state: 'on'
+action: more-info
+```
+
+### Glass RGB Card
+
+Steuert Farbton und Helligkeit eines farbfaehigen Lichts. Ausgeschaltete Lichter erscheinen grau; ein Klick auf den Kreis oder den Kopfbutton schaltet sie mit dem ersten Preset ein, auch wenn die Preset-Reihe ausgeblendet ist. Der Kopfbutton schaltet ein eingeschaltetes Licht aus. Die optionalen sechs Presets werden durch Anklicken ausgewaehlt; anschliessende Aenderungen an Farbton, Helligkeit oder Farbtemperatur werden im ausgewaehlten Preset gespeichert. Presets werden pro Licht im Browser gespeichert und nicht zwischen Geraeten synchronisiert. Die Farbtemperatur erscheint nur, wenn die Leuchte RGBW oder RGBWW und Farbtemperatur unterstuetzt.
+
+```yaml
+type: custom:glass-rgb-card
+entity: light.wohnzimmer
+title: RGB
+name: Sofa
+icon: mdi:lightbulb-outline
+title_size: 5
+button_size: 5
+show_presets: true
+```
+
+| Option | Standard | Beschreibung |
+| --- | --- | --- |
+| `entity` | erforderlich | Farbfähige Licht-Entitaet |
+| `title` | `RGB` | Kleine Kopfzeile |
+| `name` | Friendly Name | Grosse Ueberschrift |
+| `icon` | `mdi:lightbulb-outline` | Icon des Schaltbuttons |
+| `title_size` | `5` | Groesse der Ueberschrift von `1` bis `5` |
+| `button_size` | `5` | Groesse des Kopfbuttons von `1` bis `5` |
+| `show_presets` | `false` | Sechs lokal gespeicherte Farb-Presets anzeigen |
 
 ### Glass Panel Card
 

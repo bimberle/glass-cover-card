@@ -1,9 +1,12 @@
-const CARD_VERSION = "1.5.0";
+const CARD_VERSION = "1.6.0";
 const BUTTON_COLORS = {
   orange: "#ff8b2b",
   white: "#f2f2f4",
   gray: "#8f9299",
+  green: "#4bc785",
+  red: "#f05c5c",
 };
+const BUTTON_COLOR_OPTIONS = [["orange", "Orange"], ["white", "Weiß"], ["gray", "Grau"], ["green", "Grün"], ["red", "Rot"]];
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -64,6 +67,11 @@ class GlassButtonCard extends HTMLElement {
     const schema = [
       { name: "entity", required: true, selector: { entity: {} } },
       { name: "icon", selector: { icon: {} } },
+      { name: "icon_active", selector: { icon: {} } },
+      { name: "color_active", selector: { select: { mode: "dropdown", options: BUTTON_COLOR_OPTIONS } } },
+      { name: "icon_inactive", selector: { icon: {} } },
+      { name: "color_inactive", default: "gray", selector: { select: { mode: "dropdown", options: BUTTON_COLOR_OPTIONS } } },
+      { name: "binary_sensor_active_state", default: "on", selector: { select: { mode: "dropdown", options: [["on", "Offen"], ["off", "Geschlossen"]] } } },
       { name: "name", selector: { text: {} } },
       {
         name: "action",
@@ -73,7 +81,7 @@ class GlassButtonCard extends HTMLElement {
       {
         name: "color",
         default: "orange",
-        selector: { select: { mode: "dropdown", options: [["orange", "Orange"], ["white", "Weiß"], ["gray", "Grau"]] } },
+        selector: { select: { mode: "dropdown", options: BUTTON_COLOR_OPTIONS } },
       },
       { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
       { name: "show_name", default: true, selector: { boolean: {} } },
@@ -85,6 +93,11 @@ class GlassButtonCard extends HTMLElement {
         computeLabel: (field) => ({
           entity: "Entität",
           icon: "Icon",
+          icon_active: "Binary Sensor: Icon für aktiven Zustand",
+          color_active: "Binary Sensor: Farbe für aktiven Zustand",
+          icon_inactive: "Binary Sensor: Icon für inaktiven Zustand",
+          color_inactive: "Binary Sensor: Farbe für inaktiven Zustand",
+          binary_sensor_active_state: "Binary Sensor: Zustand mit Akzentfarbe",
           name: "Text",
           action: "Aktion",
           color: "Farbe",
@@ -209,9 +222,14 @@ class GlassButtonCard extends HTMLElement {
     const button = this.shadowRoot.querySelector(".button");
     if (!button) return;
     const state = this._hass?.states?.[this._config.entity];
-    const isActive = state && !["off", "closed", "idle", "standby", "unavailable", "unknown", "not_home"].includes(state.state);
+    const binarySensor = this._config.entity?.startsWith("binary_sensor.");
+    const binaryKnown = binarySensor && ["on", "off"].includes(state?.state);
+    const isActive = binarySensor ? binaryKnown && state.state === (this._config.binary_sensor_active_state === "off" ? "off" : "on") : state && !["off", "closed", "idle", "standby", "unavailable", "unknown", "not_home"].includes(state.state);
+    button.classList.toggle("binary-sensor", Boolean(binarySensor));
     button.classList.toggle("active", Boolean(isActive));
-    button.classList.toggle("inactive", Boolean(state && ["off", "closed", "idle", "standby", "not_home"].includes(state.state)));
+    button.classList.toggle("inactive", Boolean(binarySensor ? binaryKnown && !isActive : state && ["off", "closed", "idle", "standby", "not_home"].includes(state.state)));
+    const icon = this.shadowRoot.querySelector(".button ha-icon");
+    if (icon) icon.setAttribute("icon", (binaryKnown ? ((isActive ? this._config.icon_active : this._config.icon_inactive) || (state.state === "on" ? this._config.icon_open : this._config.icon_closed)) : null) || this._config.icon || "mdi:gesture-tap-button");
     const dimmable = this._isDimmable(state);
     const available = !["unavailable", "unknown"].includes(state?.state);
     button.classList.toggle("dimmable", dimmable);
@@ -230,7 +248,7 @@ class GlassButtonCard extends HTMLElement {
     }
     if (!this._dragging && !this._pendingBrightnessState) this._displayBrightness(isActive && Number.isFinite(state?.attributes?.brightness) ? state.attributes.brightness / 255 * 100 : 0);
     const stateLabel = this.shadowRoot.querySelector(".state-value");
-    if (stateLabel) stateLabel.textContent = !dimmable && ["on", "off"].includes(state?.state) ? (state.state === "on" ? "An" : "Aus") : "";
+    if (stateLabel) stateLabel.textContent = !dimmable && ["on", "off"].includes(state?.state) ? (binarySensor ? (state.state === "on" ? "Offen" : "Geschlossen") : (state.state === "on" ? "An" : "Aus")) : "";
     const name = this._config.name || state?.attributes?.friendly_name || this._config.entity || "Button";
     button.setAttribute("aria-label", name);
     button.setAttribute("title", name);
@@ -245,6 +263,8 @@ class GlassButtonCard extends HTMLElement {
     const showName = this._config.show_name !== false;
     const showCardFrame = this._config.show_card_frame !== false;
     const color = BUTTON_COLORS[this._config.color] ? this._config.color : "orange";
+    const activeColor = BUTTON_COLORS[this._config.color_active] || BUTTON_COLORS[color];
+    const inactiveColor = BUTTON_COLORS[this._config.color_inactive] || BUTTON_COLORS.gray;
     const state = this._hass?.states?.[this._config.entity];
     const isActive = state && !["off", "closed", "idle", "standby", "unavailable", "unknown", "not_home"].includes(state.state);
     const name = this._config.name || state?.attributes?.friendly_name || this._config.entity || "Button";
@@ -264,11 +284,15 @@ class GlassButtonCard extends HTMLElement {
         .button.active { border-color:var(--accent); background:radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--accent) 24%,#1c1b19),#1c1b19 72%); box-shadow:inset 0 0 24px color-mix(in srgb,var(--accent) 18%,transparent),0 0 0 1px color-mix(in srgb,var(--accent) 35%,transparent),0 8px 22px rgba(0,0,0,.3); }
         .button.inactive { color:#85878b; border-color:#45474b; }
         .button.inactive:hover { border-color:#77797d; }
+        .button.binary-sensor.active { --accent:var(--sensor-active-color); color:var(--sensor-active-color); }
+        .button.binary-sensor.inactive { color:var(--sensor-inactive-color); border-color:var(--sensor-inactive-color); }
+        .button.binary-sensor.inactive:hover { border-color:var(--sensor-inactive-color); }
         .button.dimmable,.button.dimmable:hover { border-color:transparent; }
         .button.dimmable:hover { transform:none; }
         .button-content { display:flex; flex-direction:column; align-items:center; justify-content:center; }
         .button.dimmable ha-icon,.button:has(.state-value:not(:empty)) ha-icon { transform:scale(.7); }
         .brightness-value,.state-value { color:inherit; font-size:clamp(5px,calc(var(--button-size) * .15),17px); line-height:1; white-space:nowrap; }
+        .button.binary-sensor .state-value { font-size:clamp(3px,calc(var(--button-size) * .1),11px); }
         .brightness-value { display:none; }
         .button.dimmable .brightness-value { display:block; }
         .dimmer { position:absolute; inset:0; width:100%; height:100%; overflow:hidden; visibility:hidden; pointer-events:none; touch-action:none; }
@@ -287,7 +311,7 @@ class GlassButtonCard extends HTMLElement {
         .name { max-width:100%; color:#e4e4e7; font-size:clamp(13px,2.2vw,20px); line-height:1.2; text-align:center; overflow-wrap:anywhere; }
         @media (prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none !important; } }
       </style>
-      <article class="card ${showCardFrame ? "" : "no-frame"}" style="--accent:${BUTTON_COLORS[color]};--button-size:clamp(${72 * scale}px,${15 * scale}vw,${114 * scale}px);--icon-size:clamp(${Math.min(16, 72 * scale * .48)}px,${15 * scale * .48}vw,${114 * scale * .48}px)">
+      <article class="card ${showCardFrame ? "" : "no-frame"}" style="--accent:${BUTTON_COLORS[color]};--sensor-active-color:${activeColor};--sensor-inactive-color:${inactiveColor};--button-size:clamp(${72 * scale}px,${15 * scale}vw,${114 * scale}px);--icon-size:clamp(${Math.min(16, 72 * scale * .48)}px,${15 * scale * .48}vw,${114 * scale * .48}px)">
         <div class="button-wrap">
           <div class="button-control">
           <button class="button ${isActive ? "active" : ""}" aria-label="${escapeHtml(name)}" title="${escapeHtml(name)}">

@@ -42,6 +42,7 @@ async function loadCard(filePath, cardTag, editorTag) {
       };
       const brightnessLabel = { textContent: "" };
       const stateLabel = { textContent: "" };
+      const cardIcon = { attributes: {}, setAttribute(name, value) { this.attributes[name] = value; }, getAttribute(name) { return this.attributes[name]; } };
       this.shadowRoot = {
         _innerHTML: "",
         get innerHTML() {
@@ -51,7 +52,7 @@ async function loadCard(filePath, cardTag, editorTag) {
           this._innerHTML = value;
           host._innerHTMLWrites += 1;
         },
-        querySelector: (selector) => selector === ".action-state" ? actionStateLabel : (selector === ".state-value" ? stateLabel : (selector === ".dimmer" ? dimmer : (selector === ".brightness-value" ? brightnessLabel : (selector === "ha-form" ? form : (selector === ".children" ? childContainer : (selector === ".header-action" ? headerButton : (selector === ".button" ? cardButton : (selector === ".name" ? nameLabel : null)))))))),
+        querySelector: (selector) => selector === ".button ha-icon" ? cardIcon : (selector === ".action-state" ? actionStateLabel : (selector === ".state-value" ? stateLabel : (selector === ".dimmer" ? dimmer : (selector === ".brightness-value" ? brightnessLabel : (selector === "ha-form" ? form : (selector === ".children" ? childContainer : (selector === ".header-action" ? headerButton : (selector === ".button" ? cardButton : (selector === ".name" ? nameLabel : null))))))))),
         querySelectorAll: () => [],
       };
       return this.shadowRoot;
@@ -78,9 +79,13 @@ async function loadCard(filePath, cardTag, editorTag) {
     }
   }
 
+  const storage = new Map();
   const context = {
     HTMLElement,
     CustomEvent,
+    setTimeout,
+    clearTimeout,
+    localStorage: { getItem: (key) => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
     customElements: {
       get: (name) => definitions.get(name),
       define: (name, value) => definitions.set(name, value),
@@ -221,11 +226,52 @@ const buttonForm = buttonModule.Card.getConfigForm();
 const buttonSchema = Object.fromEntries(buttonForm.schema.map((field) => [field.name, field]));
 assert.equal(buttonSchema.entity.selector.entity !== undefined, true);
 assert.equal(buttonSchema.icon.selector.icon !== undefined, true);
-assert.equal(buttonSchema.color.selector.select.options.map(([value]) => value).join(","), "orange,white,gray");
+assert.equal(buttonSchema.color.selector.select.options.map(([value]) => value).join(","), "orange,white,gray,green,red");
 assert.equal(buttonSchema.button_size.selector.number.mode, "slider");
 assert.equal(buttonSchema.show_card_frame.selector.boolean !== undefined, true);
 assert.equal(buttonSchema.show_brightness_slider.default, true);
+assert.equal(buttonSchema.icon_active.selector.icon !== undefined, true);
+assert.equal(buttonSchema.icon_inactive.selector.icon !== undefined, true);
+assert.equal(buttonSchema.color_active.selector.select.options.map(([value]) => value).join(","), "orange,white,gray,green,red");
+assert.equal(buttonSchema.color_inactive.selector.select.options.map(([value]) => value).join(","), "orange,white,gray,green,red");
+assert.equal(buttonSchema.binary_sensor_active_state.selector.select.options.map(([value]) => value).join(","), "on,off");
 assert.equal(buttonModule.Card.getConfigElement, undefined);
+
+const sensorCard = new buttonModule.Card();
+sensorCard.setConfig({ entity: "binary_sensor.door", icon: "mdi:door", icon_active: "mdi:door-closed", icon_inactive: "mdi:door-open", color_active: "green", color_inactive: "red", binary_sensor_active_state: "off" });
+assert.match(sensorCard.shadowRoot.innerHTML, /--sensor-active-color:#4bc785;--sensor-inactive-color:#f05c5c/);
+const sensorHass = (state) => ({ states: { "binary_sensor.door": { state, attributes: {} } }, callService: (...args) => serviceCalls.push(args) });
+sensorCard.hass = sensorHass("on");
+assert.equal(sensorCard.shadowRoot.querySelector(".button ha-icon").getAttribute("icon"), "mdi:door-open");
+assert.equal(sensorCard.shadowRoot.querySelector(".button").classList.inactive, true);
+assert.equal(sensorCard.shadowRoot.querySelector(".state-value").textContent, "Offen");
+const sensorRenderCount = sensorCard._innerHTMLWrites;
+sensorCard.hass = sensorHass("off");
+assert.equal(sensorCard.shadowRoot.querySelector(".button ha-icon").getAttribute("icon"), "mdi:door-closed");
+assert.equal(sensorCard.shadowRoot.querySelector(".button").classList.active, true);
+assert.equal(sensorCard.shadowRoot.querySelector(".state-value").textContent, "Geschlossen");
+assert.equal(sensorCard._innerHTMLWrites, sensorRenderCount);
+sensorCard.hass = sensorHass("unavailable");
+assert.equal(sensorCard.shadowRoot.querySelector(".button").classList.active, false);
+assert.equal(sensorCard.shadowRoot.querySelector(".button").classList.inactive, false);
+assert.equal(sensorCard.shadowRoot.querySelector(".button ha-icon").getAttribute("icon"), "mdi:door");
+assert.equal(sensorCard.shadowRoot.querySelector(".state-value").textContent, "");
+sensorCard.setConfig({ entity: "binary_sensor.door", icon: "mdi:door" });
+sensorCard.hass = sensorHass("on");
+assert.equal(sensorCard.shadowRoot.querySelector(".button").classList.active, true);
+assert.equal(sensorCard.shadowRoot.querySelector(".button ha-icon").getAttribute("icon"), "mdi:door");
+sensorCard.setConfig({ entity: "binary_sensor.door", icon_active: "mdi:door-open", icon_inactive: "mdi:door-closed", color_active: "red", color_inactive: "green" });
+sensorCard.hass = sensorHass("on");
+assert.equal(sensorCard.shadowRoot.querySelector(".button").classList.active, true);
+assert.equal(sensorCard.shadowRoot.querySelector(".button ha-icon").getAttribute("icon"), "mdi:door-open");
+sensorCard.hass = sensorHass("off");
+assert.equal(sensorCard.shadowRoot.querySelector(".button").classList.inactive, true);
+assert.equal(sensorCard.shadowRoot.querySelector(".button ha-icon").getAttribute("icon"), "mdi:door-closed");
+assert.match(sensorCard.shadowRoot.innerHTML, /--sensor-active-color:#f05c5c;--sensor-inactive-color:#4bc785/);
+buttonCard.setConfig({ entity: "light.living_room", color: "green" });
+assert.match(buttonCard.shadowRoot.innerHTML, /--accent:#4bc785/);
+buttonCard.setConfig({ entity: "light.living_room", color: "red" });
+assert.match(buttonCard.shadowRoot.innerHTML, /--accent:#f05c5c/);
 
 const dimmerCard = new buttonModule.Card();
 dimmerCard.setConfig({ entity: "light.dimmed", button_size: 1 });
@@ -301,9 +347,80 @@ const marketplaceEntry = await loadCard("dist/glass-cover-card.js", "glass-cover
 assert.ok(marketplaceEntry.definitions.has("glass-button-card"));
 assert.equal(typeof marketplaceEntry.Card.getConfigForm, "function");
 assert.ok(marketplaceEntry.definitions.has("glass-panel-card"));
-assert.deepEqual(marketplaceEntry.customCards.map((card) => card.type).sort(), ["glass-button-card", "glass-cover-card", "glass-panel-card"]);
+assert.ok(marketplaceEntry.definitions.has("glass-rgb-card"));
+const rgbSource = await readFile("dist/glass-rgb-card.js", "utf8");
+assert.match(rgbSource, /\.controls\.is-off \.readout,\.controls\.is-off \.brightness-arc \{ display:none; \}/);
+assert.match(rgbSource, /<button class="turn-on"[^>]*><ha-icon icon=/);
+assert.match(rgbSource, /<span class="turn-on-label">RGB<\/span>/);
+assert.deepEqual(marketplaceEntry.customCards.map((card) => card.type).sort(), ["glass-button-card", "glass-cover-card", "glass-panel-card", "glass-rgb-card"]);
 await marketplaceEntry.runSource(await readFile("dist/glass-button-card.js", "utf8"), "dist/glass-button-card.js");
-assert.equal(marketplaceEntry.customCards.length, 3, "Loading standalone cards must not register duplicate card entries");
+assert.equal(marketplaceEntry.customCards.length, 4, "Loading standalone cards must not register duplicate card entries");
+
+const rgbCard = new (marketplaceEntry.definitions.get("glass-rgb-card"))();
+rgbCard._config = { entity: "light.rgb_test", show_presets: true };
+rgbCard._hass = { callService: (...args) => serviceCalls.push(args) };
+rgbCard._updateView = () => {};
+rgbCard._loadPresets();
+rgbCard._selectPreset(1);
+assert.equal(serviceCalls.at(-1)[0], "light");
+assert.equal(serviceCalls.at(-1)[1], "turn_on");
+assert.equal(serviceCalls.at(-1)[2].hs_color[0], 325);
+rgbCard._hue = 120;
+rgbCard._brightness = 55;
+rgbCard._savePreset();
+const rgbSecondCard = new (marketplaceEntry.definitions.get("glass-rgb-card"))();
+rgbSecondCard._config = { entity: "light.rgb_test", show_presets: true };
+rgbSecondCard._loadPresets();
+assert.equal(rgbSecondCard._presets[1].hue, 120);
+assert.equal(rgbSecondCard._presets[1].brightness, 55);
+rgbCard._temperatureValue = 3100;
+rgbCard._savePreset();
+rgbSecondCard._loadPresets();
+assert.equal(rgbSecondCard._presets[1].temperature, 3100);
+const rgbNodes = {
+  ".card": {}, ".header-action": { classList: { toggle() {} } }, ".action-state": {}, ".subtitle": {},
+  ".controls": { classList: { toggle(name, value) { this[name] = value; } } }, ".unavailable": {}, ".temperature": {}, ".temperature input": {},
+  ".turn-on": {}, ".wheel": { setAttribute() {} }, ".brightness": {},
+};
+rgbCard.shadowRoot.querySelector = (selector) => rgbNodes[selector];
+rgbCard._pending = false;
+const rgbState = (modes) => ({ states: { "light.rgb_test": { state: "on", attributes: { supported_color_modes: modes, brightness: 128 } } } });
+rgbCard._hass = rgbState(["rgbw", "color_temp"]);
+rgbCard._sync();
+assert.equal(rgbNodes[".temperature"].hidden, false);
+rgbCard._hass.callService = (...args) => serviceCalls.push(args);
+rgbCard._selectPreset(1);
+assert.equal(serviceCalls.at(-1)[2].color_temp_kelvin, 3100);
+assert.equal(serviceCalls.at(-1)[2].brightness_pct, 55);
+rgbCard._pending = false;
+rgbCard._hass = rgbState(["rgb", "color_temp"]);
+rgbCard._sync();
+assert.equal(rgbNodes[".temperature"].hidden, true);
+rgbCard._hass = rgbState(["rgbw"]);
+rgbCard._sync();
+assert.equal(rgbNodes[".temperature"].hidden, true);
+rgbCard._hass = rgbState(["onoff"]);
+rgbCard._sync();
+assert.equal(rgbNodes[".controls"].hidden, true);
+rgbCard._hass = { states: { "light.rgb_test": { state: "off", attributes: { supported_color_modes: ["rgb"] } } }, callService: (...args) => serviceCalls.push(args) };
+rgbCard._sync();
+assert.equal(rgbNodes[".controls"].classList["is-off"], true);
+assert.equal(rgbNodes[".turn-on"].hidden, false);
+assert.equal(rgbNodes[".brightness"].disabled, true);
+rgbCard._presets[0] = { hue: 120, saturation: 80, brightness: 0 };
+rgbCard._config.show_presets = false;
+rgbCard._toggleLight();
+assert.equal(serviceCalls.at(-1)[1], "turn_on");
+assert.equal(serviceCalls.at(-1)[2].hs_color[0], 120);
+assert.equal(serviceCalls.at(-1)[2].brightness_pct, 1);
+rgbCard._hass = { ...rgbState(["rgb"]), callService: (...args) => serviceCalls.push(args) };
+rgbCard._sync();
+assert.equal(rgbNodes[".turn-on"].hidden, true);
+assert.equal(rgbNodes[".brightness"].disabled, false);
+rgbCard._toggleLight();
+assert.equal(serviceCalls.at(-1)[0], "homeassistant");
+assert.equal(serviceCalls.at(-1)[1], "toggle");
+clearTimeout(rgbCard._pendingTimer);
 
 const panelCard = new (marketplaceEntry.definitions.get("glass-panel-card"))();
 const panelCardClass = marketplaceEntry.definitions.get("glass-panel-card");
