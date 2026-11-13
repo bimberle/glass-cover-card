@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.6.2";
+const CARD_VERSION = "1.6.3";
 const BUTTON_COLORS = {
   orange: "#ff8b2b",
   white: "#f2f2f4",
@@ -175,13 +175,25 @@ class GlassButtonCard extends HTMLElement {
   _setBrightnessFromPointer(event) {
     const bounds = this.shadowRoot.querySelector(".dimmer").getBoundingClientRect();
     const angle = Math.atan2(event.clientX - (bounds.left + bounds.width / 2), -(event.clientY - (bounds.top + bounds.height / 2)));
-    this._displayBrightness(((angle + 2 * Math.PI) % (2 * Math.PI)) / (2 * Math.PI) * 100);
+    const pointerValue = ((angle + 2 * Math.PI) % (2 * Math.PI)) / (2 * Math.PI) * 100;
+    if (this._dragging && this._pointerValue != null) {
+      let difference = pointerValue - this._pointerValue;
+      if (difference > 50) difference -= 100;
+      if (difference < -50) difference += 100;
+      this._dragBrightness = Math.max(0, Math.min(100, this._dragBrightness + difference));
+      this._displayBrightness(this._dragBrightness);
+    } else {
+      this._dragBrightness = pointerValue < 1 && this._brightness > 50 ? 100 : pointerValue;
+      this._displayBrightness(this._dragBrightness);
+    }
+    this._pointerValue = pointerValue;
   }
 
   _startBrightnessDrag(event) {
     const state = this._hass?.states?.[this._config.entity];
     if (event.button !== 0 || !this._isDimmable(state) || ["unavailable", "unknown"].includes(state.state)) return;
     event.preventDefault();
+    this._pointerValue = null;
     this._dragging = true;
     event.currentTarget.classList.add("dragging");
     event.currentTarget.setPointerCapture(event.pointerId);
