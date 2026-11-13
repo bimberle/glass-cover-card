@@ -73,7 +73,7 @@ cards:
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle vier Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.19.2`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle vier Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.20.0`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
@@ -86,7 +86,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.19.1 installiert?** Aktualisiere auf v1.19.2 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.19.2 installiert?** Aktualisiere auf v1.20.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
@@ -130,7 +130,9 @@ action: more-info
 
 ### Glass RGB Card
 
-Steuert Farbton und Helligkeit eines farbfaehigen Lichts. Ausgeschaltete Lichter erscheinen grau; ein Klick auf den Kreis oder den Kopfbutton schaltet sie mit dem ersten Preset ein, auch wenn die Preset-Reihe ausgeblendet ist. Der Kopfbutton schaltet ein eingeschaltetes Licht aus. Die optionalen sechs Presets werden durch Anklicken ausgewaehlt; anschliessende Aenderungen an Farbton, Helligkeit oder Farbtemperatur werden im ausgewaehlten Preset gespeichert. Presets werden pro Licht im Browser gespeichert und nicht zwischen Geraeten synchronisiert. Die Farbtemperatur erscheint nur, wenn die Leuchte RGBW oder RGBWW und Farbtemperatur unterstuetzt.
+Steuert Farbton und Helligkeit eines farbfaehigen Lichts. Ein Klick auf die Mitte oder den Kopfbutton schaltet das Licht ein oder aus. Beim Einschalten wird das erste konfigurierte Preset verwendet, falls vorhanden; andernfalls stellt Home Assistant den letzten Lichtzustand wieder her. Bis zu sechs Farben lassen sich in der Kartenkonfiguration festlegen. Das Veraendern der Regler ueberschreibt diese Presets nicht. Die Farbtemperatur erscheint nur, wenn die Leuchte RGBW oder RGBWW und Farbtemperatur unterstuetzt.
+
+Frueher im Browser gespeicherte Presets werden nicht mehr verwendet; lege die gewuenschten Farben in der Kartenkonfiguration neu fest.
 
 ```yaml
 type: custom:glass-rgb-card
@@ -141,6 +143,8 @@ icon: mdi:lightbulb-outline
 title_size: 5
 button_size: 5
 show_presets: true
+preset_1: [255, 0, 0]
+preset_2: [0, 180, 255]
 ```
 
 | Option | Standard | Beschreibung |
@@ -151,7 +155,8 @@ show_presets: true
 | `icon` | `mdi:lightbulb-outline` | Icon des Schaltbuttons |
 | `title_size` | `5` | Groesse der Ueberschrift von `1` bis `5` |
 | `button_size` | `5` | Groesse des Kopfbuttons von `1` bis `5` |
-| `show_presets` | `false` | Sechs lokal gespeicherte Farb-Presets anzeigen |
+| `show_presets` | `false` | Konfigurierte Farb-Presets anzeigen |
+| `preset_1` bis `preset_6` | keine | Optionale RGB-Farbe als Liste mit drei Werten von `0` bis `255` |
 
 ### Glass Panel Card
 

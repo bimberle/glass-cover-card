@@ -1,5 +1,5 @@
 (() => {
-const CARD_VERSION = "1.19.2";
+const CARD_VERSION = "1.20.0";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -1049,8 +1049,22 @@ if (!window.customCards.some((card) => card.type === "glass-panel-card")) {
 })();
 
 (() => {
-const RGB_CARD_VERSION = "1.0.2";
-const RGB_PRESETS = [[40, 35], [325, 75], [25, 100], [115, 80], [185, 100], [210, 100]];
+const RGB_CARD_VERSION = "1.1.0";
+const RGB_PRESET_COUNT = 6;
+const rgbToHs = (rgb) => {
+  const [red, green, blue] = rgb.map((value) => value / 255);
+  const maximum = Math.max(red, green, blue);
+  const minimum = Math.min(red, green, blue);
+  const difference = maximum - minimum;
+  let hue = 0;
+  if (difference) {
+    if (maximum === red) hue = (green - blue) / difference;
+    else if (maximum === green) hue = (blue - red) / difference + 2;
+    else hue = (red - green) / difference + 4;
+    hue = (hue * 60 + 360) % 360;
+  }
+  return [Math.round(hue), maximum ? Math.round(difference / maximum * 100) : 0];
+};
 const escapeRgb = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 
 class GlassRgbCard extends HTMLElement {
@@ -1082,16 +1096,23 @@ class GlassRgbCard extends HTMLElement {
         { name: "title_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
         { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
         { name: "show_presets", default: false, selector: { boolean: {} } },
+        ...Array.from({ length: RGB_PRESET_COUNT }, (_, index) => ({ name: `preset_${index + 1}`, selector: { color_rgb: {} } })),
       ],
-      computeLabel: (field) => ({ entity: "Licht", title: "Titel", name: "Name", icon: "Icon", title_size: "Überschrift-Größe", button_size: "Button-Größe", show_presets: "Farb-Presets anzeigen" })[field.name],
+      computeLabel: (field) => ({ entity: "Licht", title: "Titel", name: "Name", icon: "Icon", title_size: "Überschrift-Größe", button_size: "Button-Größe", show_presets: "Farb-Presets anzeigen" })[field.name] || (field.name.startsWith("preset_") ? `Farb-Preset ${field.name.slice(7)}` : field.name),
     };
   }
 
   setConfig(config) {
     if (!config.entity) throw new Error("Bitte eine Licht-Entität auswählen.");
+    for (let index = 1; index <= RGB_PRESET_COUNT; index++) {
+      const color = config[`preset_${index}`];
+      if (color != null && (!Array.isArray(color) || color.length !== 3 || color.some((channel) => !Number.isInteger(channel) || channel < 0 || channel > 255))) throw new Error(`Preset ${index} muss eine RGB-Farbe mit drei Werten von 0 bis 255 sein.`);
+    }
     const changed = this._config?.entity !== config.entity;
     this._config = { title: "RGB", title_size: 5, button_size: 5, show_presets: false, ...config };
-    if (changed) { this._selected = -1; this._loadPresets(); }
+    if (changed) this._selected = -1;
+    this._loadPresets();
+    this._selected = -1;
     this._render();
     this._sync();
   }
@@ -1110,19 +1131,10 @@ class GlassRgbCard extends HTMLElement {
   getCardSize() { return 5; }
 
   _loadPresets() {
-    this._presets = RGB_PRESETS.map(([hue, saturation]) => ({ hue, saturation, brightness: 100 }));
-    try {
-      const saved = JSON.parse(localStorage.getItem(`glass-rgb-presets:${this._config.entity}`) || "null");
-      if (Array.isArray(saved) && saved.length === RGB_PRESETS.length && saved.every((preset) => Number.isFinite(preset.hue) && Number.isFinite(preset.saturation) && Number.isFinite(preset.brightness))) this._presets = saved;
-    } catch (error) { this._storageError = true; }
-  }
-
-  _savePreset() {
-    if (this._selected < 0 || !this._config.show_presets) return;
-    this._presets[this._selected] = { hue: this._hue, saturation: this._saturation, brightness: this._brightness, temperature: this._temperatureValue };
-    try { localStorage.setItem(`glass-rgb-presets:${this._config.entity}`, JSON.stringify(this._presets)); this._storageError = false; }
-    catch (error) { this._storageError = true; }
-    this._updateView();
+    this._presets = Array.from({ length: RGB_PRESET_COUNT }, (_, index) => ({ slot: index + 1, rgb: this._config[`preset_${index + 1}`] })).filter((preset) => Array.isArray(preset.rgb)).map((preset) => {
+      const [hue, saturation] = rgbToHs(preset.rgb);
+      return { ...preset, hue, saturation };
+    });
   }
 
   _markPending() {
@@ -1144,23 +1156,23 @@ class GlassRgbCard extends HTMLElement {
     else this._hass.callService("light", "turn_on", { entity_id: this._config.entity, brightness_pct: this._brightness });
   }
 
-  _selectPreset(index, forceOn = false) {
+  _selectPreset(index) {
     this._selected = index;
     const preset = this._presets[index];
-    this._hue = preset.hue; this._saturation = preset.saturation; this._brightness = forceOn ? Math.max(1, preset.brightness) : preset.brightness;
-    this._temperatureValue = Number.isFinite(preset.temperature) ? preset.temperature : null;
+    if (!preset || !this._hass) return;
+    this._hue = preset.hue; this._saturation = preset.saturation;
+    this._temperatureValue = null;
     this._updateView();
-    if (this._brightness === 0) this._sendBrightness();
-    else if (this._temperatureValue !== null && !this.shadowRoot.querySelector(".temperature").hidden) {
-      this._markPending();
-      this.shadowRoot.querySelector(".temperature input").value = this._temperatureValue;
-      this._hass?.callService("light", "turn_on", { entity_id: this._config.entity, color_temp_kelvin: this._temperatureValue, brightness_pct: this._brightness });
-    } else this._sendColor();
+    this._markPending();
+    this._hass.callService("light", "turn_on", { entity_id: this._config.entity, rgb_color: preset.rgb });
   }
 
   _toggleLight() {
     const state = this._hass?.states?.[this._config.entity]?.state;
-    if (state === "off") this._selectPreset(0, true);
+    if (state === "off") {
+      if (this._presets.length) this._selectPreset(0);
+      else this._hass.callService("light", "turn_on", { entity_id: this._config.entity });
+    }
     else if (state === "on") this._hass.callService("homeassistant", "toggle", { entity_id: this._config.entity });
   }
 
@@ -1170,6 +1182,7 @@ class GlassRgbCard extends HTMLElement {
     this._hue = Math.round(((angle * 180 / Math.PI) + 360) % 360);
     this._saturation = 100;
     this._temperatureValue = null;
+    this._selected = -1;
     this._updateView();
   }
 
@@ -1193,6 +1206,7 @@ class GlassRgbCard extends HTMLElement {
     controls.hidden = !supportsColor || !available;
     controls.classList.toggle("is-off", state?.state === "off");
     this.shadowRoot.querySelector(".turn-on").hidden = state?.state !== "off";
+    this.shadowRoot.querySelector(".turn-off").hidden = state?.state !== "on";
     this.shadowRoot.querySelector(".wheel").setAttribute("tabindex", state?.state === "off" ? "-1" : "0");
     this.shadowRoot.querySelector(".brightness").disabled = state?.state === "off";
     this.shadowRoot.querySelector(".unavailable").hidden = supportsColor && available;
@@ -1211,24 +1225,17 @@ class GlassRgbCard extends HTMLElement {
     const wheel = this.shadowRoot.querySelector(".wheel");
     if (!wheel) return;
     wheel.style.setProperty("--hue", this._hue);
+    wheel.style.setProperty("--saturation", `${this._saturation}%`);
     wheel.setAttribute("aria-valuenow", String(Math.round(this._hue)));
     this.shadowRoot.querySelector(".brightness-number").textContent = `${Math.round(this._brightness)} %`;
-    const arc = this.shadowRoot.querySelector(".brightness-arc");
-    arc.style.setProperty("--brightness", this._brightness);
-    arc.setAttribute("aria-valuenow", String(this._brightness));
-    const angle = Math.PI * this._brightness / 100;
-    const thumb = this.shadowRoot.querySelector(".brightness-thumb");
-    thumb.setAttribute("cx", String(50 - 35 * Math.cos(angle)));
-    thumb.setAttribute("cy", String(48 - 35 * Math.sin(angle)));
     const brightness = this.shadowRoot.querySelector(".brightness");
     brightness.value = this._brightness;
     brightness.style.setProperty("--brightness", `${this._brightness}%`);
     this.shadowRoot.querySelectorAll(".preset").forEach((button, index) => {
       const preset = this._presets[index];
-      button.style.setProperty("--swatch", Number.isFinite(preset.temperature) ? "#f3e5c4" : `hsl(${preset.hue} ${preset.saturation}% 50%)`);
+      button.style.setProperty("--swatch", `rgb(${preset.rgb.join(",")})`);
       button.setAttribute("aria-pressed", String(index === this._selected));
     });
-    this.shadowRoot.querySelector(".storage-error").hidden = !this._storageError;
   }
 
   _render() {
@@ -1247,62 +1254,55 @@ class GlassRgbCard extends HTMLElement {
         .header-action.active { border-color:#ff8b2b; color:#ff9b4a; box-shadow:inset 0 0 20px rgba(255,139,43,.12),0 0 0 1px rgba(255,139,43,.2),0 6px 15px rgba(0,0,0,.25); }
         .header-action.inactive { color:#85878b; border-color:#45474b; } .header-action ha-icon { display:block; width:var(--header-icon-size); height:var(--header-icon-size); --mdc-icon-size:var(--header-icon-size); }
         .action-state { position:absolute; bottom:11%; font-size:clamp(5px,calc(var(--header-action-size) * .15),13px); line-height:1; color:inherit; }
-        .controls[hidden],.temperature[hidden],.unavailable[hidden],.storage-error[hidden],.turn-on[hidden] { display:none; }
+        .controls[hidden],.temperature[hidden],.unavailable[hidden],.turn-on[hidden],.turn-off[hidden] { display:none; }
         .color-control { position:relative; width:min(100%,360px); aspect-ratio:1; margin:0 auto; }
-        .controls.is-off .wheel,.controls.is-off .brightness-arc,.controls.is-off .brightness,.controls.is-off .preset { filter:grayscale(1) brightness(.65); }
-        .controls.is-off .readout,.controls.is-off .brightness-arc { display:none; }
+        .controls.is-off .wheel,.controls.is-off .brightness,.controls.is-off .preset { filter:grayscale(1) brightness(.65); }
+        .controls.is-off .brightness-control { display:none; }
         .turn-on { position:absolute; inset:0; z-index:2; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; width:100%; height:100%; border:0; border-radius:50%; background:transparent; color:#85878b; cursor:pointer; }
         .turn-on ha-icon { display:block; width:28%; height:28%; --mdc-icon-size:100%; }
         .turn-on-label { color:inherit; font:inherit; font-size:14px; }
         .turn-on:focus-visible { outline:2px solid #ddd; outline-offset:3px; }
         .wheel { position:absolute; inset:0; overflow:hidden; border-radius:50%; background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red); touch-action:none; cursor:pointer; }
-        .wheel::before { content:""; position:absolute; inset:9%; border-radius:50%; background:#15171a; pointer-events:none; }
+        .wheel::before { content:""; position:absolute; inset:9%; border-radius:50%; background:color-mix(in srgb,hsl(var(--hue,0) 100% 50%) var(--saturation,100%),white); pointer-events:none; }
+        .controls.is-off .wheel::before { background:#15171a; }
         .wheel-marker { position:absolute; inset:0; transform:rotate(calc(var(--hue) * 1deg)); pointer-events:none; }
         .wheel-marker::after { content:""; position:absolute; width:10%; aspect-ratio:1; top:0; left:45%; border:2px solid #ddd; border-radius:50%; background:hsl(var(--hue) 100% 50%); }
         .wheel:focus-visible { outline:2px solid white; outline-offset:3px; }
-        .readout { position:absolute; inset:21%; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:10px; pointer-events:none; }
-        .brightness-arc { position:absolute; inset:14%; width:72%; height:72%; overflow:visible; pointer-events:none; touch-action:none; }
-        .brightness-track,.brightness-progress,.brightness-hit { fill:none; stroke-width:2; }
-        .brightness-track { stroke:#393a3d; } .brightness-progress { stroke:#ff8b2b; stroke-dasharray:100; stroke-dashoffset:calc(100 - var(--brightness,0)); }
-        .brightness-thumb { fill:#ff8b2b; pointer-events:all; cursor:pointer; } .brightness-hit { stroke:transparent; stroke-width:10; pointer-events:stroke; cursor:pointer; }
-        .brightness-number { font-size:clamp(25px,6vw,52px); font-weight:700; line-height:1; } .brightness-label { color:#a0a2ad; font-size:14px; }
-        .brightness { width:75%; accent-color:#ff8b2b; pointer-events:auto; cursor:pointer; }
+        .turn-off { position:absolute; inset:12%; z-index:1; border:0; border-radius:50%; background:transparent; cursor:pointer; }
+        .turn-off:focus-visible { outline:2px solid white; outline-offset:3px; }
+        .brightness-control { display:flex; align-items:center; gap:12px; margin:20px auto 0; width:min(100%,360px); color:#a0a2ad; font-size:14px; }
+        .brightness { min-width:0; flex:1; accent-color:#ff8b2b; cursor:pointer; }
         .presets { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; margin-top:28px; justify-items:center; }
         .preset { width:min(100%,42px); aspect-ratio:1; border:2px solid transparent; border-radius:50%; background:var(--swatch); cursor:pointer; }
         .preset[aria-pressed="true"] { outline:2px solid white; outline-offset:3px; }
         .temperature { display:flex; align-items:center; gap:12px; margin-top:28px; color:#a0a2ad; font-size:14px; }
         .temperature input { min-width:0; flex:1; accent-color:#f1f1f1; cursor:pointer; }
-        .unavailable,.storage-error { color:var(--secondary-text-color,#a0a2ad); font-size:14px; }
+        .unavailable { color:var(--secondary-text-color,#a0a2ad); font-size:14px; }
         @media (max-width:380px) { .card { padding:18px; } .presets { gap:6px; } }
       </style>
       <article class="card" style="--subtitle-font:clamp(${22 * titleScale}px,${4.8 * titleScale}vw,${38 * titleScale}px);--header-action-size:clamp(${56 * menuScale}px,${11 * menuScale}vw,${88 * menuScale}px);--header-icon-size:calc((var(--header-action-size) - 16px) * .46)">
         <header class="header"><div class="titles"><div class="title">${escapeRgb(this._config.title)}</div><h2 class="subtitle"></h2></div><button class="header-action" aria-label="Licht ein- oder ausschalten" title="Licht ein- oder ausschalten"><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}"></ha-icon><span class="action-state"></span></button></header>
         <p class="unavailable" hidden></p>
-        <div class="controls" hidden><div class="color-control"><div class="wheel" role="slider" tabindex="0" aria-label="Farbton" aria-valuemin="0" aria-valuemax="359" aria-valuenow="0"><span class="wheel-marker"></span></div><svg class="brightness-arc" viewBox="0 0 100 100" aria-hidden="true"><path class="brightness-track" d="M15 48 A35 35 0 0 1 85 48"/><path class="brightness-progress" d="M15 48 A35 35 0 0 1 85 48" pathLength="100"/><path class="brightness-hit" d="M15 48 A35 35 0 0 1 85 48"/><circle class="brightness-thumb" cx="15" cy="48" r="4"/></svg><div class="readout"><strong class="brightness-number">0 %</strong><span class="brightness-label">Helligkeit</span><input class="brightness" type="range" min="0" max="100" aria-label="Helligkeit"></div><button class="turn-on" type="button" aria-label="Licht mit erstem Preset einschalten" title="Licht einschalten" hidden><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}"></ha-icon><span class="turn-on-label">RGB</span></button></div>
-        ${this._config.show_presets ? `<div class="presets">${RGB_PRESETS.map((preset, index) => `<button class="preset" type="button" title="Farb-Preset ${index + 1}" aria-label="Farb-Preset ${index + 1}" aria-pressed="false"></button>`).join("")}</div><p class="storage-error" hidden>Presets konnten im Browser nicht gespeichert werden.</p>` : `<p class="storage-error" hidden></p>`}
+        <div class="controls" hidden><div class="color-control"><div class="wheel" role="slider" tabindex="0" aria-label="Farbton" aria-valuemin="0" aria-valuemax="359" aria-valuenow="0"><span class="wheel-marker"></span></div><button class="turn-off" type="button" aria-label="Licht ausschalten" title="Licht ausschalten" hidden></button><button class="turn-on" type="button" aria-label="Licht mit erstem Preset einschalten" title="Licht einschalten" hidden><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}"></ha-icon><span class="turn-on-label">RGB</span></button></div><div class="brightness-control"><input class="brightness" type="range" min="0" max="100" aria-label="Helligkeit"><span class="brightness-number">0 %</span></div>
+        ${this._config.show_presets && this._presets.length ? `<div class="presets">${this._presets.map((preset) => `<button class="preset" type="button" title="Farb-Preset ${preset.slot}" aria-label="Farb-Preset ${preset.slot}" aria-pressed="false"></button>`).join("")}</div>` : ""}
         <div class="temperature" hidden><span>Warm</span><input type="range" aria-label="Farbtemperatur" step="50"><span>Kalt</span></div></div>
       </article>`;
     this.shadowRoot.querySelector(".header-action").addEventListener("click", () => this._toggleLight());
     this.shadowRoot.querySelector(".turn-on").addEventListener("click", () => this._toggleLight());
+    this.shadowRoot.querySelector(".turn-off").addEventListener("click", () => this._toggleLight());
     const wheel = this.shadowRoot.querySelector(".wheel");
     wheel.addEventListener("pointerdown", (event) => { if (event.button !== 0 || event.target !== wheel) return; event.preventDefault(); this._dragging = true; wheel.setPointerCapture(event.pointerId); this._setHue(event); });
     wheel.addEventListener("pointermove", (event) => { if (this._dragging) this._setHue(event); });
-    wheel.addEventListener("pointerup", (event) => { if (!this._dragging) return; this._setHue(event); this._dragging = false; this._savePreset(); this._sendColor(); });
+    wheel.addEventListener("pointerup", (event) => { if (!this._dragging) return; this._setHue(event); this._dragging = false; this._sendColor(); });
     wheel.addEventListener("pointercancel", () => { this._dragging = false; this._sync(); });
-    wheel.addEventListener("keydown", (event) => { if (!["ArrowLeft", "ArrowDown", "ArrowRight", "ArrowUp"].includes(event.key)) return; event.preventDefault(); this._hue = (Math.round(this._hue) + (event.key === "ArrowLeft" || event.key === "ArrowDown" ? 355 : 5)) % 360; this._saturation = 100; this._temperatureValue = null; this._updateView(); this._savePreset(); this._sendColor(); });
-    const arc = this.shadowRoot.querySelector(".brightness-arc");
-    const setArcBrightness = (event) => { const bounds = arc.getBoundingClientRect(); const x = (event.clientX - bounds.left) / bounds.width * 100 - 50; const y = Math.max(0, 48 - (event.clientY - bounds.top) / bounds.height * 100); this._brightness = Math.round(Math.atan2(y, -x) / Math.PI * 100); this._updateView(); };
-    arc.addEventListener("pointerdown", (event) => { if (event.button !== 0) return; event.preventDefault(); this._dragging = true; arc.setPointerCapture(event.pointerId); setArcBrightness(event); });
-    arc.addEventListener("pointermove", (event) => { if (this._dragging) setArcBrightness(event); });
-    arc.addEventListener("pointerup", (event) => { if (!this._dragging) return; setArcBrightness(event); this._dragging = false; this._savePreset(); this._sendBrightness(); });
-    arc.addEventListener("pointercancel", () => { this._dragging = false; this._sync(); });
+    wheel.addEventListener("keydown", (event) => { if (!["ArrowLeft", "ArrowDown", "ArrowRight", "ArrowUp"].includes(event.key)) return; event.preventDefault(); this._hue = (Math.round(this._hue) + (event.key === "ArrowLeft" || event.key === "ArrowDown" ? 355 : 5)) % 360; this._saturation = 100; this._temperatureValue = null; this._selected = -1; this._updateView(); this._sendColor(); });
     const brightness = this.shadowRoot.querySelector(".brightness");
     brightness.addEventListener("input", () => { this._dragging = true; this._brightness = Number(brightness.value); this._updateView(); });
-    brightness.addEventListener("change", () => { this._dragging = false; this._brightness = Number(brightness.value); this._savePreset(); this._sendBrightness(); });
+    brightness.addEventListener("change", () => { this._dragging = false; this._brightness = Number(brightness.value); this._sendBrightness(); });
     this.shadowRoot.querySelectorAll(".preset").forEach((button, index) => button.addEventListener("click", () => this._selectPreset(index)));
     const temperature = this.shadowRoot.querySelector(".temperature input");
     temperature.addEventListener("input", () => { this._dragging = true; });
-    temperature.addEventListener("change", () => { this._dragging = false; this._temperatureValue = Number(temperature.value); this._savePreset(); this._markPending(); this._hass?.callService("light", "turn_on", { entity_id: this._config.entity, color_temp_kelvin: this._temperatureValue }); });
+    temperature.addEventListener("change", () => { this._dragging = false; this._temperatureValue = Number(temperature.value); this._selected = -1; this._updateView(); this._markPending(); this._hass?.callService("light", "turn_on", { entity_id: this._config.entity, color_temp_kelvin: this._temperatureValue }); });
   }
 }
 
