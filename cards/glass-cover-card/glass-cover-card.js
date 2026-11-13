@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.20.0";
+const CARD_VERSION = "1.20.1";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {

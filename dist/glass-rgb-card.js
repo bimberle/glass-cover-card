@@ -1,4 +1,4 @@
-const RGB_CARD_VERSION = "1.1.0";
+const RGB_CARD_VERSION = "1.1.1";
 const RGB_PRESET_COUNT = 6;
 const rgbToHs = (rgb) => {
   const [red, green, blue] = rgb.map((value) => value / 255);
@@ -173,8 +173,9 @@ class GlassRgbCard extends HTMLElement {
   _updateView() {
     const wheel = this.shadowRoot.querySelector(".wheel");
     if (!wheel) return;
-    wheel.style.setProperty("--hue", this._hue);
-    wheel.style.setProperty("--saturation", `${this._saturation}%`);
+    const colorControl = this.shadowRoot.querySelector(".color-control");
+    colorControl.style.setProperty("--hue", this._hue);
+    colorControl.style.setProperty("--saturation", `${this._saturation}%`);
     wheel.setAttribute("aria-valuenow", String(Math.round(this._hue)));
     this.shadowRoot.querySelector(".brightness-number").textContent = `${Math.round(this._brightness)} %`;
     const brightness = this.shadowRoot.querySelector(".brightness");
@@ -211,16 +212,17 @@ class GlassRgbCard extends HTMLElement {
         .turn-on ha-icon { display:block; width:28%; height:28%; --mdc-icon-size:100%; }
         .turn-on-label { color:inherit; font:inherit; font-size:14px; }
         .turn-on:focus-visible { outline:2px solid #ddd; outline-offset:3px; }
-        .wheel { position:absolute; inset:0; overflow:hidden; border-radius:50%; background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red); touch-action:none; cursor:pointer; }
-        .wheel::before { content:""; position:absolute; inset:9%; border-radius:50%; background:color-mix(in srgb,hsl(var(--hue,0) 100% 50%) var(--saturation,100%),white); pointer-events:none; }
+        .wheel { position:absolute; inset:0; border-radius:50%; background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red); touch-action:none; cursor:pointer; }
+        .wheel::before { content:""; position:absolute; inset:9%; border-radius:50%; background:#15171a; pointer-events:none; }
         .controls.is-off .wheel::before { background:#15171a; }
-        .wheel-marker { position:absolute; inset:0; transform:rotate(calc(var(--hue) * 1deg)); pointer-events:none; }
-        .wheel-marker::after { content:""; position:absolute; width:10%; aspect-ratio:1; top:0; left:45%; border:2px solid #ddd; border-radius:50%; background:hsl(var(--hue) 100% 50%); }
+        .wheel-marker { position:absolute; inset:0; pointer-events:none; }
+        .wheel-marker::after { content:""; position:absolute; box-sizing:border-box; width:10%; aspect-ratio:1; top:-2px; left:45%; border:2px solid #ddd; border-radius:50%; background:hsl(var(--hue) 100% 50%); transform:rotate(calc(var(--hue) * 1deg)); transform-origin:50% calc(500% + 2px); }
         .wheel:focus-visible { outline:2px solid white; outline-offset:3px; }
-        .turn-off { position:absolute; inset:12%; z-index:1; border:0; border-radius:50%; background:transparent; cursor:pointer; }
+        .turn-off { position:absolute; inset:18%; z-index:1; display:grid; place-items:center; border:clamp(4.5px,1.5vw,9px) solid color-mix(in srgb,hsl(var(--hue,0) 100% 50%) var(--saturation,100%),white); border-radius:50%; background:#15171a; color:color-mix(in srgb,hsl(var(--hue,0) 100% 50%) var(--saturation,100%),white); cursor:pointer; }
+        .turn-off ha-icon { display:block; transform:translateY(-25%); --mdc-icon-size:clamp(42px,18vw,96px); }
         .turn-off:focus-visible { outline:2px solid white; outline-offset:3px; }
-        .brightness-control { display:flex; align-items:center; gap:12px; margin:20px auto 0; width:min(100%,360px); color:#a0a2ad; font-size:14px; }
-        .brightness { min-width:0; flex:1; accent-color:#ff8b2b; cursor:pointer; }
+        .brightness-control { position:absolute; z-index:2; top:60%; left:27%; width:46%; display:flex; flex-direction:column; align-items:center; gap:3px; color:#a0a2ad; font-size:12px; }
+        .brightness { width:100%; min-width:0; margin:0; accent-color:color-mix(in srgb,hsl(var(--hue,0) 100% 50%) var(--saturation,100%),white); cursor:pointer; }
         .presets { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; margin-top:28px; justify-items:center; }
         .preset { width:min(100%,42px); aspect-ratio:1; border:2px solid transparent; border-radius:50%; background:var(--swatch); cursor:pointer; }
         .preset[aria-pressed="true"] { outline:2px solid white; outline-offset:3px; }
@@ -232,7 +234,7 @@ class GlassRgbCard extends HTMLElement {
       <article class="card" style="--subtitle-font:clamp(${22 * titleScale}px,${4.8 * titleScale}vw,${38 * titleScale}px);--header-action-size:clamp(${56 * menuScale}px,${11 * menuScale}vw,${88 * menuScale}px);--header-icon-size:calc((var(--header-action-size) - 16px) * .46)">
         <header class="header"><div class="titles"><div class="title">${escapeRgb(this._config.title)}</div><h2 class="subtitle"></h2></div><button class="header-action" aria-label="Licht ein- oder ausschalten" title="Licht ein- oder ausschalten"><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}"></ha-icon><span class="action-state"></span></button></header>
         <p class="unavailable" hidden></p>
-        <div class="controls" hidden><div class="color-control"><div class="wheel" role="slider" tabindex="0" aria-label="Farbton" aria-valuemin="0" aria-valuemax="359" aria-valuenow="0"><span class="wheel-marker"></span></div><button class="turn-off" type="button" aria-label="Licht ausschalten" title="Licht ausschalten" hidden></button><button class="turn-on" type="button" aria-label="Licht mit erstem Preset einschalten" title="Licht einschalten" hidden><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}"></ha-icon><span class="turn-on-label">RGB</span></button></div><div class="brightness-control"><input class="brightness" type="range" min="0" max="100" aria-label="Helligkeit"><span class="brightness-number">0 %</span></div>
+        <div class="controls" hidden><div class="color-control"><div class="wheel" role="slider" tabindex="0" aria-label="Farbton" aria-valuemin="0" aria-valuemax="359" aria-valuenow="0"><span class="wheel-marker"></span></div><button class="turn-off" type="button" aria-label="Licht ausschalten" title="Licht ausschalten" hidden><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}" aria-hidden="true"></ha-icon></button><button class="turn-on" type="button" aria-label="Licht mit erstem Preset einschalten" title="Licht einschalten" hidden><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}"></ha-icon><span class="turn-on-label">RGB</span></button><div class="brightness-control"><input class="brightness" type="range" min="0" max="100" aria-label="Helligkeit"><span class="brightness-number">0 %</span></div></div>
         ${this._config.show_presets && this._presets.length ? `<div class="presets">${this._presets.map((preset) => `<button class="preset" type="button" title="Farb-Preset ${preset.slot}" aria-label="Farb-Preset ${preset.slot}" aria-pressed="false"></button>`).join("")}</div>` : ""}
         <div class="temperature" hidden><span>Warm</span><input type="range" aria-label="Farbtemperatur" step="50"><span>Kalt</span></div></div>
       </article>`;
