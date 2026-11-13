@@ -404,6 +404,79 @@ assert.ok(marketplaceEntry.definitions.has("glass-button-card"));
 assert.equal(typeof marketplaceEntry.Card.getConfigForm, "function");
 assert.ok(marketplaceEntry.definitions.has("glass-panel-card"));
 assert.ok(marketplaceEntry.definitions.has("glass-rgb-card"));
+assert.ok(marketplaceEntry.definitions.has("glass-navigation-card"));
+const NavigationCard = marketplaceEntry.definitions.get("glass-navigation-card");
+const navigationForm = NavigationCard.getConfigForm();
+const navigationSchema = Object.fromEntries(navigationForm.schema.map((field) => [field.name, field]));
+assert.equal(navigationSchema.items.selector.object.multiple, true);
+assert.equal(navigationSchema.color.default, "orange");
+assert.equal(navigationSchema.position.default, "bottom");
+assert.equal(navigationSchema.scale.default, 100);
+assert.equal(navigationSchema.scale.selector.number.min, 70);
+assert.equal(navigationSchema.scale.selector.number.max, 140);
+assert.equal(navigationSchema.scale.selector.number.step, 5);
+assert.equal(navigationSchema.color.selector.select.options.map(({ value }) => value).join(","), "orange,white,gray,green,red");
+assert.equal(navigationSchema.position.selector.select.options.map(({ value }) => value).join(","), "top,bottom,left,right");
+assert.equal(navigationForm.computeLabel(navigationSchema.color), "Farbe für Icons und Texte");
+const navigationCard = new NavigationCard();
+navigationCard.setConfig({
+  color: "green",
+  position: "left",
+  scale: 80,
+  items: [
+    { name: "Home", icon: "mdi:home", url: "/lovelace/home" },
+    { name: "Räume", icon: "mdi:view-grid", menu_title: "Raum wählen", children: [
+      { name: "UG", icon: "mdi:home-floor-b", children: [{ name: "Waschküche", icon: "mdi:washing-machine", url: "/lovelace/waschkueche" }] },
+      { name: "EG", icon: "mdi:home-floor-0", children: [
+        { name: "Küche", icon: "mdi:pot-steam", url: "/lovelace/kueche" },
+        { name: "Wohnen", icon: "mdi:sofa", url: "/lovelace/wohnen" },
+        { name: "Flur", icon: "mdi:door", url: "/lovelace/flur" },
+        { name: "Bad", icon: "mdi:shower", url: "/lovelace/bad" },
+        { name: "Büro", icon: "mdi:desk", url: "/lovelace/buero" },
+      ] },
+      { name: "OG", icon: "mdi:home-floor-1", children: [{ name: "Schlafzimmer", icon: "mdi:bed", url: "/lovelace/schlafzimmer" }] },
+    ] },
+    { type: "separator" },
+    { name: "Mehr", icon: "mdi:dots-horizontal", url: "/lovelace/mehr" },
+  ],
+});
+assert.equal(navigationCard._config.position, "left");
+assert.equal(navigationCard._config.scale, 80);
+assert.match(navigationCard.shadowRoot.innerHTML, /class="shell position-left"/);
+assert.match(navigationCard.shadowRoot.innerHTML, /--nav-scale:0\.8/);
+navigationCard._menuRootIndex = 1;
+assert.equal(navigationCard._menuTitle(), "Raum wählen");
+navigationCard._render();
+assert.match(navigationCard.shadowRoot.innerHTML, /class="menu-segments"/);
+assert.match(navigationCard.shadowRoot.innerHTML, /class="nav-separator" role="separator" aria-orientation="horizontal"/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu \{[^}]*width:min\(720px/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.menu-segments \{[^}]*width:min\(100%,620px\)/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \{ display:grid; grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item \{ width:min\(100%,160px\)/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item ha-icon \{[^}]*width:72px; height:72px; --mdc-icon-size:72px;/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item span:not\(\.chevron\) \{[^}]*font-size:20px/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item span:not\(\.chevron\) \{[^}]*bottom:12%/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item ha-icon \{ position:absolute; top:50%; left:50%;/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item span:not\(\.chevron\) \{ position:absolute;/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.position-bottom \.bar \.nav-item\.has-children \.chevron \{ top:-3px; right:50%; transform:translateX\(50%\)/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \{ grid-template-columns:repeat\(3,minmax\(0,1fr\)\); gap:6px; \}/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item ha-icon \{ width:48px; height:48px; --mdc-icon-size:48px; \}/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item span:not\(\.chevron\) \{[^}]*font-size:14px/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item span:not\(\.chevron\) \{[^}]*bottom:8%/);
+assert.match(navigationCard.shadowRoot.innerHTML, /UG/);
+navigationCard._menuPath = [1];
+navigationCard._render();
+assert.equal(navigationCard._visibleItems().length, 5, "Five rooms must fit a fixed three-column grid over two rows");
+const navigationScaleCard = new NavigationCard();
+navigationScaleCard.setConfig({ scale: 200, items: [{ name: "Home", icon: "mdi:home", url: "/lovelace/home" }] });
+assert.equal(navigationScaleCard._config.scale, 140);
+navigationScaleCard.setConfig({ scale: 0, items: [{ name: "Home", icon: "mdi:home", url: "/lovelace/home" }] });
+assert.equal(navigationScaleCard._config.scale, 70);
+assert.match(navigationCard.shadowRoot.innerHTML, /Küche/);
+assert.match(navigationCard.shadowRoot.innerHTML, /class="segment selected"/);
+assert.throws(() => navigationCard.setConfig({ items: [{ name: "Bad URL", icon: "mdi:alert", url: "javascript:alert(1)" }] }), /HTTP\(S\)-URL/);
+assert.throws(() => navigationCard.setConfig({ items: [{ name: "External", icon: "mdi:alert", url: "//example.com" }] }), /HTTP\(S\)-URL/);
+assert.throws(() => navigationCard.setConfig({ items: [{ name: "Ambiguous", icon: "mdi:alert", url: "/home", children: [{ name: "Child", icon: "mdi:home", url: "/child" }] }] }), /nicht beides/);
 const rgbForm = marketplaceEntry.definitions.get("glass-rgb-card").getConfigForm();
 assert.equal(rgbForm.schema.filter((field) => /^preset_[1-6]$/.test(field.name) && field.selector.color_rgb).length, 6);
 assert.equal(rgbForm.schema.find((field) => field.name === "show_action_button").default, true);
@@ -440,9 +513,9 @@ assert.match(rgbSource, /\.turn-off \{[^}]*solid var\(--light-color\);[^}]*color
 assert.match(rgbSource, /<button class="turn-on"[^>]*><ha-icon icon=/);
 assert.match(rgbSource, /this\._config\.turn_on_text/);
 assert.match(rgbSource, /class="turn-on-label"/);
-assert.deepEqual(marketplaceEntry.customCards.map((card) => card.type).sort(), ["glass-button-card", "glass-cover-card", "glass-panel-card", "glass-rgb-card", "glass-room-card"]);
+assert.deepEqual(marketplaceEntry.customCards.map((card) => card.type).sort(), ["glass-button-card", "glass-cover-card", "glass-navigation-card", "glass-panel-card", "glass-rgb-card", "glass-room-card"]);
 await marketplaceEntry.runSource(await readFile("dist/glass-button-card.js", "utf8"), "dist/glass-button-card.js");
-assert.equal(marketplaceEntry.customCards.length, 5, "Loading standalone cards must not register duplicate card entries");
+assert.equal(marketplaceEntry.customCards.length, 6, "Loading standalone cards must not register duplicate card entries");
 const RoomCard = marketplaceEntry.definitions.get("glass-room-card");
 const roomEditor = RoomCard.getConfigElement();
 roomEditor.setConfig({ name: "Wohnzimmer", height: 430 });

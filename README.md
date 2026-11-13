@@ -9,7 +9,7 @@ npm run build
 npm test
 ```
 
-Die Quellen der fuenf Karten liegen jeweils in `cards/<kartenname>/`. Die gebauten `dist/*.js`-Dateien werden mit versioniert, damit HACS sie direkt aus einer GitHub-Release installieren kann.
+Die Quellen der sechs Karten liegen jeweils in `cards/<kartenname>/`. Die gebauten `dist/*.js`-Dateien werden mit versioniert, damit HACS sie direkt aus einer GitHub-Release installieren kann.
 
 ## Karten
 
@@ -112,26 +112,76 @@ view_layout:
 | `name_size` | `19` | Schriftgroesse der Beschriftung in Pixeln, 12 bis 48 |
 | `sensor_size` | `29` | Schriftgroesse des Sensorwerts in Pixeln, 12 bis 64 |
 
+### Glass Navigation Card
+
+Eine feste Navigationsleiste fuer Home Assistant. Menüpunkte können beliebig verschachtelt werden: Gruppen öffnen eine weitere Auswahl, Einträge mit `url` navigieren. Gruppen haben nur `children`, Blatt-Einträge nur `url`. Raumkacheln erscheinen in drei Spalten; fünf Räume werden zum Beispiel als drei plus zwei Kacheln angeordnet. Das Farbfeld färbt alle Icons und Texte gemeinsam. Die Position dockt die Leiste am oberen oder unteren Bildschirmrand horizontal beziehungsweise links oder rechts vertikal an.
+
+```yaml
+type: custom:glass-navigation-card
+position: bottom
+color: orange
+scale: 100
+items:
+  - name: Home
+    icon: mdi:home-outline
+    url: /lovelace/home
+  - name: Räume
+    icon: mdi:view-grid
+    menu_title: Raum wählen
+    children:
+      - name: UG
+        icon: mdi:home-floor-b
+        children:
+          - name: Waschküche
+            icon: mdi:washing-machine
+            url: /lovelace/waschkueche
+      - name: EG
+        icon: mdi:home-floor-0
+        children:
+          - name: Küche
+            icon: mdi:pot-steam
+            url: /lovelace/kueche
+          - name: Wohnen
+            icon: mdi:sofa-outline
+            url: /lovelace/wohnen
+  - type: separator
+  - name: Mehr
+    icon: mdi:dots-horizontal
+    url: /lovelace/mehr
+```
+
+| Option | Standard | Beschreibung |
+| --- | --- | --- |
+| `items` | erforderlich | Verschachtelte Liste aus Gruppen (`children`) und Navigationszielen (`url`); jeder Eintrag hat `name` und `icon`. Gruppen mit Gruppen-Kindern werden als Segmentauswahl angezeigt. |
+| `color` | `orange` | Gemeinsame Farbe für Icons und Texte: `orange`, `white`, `gray`, `green` oder `red` |
+| `position` | `bottom` | `top` oder `bottom` für horizontal; `left` oder `right` für vertikal |
+| `scale` | `100` | Gesamte Navigation skalieren, von `70` bis `140` Prozent |
+
+Gruppen können optional `menu_title` setzen, zum Beispiel `menu_title: Raum wählen`.
+Mit `{ type: separator }` fügst du zwischen Punkten der Hauptnavigation einen Trenner ein; er steht bei horizontaler Leiste senkrecht und bei vertikaler Leiste waagerecht.
+
+Interne URLs beginnen mit `/`, zum Beispiel `/lovelace/kueche`; externe Links müssen mit `http://` oder `https://` beginnen. Die Leiste ist am Bildschirmrand fixiert und liegt über dem Dashboard-Inhalt.
+
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle fuenf Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die Beschriftung. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.22.3`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle sechs Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die Beschriftung. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.23.0`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
 3. Fuege `https://github.com/bimberle/glass-cover-card` hinzu und waehle den Typ **Dashboard**.
 4. Suche nach **Glass Cover Cards**, oeffne den Eintrag und installiere ihn.
-5. Lade die Dashboard-Ressource neu. Die Ressource `glass-cover-card.js` registriert `custom:glass-cover-card`, `custom:glass-button-card`, `custom:glass-panel-card`, `custom:glass-rgb-card` und `custom:glass-room-card`.
+5. Lade die Dashboard-Ressource neu. Die Ressource `glass-cover-card.js` registriert `custom:glass-cover-card`, `custom:glass-button-card`, `custom:glass-panel-card`, `custom:glass-rgb-card`, `custom:glass-room-card` und `custom:glass-navigation-card`.
 
   - Home Assistant 2026.11+: `/local/community/glass-cover-card/glass-cover-card.js`
   - Aeltere HACS-Versionen: `/hacsfiles/glass-cover-card.js`
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.22.2 installiert?** Aktualisiere auf v1.22.3 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.22.3 installiert?** Aktualisiere auf v1.23.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
-Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/local/glass-cover-card.js` unter **Einstellungen > Dashboards > Ressourcen** als **JavaScript-Modul**. Die Datei enthaelt alle fuenf Karten. Optional kann fuer eine isolierte Buttonkarten-Installation stattdessen nur `glass-button-card.js` kopiert und `/local/glass-button-card.js` registriert werden.
+Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/local/glass-cover-card.js` unter **Einstellungen > Dashboards > Ressourcen** als **JavaScript-Modul**. Die Datei enthaelt alle sechs Karten. Optional kann fuer eine isolierte Buttonkarten-Installation stattdessen nur `glass-button-card.js` kopiert und `/local/glass-button-card.js` registriert werden.
 
 ## Optionen
 
