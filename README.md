@@ -9,7 +9,7 @@ npm run build
 npm test
 ```
 
-Die Quellen der vier Karten liegen jeweils in `cards/<kartenname>/`. Die gebauten `dist/*.js`-Dateien werden mit versioniert, damit HACS sie direkt aus einer GitHub-Release installieren kann.
+Die Quellen der fuenf Karten liegen jeweils in `cards/<kartenname>/`. Die gebauten `dist/*.js`-Dateien werden mit versioniert, damit HACS sie direkt aus einer GitHub-Release installieren kann.
 
 ## Karten
 
@@ -75,26 +75,53 @@ cards:
 
   Steuert ein farbfaehiges Licht ueber einen Farbkreis und einen Helligkeitsregler. Die Mitte schaltet das Licht ein oder aus; bis zu sechs Farb-Presets koennen in der Kartenkonfiguration festgelegt werden. Fuer RGBW- und RGBWW-Leuchten mit Farbtemperatur steht zusaetzlich ein Warm/Kalt-Regler bereit. Ein Beispiel und alle Optionen findest du unter [Glass RGB Card](#glass-rgb-card-1).
 
+### Glass Room Card
+
+Zeigt ein Raumfoto mit Raumname und optionalem Sensorwert inklusive Einheit. Ein Klick oeffnet die Sensordetails; ohne Sensor bleibt die Karte eine reine Bildkarte. Bildpfad, Sensor, Hoehe und vertikaler Bildausschnitt sind im visuellen Editor einstellbar. Bei einem fehlenden oder nicht verfuegbaren Sensor erscheint eine entsprechende Meldung.
+
+```yaml
+type: custom:glass-room-card
+name: Wohnzimmer
+image: /local/glass_design/rooms/Wohnzimmer.png
+entity: sensor.temperatur_wohnzimmer
+height: 430
+image_position: 60
+view_layout:
+  grid-area: raum
+```
+
+| Option | Standard | Beschreibung |
+| --- | --- | --- |
+| `name` | `Wohnzimmer` | Raumname |
+| `image` | leer | Lokaler Bildpfad oder HTTP(S)-Bild-URL |
+| `entity` | keine | Optionale Sensor-Entitaet; ohne Entitaet kein Sensorwert und keine Klickaktion |
+| `height` | `430` | Kartenhoehe in Pixeln, begrenzt auf 180 bis 800 |
+| `image_position` | `60` | Vertikaler Bildausschnitt von 0 bis 100 Prozent |
+| `text_color` | `white` | Schriftfarbe fuer den Raumnamen: `black`, `white` oder `gray` |
+| `sensor_color` | `white` | Unabhaengige Schriftfarbe fuer den Sensorwert: `black`, `white` oder `gray` |
+| `name_size` | `19` | Schriftgroesse des Raumnamens in Pixeln, 12 bis 48 |
+| `sensor_size` | `29` | Schriftgroesse des Sensorwerts in Pixeln, 12 bis 64 |
+
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle vier Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.20.4`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle fuenf Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.21.0`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
 3. Fuege `https://github.com/bimberle/glass-cover-card` hinzu und waehle den Typ **Dashboard**.
 4. Suche nach **Glass Cover Cards**, oeffne den Eintrag und installiere ihn.
-5. Lade die Dashboard-Ressource neu. Die Ressource `glass-cover-card.js` registriert `custom:glass-cover-card`, `custom:glass-button-card`, `custom:glass-panel-card` und `custom:glass-rgb-card`.
+5. Lade die Dashboard-Ressource neu. Die Ressource `glass-cover-card.js` registriert `custom:glass-cover-card`, `custom:glass-button-card`, `custom:glass-panel-card`, `custom:glass-rgb-card` und `custom:glass-room-card`.
 
   - Home Assistant 2026.11+: `/local/community/glass-cover-card/glass-cover-card.js`
   - Aeltere HACS-Versionen: `/hacsfiles/glass-cover-card.js`
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.20.3 installiert?** Aktualisiere auf v1.20.4 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.20.4 installiert?** Aktualisiere auf v1.21.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
-Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/local/glass-cover-card.js` unter **Einstellungen > Dashboards > Ressourcen** als **JavaScript-Modul**. Die Datei enthaelt alle vier Karten. Optional kann fuer eine isolierte Buttonkarten-Installation stattdessen nur `glass-button-card.js` kopiert und `/local/glass-button-card.js` registriert werden.
+Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/local/glass-cover-card.js` unter **Einstellungen > Dashboards > Ressourcen** als **JavaScript-Modul**. Die Datei enthaelt alle fuenf Karten. Optional kann fuer eine isolierte Buttonkarten-Installation stattdessen nur `glass-button-card.js` kopiert und `/local/glass-button-card.js` registriert werden.
 
 ## Optionen
 
