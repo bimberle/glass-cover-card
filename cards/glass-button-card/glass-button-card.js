@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.6.0";
+const CARD_VERSION = "1.6.1";
 const BUTTON_COLORS = {
   orange: "#ff8b2b",
   white: "#f2f2f4",
@@ -6,7 +6,7 @@ const BUTTON_COLORS = {
   green: "#4bc785",
   red: "#f05c5c",
 };
-const BUTTON_COLOR_OPTIONS = [["orange", "Orange"], ["white", "Weiß"], ["gray", "Grau"], ["green", "Grün"], ["red", "Rot"]];
+const BUTTON_COLOR_OPTIONS = [{ value: "orange", label: "Orange" }, { value: "white", label: "Weiß" }, { value: "gray", label: "Grau" }, { value: "green", label: "Grün" }, { value: "red", label: "Rot" }];
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -63,6 +63,10 @@ class GlassButtonCard extends HTMLElement {
     return this._config?.show_name === false ? 2 : 3;
   }
 
+  static getConfigElement() {
+    return document.createElement("glass-button-card-editor");
+  }
+
   static getConfigForm() {
     const schema = [
       { name: "entity", required: true, selector: { entity: {} } },
@@ -71,12 +75,12 @@ class GlassButtonCard extends HTMLElement {
       { name: "color_active", selector: { select: { mode: "dropdown", options: BUTTON_COLOR_OPTIONS } } },
       { name: "icon_inactive", selector: { icon: {} } },
       { name: "color_inactive", default: "gray", selector: { select: { mode: "dropdown", options: BUTTON_COLOR_OPTIONS } } },
-      { name: "binary_sensor_active_state", default: "on", selector: { select: { mode: "dropdown", options: [["on", "Offen"], ["off", "Geschlossen"]] } } },
+      { name: "binary_sensor_active_state", default: "on", selector: { select: { mode: "dropdown", options: [{ value: "on", label: "Offen" }, { value: "off", label: "Geschlossen" }] } } },
       { name: "name", selector: { text: {} } },
       {
         name: "action",
         default: "toggle",
-        selector: { select: { mode: "dropdown", options: [["toggle", "Ein-/Ausschalten"], ["more-info", "Mehr Informationen anzeigen"]] } },
+        selector: { select: { mode: "dropdown", options: [{ value: "toggle", label: "Ein-/Ausschalten" }, { value: "more-info", label: "Mehr Informationen anzeigen" }] } },
       },
       {
         name: "color",
@@ -125,7 +129,7 @@ class GlassButtonCard extends HTMLElement {
   _callButton() {
     const button = this._config;
     if (!this._hass || !button.entity) return;
-    if ((button.action || "toggle") === "more-info") {
+    if (button.entity.startsWith("binary_sensor.") || (button.action || "toggle") === "more-info") {
       this.dispatchEvent(new CustomEvent("hass-more-info", {
         bubbles: true,
         composed: true,
@@ -276,7 +280,6 @@ class GlassButtonCard extends HTMLElement {
         * { box-sizing:border-box; }
         .card { width:100%; padding:clamp(16px,3vw,30px); border:1px solid rgba(255,255,255,.1); border-radius:28px; background:radial-gradient(ellipse at 50% 0,#22252a 0,#15171a 62%,#101214 100%); box-shadow:inset 0 1px 1px rgba(255,255,255,.06),0 12px 30px rgba(0,0,0,.2); }
         .card.no-frame { padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
-        .no-frame .name { display:none; }
         .button-wrap { display:flex; flex-direction:column; align-items:center; gap:clamp(12px,2vw,20px); }
         .button-control { position:relative; width:var(--button-size); aspect-ratio:1; flex:none; }
         .button { display:grid; width:100%; height:100%; place-items:center; padding:0; border:2px solid color-mix(in srgb,var(--accent) 78%,#414348); border-radius:50%; background:linear-gradient(145deg,#222428,#131518); color:var(--accent); box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 8px 18px rgba(0,0,0,.28); transition:border-color .18s ease,color .18s ease,background .18s ease,box-shadow .18s ease,transform .18s ease; cursor:pointer; -webkit-tap-highlight-color:transparent; }
@@ -327,7 +330,54 @@ class GlassButtonCard extends HTMLElement {
   }
 }
 
+class GlassButtonCardEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this.shadowRoot.innerHTML = "<ha-form></ha-form>";
+    this._config = {};
+    this._domain = null;
+    this.shadowRoot.querySelector("ha-form").addEventListener("value-changed", (event) => {
+      event.stopPropagation();
+      this._config = { ...this._config, ...event.detail.value };
+      this._syncForm();
+      this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
+    });
+  }
+
+  setConfig(config) {
+    this._config = { ...config };
+    this._syncForm();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this.shadowRoot.querySelector("ha-form").hass = hass;
+  }
+
+  _syncForm() {
+    const form = this.shadowRoot.querySelector("ha-form");
+    const domain = this._config.entity?.split(".")[0] || "";
+    if (domain !== this._domain) {
+      this._domain = domain;
+      const binaryFields = ["icon_active", "icon_inactive", "color_active", "color_inactive", "binary_sensor_active_state"];
+      const nonBinaryFields = ["icon", "color", "action"];
+      const definition = GlassButtonCard.getConfigForm();
+      form.schema = definition.schema.filter((field) => {
+        if (binaryFields.includes(field.name)) return domain === "binary_sensor";
+        if (nonBinaryFields.includes(field.name)) return domain !== "binary_sensor";
+        if (field.name === "show_brightness_slider") return domain === "light";
+        return true;
+      });
+      form.computeLabel = definition.computeLabel;
+    }
+    form.data = this._config;
+    form.hass = this._hass;
+  }
+}
+
 if (!customElements.get("glass-button-card")) customElements.define("glass-button-card", GlassButtonCard);
+if (!customElements.get("glass-button-card-editor")) customElements.define("glass-button-card-editor", GlassButtonCardEditor);
 
 window.customCards = window.customCards || [];
 if (!window.customCards.some((card) => card.type === "glass-button-card")) {

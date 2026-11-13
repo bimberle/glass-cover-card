@@ -56,7 +56,7 @@ show_card_frame: true
 
 Im visuellen Editor waehlst du Entitaet, Icon, Text, Aktion und Farbe aus. Dimmbare Lichter zeigen automatisch einen Helligkeitsring: Ziehen am Ring aendert die Helligkeit, ein Klick in der Mitte fuehrt weiterhin die gewaehlte Aktion aus. Beim Einschalten bewegt sich der Ring zur gemeldeten Helligkeit. Mit `show_brightness_slider: false` laesst sich der Ring ausblenden. Fuer mehrere Buttons legst du mehrere einzelne Karten im Dashboard-Raster nebeneinander an.
 
-Fuer einen Button ohne Kartenrahmen, z. B. in einem `horizontal-stack`, setze `show_card_frame: false`. Dann bleiben der Kreis, das Icon und gegebenenfalls der Helligkeitsregler sichtbar; der Buttontext wird in dieser Ansicht ausgeblendet.
+Fuer einen Button ohne Kartenrahmen, z. B. in einem `horizontal-stack`, setze `show_card_frame: false`. Die Textanzeige wird unabhaengig davon mit `show_name` gesteuert.
 
 ```yaml
 type: horizontal-stack
@@ -77,7 +77,7 @@ cards:
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle vier Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.20.2`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle vier Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.20.3`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
@@ -90,7 +90,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.20.1 installiert?** Aktualisiere auf v1.20.2 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.20.2 installiert?** Aktualisiere auf v1.20.3 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
@@ -110,16 +110,16 @@ Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/
 | `color_inactive` | `gray` | Farbe des inaktiven Zustands bei `binary_sensor` |
 | `binary_sensor_active_state` | `on` | Aktiver Zustand bei `binary_sensor`: `on` (offen) oder `off` (geschlossen) |
 | `name` | Friendly Name | Buttontext; kann mit `show_name: false` ausgeblendet werden |
-| `action` | `toggle` | `toggle` schaltet die Entitaet; `more-info` oeffnet deren Detaildialog |
+| `action` | `toggle` | `toggle` schaltet die Entitaet; `more-info` oeffnet deren Detaildialog. Bei `binary_sensor` wird immer der Detaildialog geoeffnet. |
 | `button_size` | `5` | Groesse von `1` (ein Drittel) bis `5` (entspricht den grossen Jalousiebuttons) |
-| `show_name` | `true` | Buttontext ein- oder ausblenden, solange der Kartenrahmen sichtbar ist |
+| `show_name` | `true` | Buttontext unabhaengig vom Kartenrahmen ein- oder ausblenden |
 | `color` | `orange` | Akzentfarbe `orange`, `white`, `gray`, `green` oder `red` |
-| `show_card_frame` | `true` | Kartenrahmen, Hintergrund und Außenabstand anzeigen; `false` zeigt nur Kreis und Icon und blendet den Text aus |
+| `show_card_frame` | `true` | Kartenrahmen, Hintergrund und Außenabstand anzeigen; die Textanzeige bleibt davon unabhaengig |
 | `show_brightness_slider` | `true` | Helligkeitsring bei dimmbaren Lichtern anzeigen; `false` deaktiviert ihn |
 
 Orange ist die Standardfarbe. Eingeschaltete Buttons zeigen die gewaehlte Farbe, ausgeschaltete sind grau. Bei Ein/Aus-Entitaeten ohne Helligkeitsring erscheint zusaetzlich der Zustand im Button.
 
-Fuer einen Tuer- oder Fensterkontakt zeigt `on` offen und `off` geschlossen an. Die Binary-Sensor-Einstellungen sind im Editor bei allen Entitaeten sichtbar, wirken aber nur bei `binary_sensor`. Andere Sensortypen koennen `on` und `off` anders interpretieren. Fuer Sensoren eignet sich `more-info` als Aktion:
+Fuer einen Tuer- oder Fensterkontakt zeigt `on` offen und `off` geschlossen an. Bei `binary_sensor` zeigt der Editor nur die zusaetzlichen Zustandsicons und -farben statt der normalen Icon-, Farb-, Aktions- und Helligkeitsfelder. Ein Klick oeffnet automatisch die Details. Bei anderen Entitaeten sind die Sensorfelder ausgeblendet; die Helligkeitsoption erscheint nur bei Lichtern. Andere Sensortypen koennen `on` und `off` anders interpretieren.
 
 ```yaml
 type: custom:glass-button-card
@@ -129,7 +129,6 @@ color_active: red
 icon_inactive: mdi:door-closed
 color_inactive: green
 binary_sensor_active_state: 'on'
-action: more-info
 ```
 
 ### Glass RGB Card
