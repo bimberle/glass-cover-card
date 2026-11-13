@@ -367,6 +367,10 @@ coverCard.hass = {
 };
 assert.match(coverCard.shadowRoot.innerHTML, /range-row/);
 assert.match(coverCard.shadowRoot.innerHTML, /class="controls"/);
+coverCard.setConfig({ entity: "cover.office", show_preview: false, show_position_slider: false });
+assert.doesNotMatch(coverCard.shadowRoot.innerHTML, /class="range-row"/);
+assert.match(coverCard.shadowRoot.innerHTML, /class="controls"/);
+coverCard.setConfig({ entity: "cover.office", show_preview: false });
 assert.equal(coverModule.customCards[0].type, "glass-cover-card");
 const initialCoverRenderCount = coverCard._innerHTMLWrites;
 coverCard.hass = {
@@ -387,6 +391,8 @@ const coverSchema = Object.fromEntries(coverForm.schema.map((field) => [field.na
 assert.equal(coverSchema.entity.selector.entity.filter.domain, "cover");
 assert.equal(coverSchema.tilt_entity.selector.entity.filter.domain, "cover");
 assert.equal(coverSchema.show_action_button.default, true);
+assert.equal(coverSchema.show_position_slider.default, true);
+assert.ok(coverSchema.title.selector.text, "Cover editor must expose a title text field");
 assert.equal(coverSchema.button_size.selector.number.mode, "slider");
 assert.equal(coverModule.Card.getConfigElement, undefined);
 

@@ -33,6 +33,7 @@ entity: cover.wohnzimmer
 name: Wohnzimmer
 title: Beschattung
 show_tilt: true
+show_position_slider: true
 show_main_controls: true
 show_close_tilt: true
 # Kopfbutton ausblenden: show_action_button: false
@@ -113,7 +114,7 @@ view_layout:
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle fuenf Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.22.0`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle fuenf Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.22.1`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
@@ -126,7 +127,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.21.3 installiert?** Aktualisiere auf v1.22.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.22.0 installiert?** Aktualisiere auf v1.22.1 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
@@ -255,9 +256,10 @@ Im Bearbeitungsmodus wählst du über **Karte hinzufügen** den normalen Home-As
 | Option | Standard | Beschreibung |
 | --- | --- | --- |
 | `entity` | erforderlich | Cover-Entitaet fuer Fahrt und Position |
-| `name` | Friendly Name | Name in der Kartenueberschrift |
-| `title` | `Beschattung` | Kleine Ueberschrift oberhalb des Namens |
+| `title` | `Beschattung` | Titel oberhalb der großen Überschrift; mit `""` ausblendbar |
+| `name` | Friendly Name | Große Überschrift; mit `""` ausblendbar |
 | `show_tilt` | `true` | Lamellen-Schieberegler anzeigen oder ausblenden |
+| `show_position_slider` | `true` | Positionsslider mit Auf-/Zu-Beschriftung vor den Fahrtasten anzeigen oder ausblenden |
 | `show_main_controls` | `true` | Buttons Hoch, Stopp und Runter anzeigen oder ausblenden |
 | `show_close_tilt` | `true` | Vierten Button fuer „100 % geschlossen und Lamellen 50 %“ anzeigen oder ausblenden |
 | `show_action_button` | `true` | Schnellwahl-Button ausblenden; bei leerem Titel und Namen verschwindet damit die ganze Kopfzeile |
