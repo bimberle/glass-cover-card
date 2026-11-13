@@ -9,13 +9,13 @@ npm run build
 npm test
 ```
 
-`cards/glass-cover-card/` und `cards/glass-button-card/` enthalten die jeweiligen Quellen. Die gebauten `dist/*.js`-Dateien werden mit versioniert, damit HACS sie direkt aus einer GitHub-Release installieren kann.
+Die Quellen der vier Karten liegen jeweils in `cards/<kartenname>/`. Die gebauten `dist/*.js`-Dateien werden mit versioniert, damit HACS sie direkt aus einer GitHub-Release installieren kann.
 
 ## Karten
 
 ### Glass Cover Card
 
-![Vorschau der Glass Cover Card](https://raw.githubusercontent.com/bimberle/glass-cover-card/main/designvorlage.png)
+<img src="https://raw.githubusercontent.com/bimberle/glass-cover-card/main/designvorlage.png" alt="Vorschau der Glass Cover Card" width="50%">
 
 Steuert eine Jalousie mit Positionsregler, Hoch/Stopp/Runter, optionaler Lamellenleiste und Schnellwahl.
 
@@ -38,7 +38,7 @@ preview_size: 5
 
 ### Glass Button Card
 
-![Vorschau der Glass Button Card](https://raw.githubusercontent.com/bimberle/glass-cover-card/main/glass-button-card-preview.jpg)
+<img src="https://raw.githubusercontent.com/bimberle/glass-cover-card/main/glass-button-card-preview.jpg" alt="Vorschau der Glass Button Card" width="50%">
 
 Jede Karte zeigt genau einen grossen runden Button. Fuer mehrere Bedienelemente fuegst du mehrere Glass Button Cards nebeneinander ins Dashboard ein. Entitaet, Icon, Text, Aktion, Groesse und Akzentfarbe sind pro Karte einstellbar.
 
@@ -70,6 +70,10 @@ cards:
     icon: mdi:lightbulb-outline
     show_card_frame: false
 ```
+
+  ### Glass RGB Card
+
+  Steuert ein farbfaehiges Licht ueber einen Farbkreis und einen Helligkeitsregler. Die Mitte schaltet das Licht ein oder aus; bis zu sechs Farb-Presets koennen in der Kartenkonfiguration festgelegt werden. Fuer RGBW- und RGBWW-Leuchten mit Farbtemperatur steht zusaetzlich ein Warm/Kalt-Regler bereit. Ein Beispiel und alle Optionen findest du unter [Glass RGB Card](#glass-rgb-card-1).
 
 ## Installation ueber Marketplace / HACS
 
