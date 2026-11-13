@@ -1,5 +1,5 @@
 (() => {
-const CARD_VERSION = "1.21.3";
+const CARD_VERSION = "1.22.0";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -20,10 +20,10 @@ class GlassCoverCard extends HTMLElement {
       throw new Error("Bitte eine Cover-Entitaet mit 'entity' angeben.");
     }
     this._config = {
-      name: "",
       show_tilt: true,
       show_main_controls: true,
       show_close_tilt: true,
+      show_action_button: true,
       show_preview: true,
       invert_position: false,
       button_size: 5,
@@ -78,6 +78,7 @@ class GlassCoverCard extends HTMLElement {
       { name: "show_tilt", default: true, selector: { boolean: {} } },
       { name: "show_main_controls", default: true, selector: { boolean: {} } },
       { name: "show_close_tilt", default: true, selector: { boolean: {} } },
+      { name: "show_action_button", default: true, selector: { boolean: {} } },
       { name: "show_preview", default: true, selector: { boolean: {} } },
       { name: "invert_position", default: false, selector: { boolean: {} } },
       { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
@@ -94,6 +95,7 @@ class GlassCoverCard extends HTMLElement {
         show_tilt: "Lamellenregler anzeigen",
         show_main_controls: "Hoch/Stopp/Runter anzeigen",
         show_close_tilt: "Schließen-und-Lamellen-Button anzeigen",
+        show_action_button: "Schnellwahl-Button anzeigen",
         show_preview: "Vorschau und Prozentanzeige anzeigen",
         invert_position: "Position umkehren",
         button_size: "Button-Größe",
@@ -202,11 +204,12 @@ class GlassCoverCard extends HTMLElement {
     const displayedPosition = Math.round(uiPosition);
     const targetUiPosition = this._targetPosition === null ? null : (invertPosition ? this._targetPosition : 100 - this._targetPosition);
     const tilt = this._pendingTilt ?? this._tilt();
-    const title = this._escape(this._config.title || "Beschattung");
-    const name = this._escape(this._config.name || this._state()?.attributes?.friendly_name || this._config.entity);
+    const title = this._escape(String(this._config.title ?? "Beschattung").trim());
+    const name = this._escape(String(this._config.name ?? this._state()?.attributes?.friendly_name ?? this._config.entity).trim());
     const showTilt = this._config.show_tilt !== false;
     const showMainControls = this._config.show_main_controls !== false;
     const showCloseTilt = this._config.show_close_tilt !== false;
+    const showActionButton = this._config.show_action_button !== false;
     const showPreview = this._config.show_preview !== false;
     const buttonLevel = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
     const titleLevel = Math.min(5, Math.max(1, Number(this._config.title_size) || 5));
@@ -226,8 +229,11 @@ class GlassCoverCard extends HTMLElement {
         * { box-sizing:border-box; }
         .card { position:relative; overflow:hidden; width:100%; min-width:260px; padding:clamp(20px,4.7vw,38px); border:1px solid rgba(255,255,255,.1); border-radius:clamp(22px,4vw,36px); background:radial-gradient(ellipse at 32% 22%,#25272c 0,#17191d 43%,#101215 100%); box-shadow:inset 0 1px 1px rgba(255,255,255,.07),0 12px 30px rgba(0,0,0,.2); }
         .header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+        .header[hidden] { display:none; }
+        .header:has(> .menu-wrap:only-child) { justify-content:flex-end; }
         .eyebrow { color:#9295a0; font-size:clamp(11px,2.1vw,15px); font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
         h2 { margin:7px 0 0; font-size:var(--title-font); line-height:1.08; font-weight:700; overflow-wrap:anywhere; }
+        h2:first-child { margin-top:0; }
         button { color:inherit; font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
         .menu-wrap { position:relative; z-index:2; flex:none; }
         .menu-toggle,.round { display:grid; place-items:center; border-radius:50%; background:linear-gradient(145deg,#272a30,#17191d); border:2px solid #303239; box-shadow:0 6px 15px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05); }
@@ -272,15 +278,15 @@ class GlassCoverCard extends HTMLElement {
         @media (prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none !important; } }
       </style>
       <article class="card ${showPreview ? "" : "compact"}" style="${controlsStyle}">
-        <header class="header">
-          <div><div class="eyebrow">${title}</div><h2>${name}</h2></div>
-          <div class="menu-wrap"><button class="menu-toggle" aria-label="Schnellwahl anzeigen" aria-expanded="${this._menuOpen}">${this._icon("blinds")}</button>
+        <header class="header" ${!title && !name && !showActionButton ? "hidden" : ""}>
+          ${title || name ? `<div>${title ? `<div class="eyebrow">${title}</div>` : ""}${name ? `<h2>${name}</h2>` : ""}</div>` : ""}
+          ${showActionButton ? `<div class="menu-wrap"><button class="menu-toggle" aria-label="Schnellwahl anzeigen" aria-expanded="${this._menuOpen}">${this._icon("blinds")}</button>
             <div class="quick-menu ${this._menuOpen ? "open" : ""}" role="group" aria-label="Schnellwahl" aria-hidden="${!this._menuOpen}">
               <button class="quick" data-action="open" title="Ganz auf" aria-label="Ganz auf">${this._icon("up")}</button>
               <button class="quick" data-action="close" title="Ganz zu" aria-label="Ganz zu">${this._icon("down")}</button>
               <button class="quick" data-action="close-tilt" title="Ganz zu, Lamellen 50 Prozent (durchsichtig)" aria-label="Ganz zu, Lamellen 50 Prozent">${this._icon("half")}</button>
             </div>
-          </div>
+          </div>` : ""}
         </header>
         <section class="visual" aria-label="Jalousienposition">
           <div class="window" style="--position:${position}%;--tilt:${tilt}"><div class="glass"></div><div class="slats">${slats}</div></div>
@@ -328,7 +334,7 @@ if (!window.customCards.some((card) => card.type === "glass-cover-card")) {
 })();
 
 (() => {
-const CARD_VERSION = "1.6.3";
+const CARD_VERSION = "1.6.4";
 const BUTTON_COLORS = {
   orange: "#ff8b2b",
   white: "#f2f2f4",
@@ -363,7 +369,6 @@ class GlassButtonCard extends HTMLElement {
     this._dragging = false;
     this._config = {
       entity: "",
-      name: "",
       icon: "mdi:gesture-tap-button",
       action: "toggle",
       button_size: 5,
@@ -599,11 +604,12 @@ class GlassButtonCard extends HTMLElement {
     if (!this._dragging && !this._pendingBrightnessState) this._displayBrightness(isActive && Number.isFinite(state?.attributes?.brightness) ? state.attributes.brightness / 255 * 100 : 0);
     const stateLabel = this.shadowRoot.querySelector(".state-value");
     if (stateLabel) stateLabel.textContent = !dimmable && ["on", "off"].includes(state?.state) ? (binarySensor ? ((isActive ? this._config.state_active : this._config.state_inactive) || (state.state === "on" ? "Offen" : "Geschlossen")) : (state.state === "on" ? "An" : "Aus")) : "";
-    const name = this._config.name || state?.attributes?.friendly_name || this._config.entity || "Button";
-    button.setAttribute("aria-label", name);
-    button.setAttribute("title", name);
+    const name = String(this._config.name ?? state?.attributes?.friendly_name ?? this._config.entity ?? "Button").trim();
+    const accessibleName = name || state?.attributes?.friendly_name || this._config.entity || "Button";
+    button.setAttribute("aria-label", accessibleName);
+    button.setAttribute("title", accessibleName);
     const label = this.shadowRoot.querySelector(".name");
-    if (label && !this._config.name) label.textContent = name;
+    if (label && this._config.name == null) label.textContent = name;
   }
 
   _render() {
@@ -617,7 +623,7 @@ class GlassButtonCard extends HTMLElement {
     const inactiveColor = BUTTON_COLORS[this._config.color_inactive] || BUTTON_COLORS.gray;
     const state = this._hass?.states?.[this._config.entity];
     const isActive = state && !["off", "closed", "idle", "standby", "unavailable", "unknown", "not_home"].includes(state.state);
-    const name = this._config.name || state?.attributes?.friendly_name || this._config.entity || "Button";
+    const name = String(this._config.name ?? state?.attributes?.friendly_name ?? this._config.entity ?? "Button").trim();
     const icon = this._config.icon || "mdi:gesture-tap-button";
 
     this.shadowRoot.innerHTML = `
@@ -668,7 +674,7 @@ class GlassButtonCard extends HTMLElement {
           </button>
           <svg class="dimmer" viewBox="0 0 100 100" role="slider" aria-label="Helligkeit" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-hidden="true" tabindex="-1"><circle class="dimmer-track" cx="50" cy="50" r="43"></circle><circle class="dimmer-progress" cx="50" cy="50" r="43" pathLength="100"></circle><circle class="dimmer-hit" cx="50" cy="50" r="43"></circle><circle class="dimmer-thumb" cx="50" cy="7" r="4.5"></circle></svg>
           </div>
-          ${showName ? `<span class="name">${escapeHtml(name)}</span>` : ""}
+          ${showName && name ? `<span class="name">${escapeHtml(name)}</span>` : ""}
         </div>
       </article>`;
     this._bindEvents();
@@ -732,7 +738,7 @@ if (!window.customCards.some((card) => card.type === "glass-button-card")) {
 })();
 
 (() => {
-const CARD_VERSION = "1.5.1";
+const CARD_VERSION = "1.5.2";
 const escapePanelText = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -861,8 +867,8 @@ class GlassPanelCard extends HTMLElement {
   }
 
   _renderShell() {
-    const title = escapePanelText(this._config.title);
-    const subtitle = escapePanelText(this._config.subtitle);
+    const title = escapePanelText(String(this._config.title ?? "").trim());
+    const subtitle = escapePanelText(String(this._config.subtitle ?? "").trim());
     const titleLevel = Math.min(5, Math.max(1, Number(this._config.title_size) || 5));
     const titleScale = 0.65 + ((titleLevel - 1) / 4) * 0.35;
     const buttonLevel = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
@@ -875,9 +881,12 @@ class GlassPanelCard extends HTMLElement {
         * { box-sizing:border-box; }
         .panel { width:100%; padding:clamp(20px,4.7vw,38px); border:1px solid rgba(255,255,255,.1); border-radius:28px; background:radial-gradient(ellipse at 48% 0,#22252a 0,#15171a 62%,#101214 100%); box-shadow:inset 0 1px 1px rgba(255,255,255,.06),0 12px 30px rgba(0,0,0,.2); }
         .header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:clamp(20px,3vw,30px); }
+        .header[hidden] { display:none; }
+        .header:has(> .header-action:only-child) { justify-content:flex-end; }
         .titles { min-width:0; }
         .title { color:#9295a0; font-size:clamp(11px,2.1vw,15px); font-weight:700; letter-spacing:.12em; line-height:normal; text-transform:uppercase; }
         .subtitle { margin:7px 0 0; color:var(--primary-text-color,#f3f3f5); font-size:var(--subtitle-font); font-weight:700; line-height:1.08; overflow-wrap:anywhere; }
+        .subtitle:first-child { margin-top:0; }
         .header-action { position:relative; display:grid; flex:none; width:var(--header-action-size); aspect-ratio:1; place-items:center; border:2px solid #303239; border-radius:50%; background:linear-gradient(145deg,#272a30,#17191d); color:#ff8b2b; font:inherit; box-shadow:0 6px 15px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05); cursor:pointer; -webkit-tap-highlight-color:transparent; }
         .header-action.active { border-color:#ff8b2b; color:#ff9b4a; box-shadow:inset 0 0 20px rgba(255,139,43,.12),0 0 0 1px rgba(255,139,43,.2),0 6px 15px rgba(0,0,0,.25); }
         .header-action.inactive { color:#85878b; border-color:#45474b; }
@@ -889,8 +898,8 @@ class GlassPanelCard extends HTMLElement {
         @media (max-width:380px) { .panel { padding:18px; } }
       </style>
       <article class="panel" style="--subtitle-font:clamp(${22 * titleScale}px,${4.8 * titleScale}vw,${38 * titleScale}px);--header-action-size:clamp(${56 * menuButtonScale}px,${11 * menuButtonScale}vw,${88 * menuButtonScale}px);--header-icon-size:calc((var(--header-action-size) - 16px) * .46)">
-        <header class="header">
-          <div class="titles">${title ? `<div class="title">${title}</div>` : ""}${subtitle ? `<h2 class="subtitle">${subtitle}</h2>` : ""}</div>
+        <header class="header" ${!title && !subtitle && !actionVisible ? "hidden" : ""}>
+          ${title || subtitle ? `<div class="titles">${title ? `<div class="title">${title}</div>` : ""}${subtitle ? `<h2 class="subtitle">${subtitle}</h2>` : ""}</div>` : ""}
           ${actionVisible ? `<button class="header-action" aria-label="${escapePanelText(this._config.action_entity)}" title="${escapePanelText(this._config.action_entity)}"><ha-icon icon="${escapePanelText(this._config.action_icon || "mdi:gesture-tap-button")}"></ha-icon><span class="action-state"></span></button>` : ""}
         </header>
         <div class="children">${this._config.cards.length ? "" : `<div class="empty">Keine Karten konfiguriert.</div>`}</div>
@@ -1115,7 +1124,7 @@ if (!window.customCards.some((card) => card.type === "glass-panel-card")) {
 })();
 
 (() => {
-const RGB_CARD_VERSION = "1.1.3";
+const RGB_CARD_VERSION = "1.2.0";
 const RGB_PRESET_COUNT = 6;
 const rgbToHs = (rgb) => {
   const [red, green, blue] = rgb.map((value) => value / 255);
@@ -1151,7 +1160,7 @@ class GlassRgbCard extends HTMLElement {
     this._pendingTimer = null;
   }
 
-  static getStubConfig() { return { entity: "light.wohnzimmer", title: "RGB", title_size: 5, button_size: 5, show_presets: false }; }
+  static getStubConfig() { return { entity: "light.wohnzimmer", title: "RGB", title_size: 5, button_size: 5, show_action_button: true, show_presets: false }; }
   static getConfigForm() {
     return {
       schema: [
@@ -1159,12 +1168,13 @@ class GlassRgbCard extends HTMLElement {
         { name: "title", default: "RGB", selector: { text: {} } },
         { name: "name", selector: { text: {} } },
         { name: "icon", selector: { icon: {} } },
+        { name: "show_action_button", default: true, selector: { boolean: {} } },
         { name: "title_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
         { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
         { name: "show_presets", default: false, selector: { boolean: {} } },
         ...Array.from({ length: RGB_PRESET_COUNT }, (_, index) => ({ name: `preset_${index + 1}`, selector: { color_rgb: {} } })),
       ],
-      computeLabel: (field) => ({ entity: "Licht", title: "Titel", name: "Name", icon: "Icon", title_size: "Überschrift-Größe", button_size: "Button-Größe", show_presets: "Farb-Presets anzeigen" })[field.name] || (field.name.startsWith("preset_") ? `Farb-Preset ${field.name.slice(7)}` : field.name),
+      computeLabel: (field) => ({ entity: "Licht", title: "Titel", name: "Name", icon: "Icon", show_action_button: "Kopfbutton anzeigen", title_size: "Überschrift-Größe", button_size: "Button-Größe", show_presets: "Farb-Presets anzeigen" })[field.name] || (field.name.startsWith("preset_") ? `Farb-Preset ${field.name.slice(7)}` : field.name),
     };
   }
 
@@ -1175,7 +1185,7 @@ class GlassRgbCard extends HTMLElement {
       if (color != null && (!Array.isArray(color) || color.length !== 3 || color.some((channel) => !Number.isInteger(channel) || channel < 0 || channel > 255))) throw new Error(`Preset ${index} muss eine RGB-Farbe mit drei Werten von 0 bis 255 sein.`);
     }
     const changed = this._config?.entity !== config.entity;
-    this._config = { title: "RGB", title_size: 5, button_size: 5, show_presets: false, ...config };
+    this._config = { title: "RGB", title_size: 5, button_size: 5, show_action_button: true, show_presets: false, ...config };
     if (changed) this._selected = -1;
     this._loadPresets();
     this._selected = -1;
@@ -1263,10 +1273,17 @@ class GlassRgbCard extends HTMLElement {
       this._brightness = state.state === "on" && Number.isFinite(state.attributes?.brightness) ? Math.round(state.attributes.brightness / 255 * 100) : 0;
     }
     const header = this.shadowRoot.querySelector(".header-action");
+    header.hidden = this._config.show_action_button === false;
     header.classList.toggle("active", state?.state === "on");
     header.classList.toggle("inactive", state?.state === "off");
     this.shadowRoot.querySelector(".action-state").textContent = state?.state === "on" ? "An" : state?.state === "off" ? "Aus" : "";
-    this.shadowRoot.querySelector(".subtitle").textContent = this._config.name || state?.attributes?.friendly_name || this._config.entity;
+    const name = String(this._config.name ?? state?.attributes?.friendly_name ?? this._config.entity).trim();
+    const subtitle = this.shadowRoot.querySelector(".subtitle");
+    subtitle.textContent = name;
+    subtitle.hidden = !name;
+    const titles = this.shadowRoot.querySelector(".titles");
+    titles.hidden = !String(this._config.title ?? "").trim() && !name;
+    this.shadowRoot.querySelector(".header").hidden = titles.hidden && header.hidden;
     const available = !!state && !["unavailable", "unknown"].includes(state.state);
     const controls = this.shadowRoot.querySelector(".controls");
     controls.hidden = !supportsColor || !available;
@@ -1316,8 +1333,13 @@ class GlassRgbCard extends HTMLElement {
         * { box-sizing:border-box; }
         .card { width:100%; padding:clamp(20px,4.7vw,38px); border:1px solid rgba(255,255,255,.1); border-radius:28px; background:radial-gradient(ellipse at 48% 0,#22252a 0,#15171a 62%,#101214 100%); box-shadow:inset 0 1px 1px rgba(255,255,255,.06),0 12px 30px rgba(0,0,0,.2); }
         .header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:clamp(20px,3vw,30px); }
+        .header[hidden] { display:none; }
+        .header-action[hidden] { display:none; }
+        .titles[hidden],.subtitle[hidden] { display:none; }
+        .header:has(> .titles[hidden]) { justify-content:flex-end; }
         .titles { min-width:0; } .title { color:#9295a0; font-size:clamp(11px,2.1vw,15px); font-weight:700; letter-spacing:.12em; line-height:normal; text-transform:uppercase; }
         .subtitle { margin:7px 0 0; color:var(--primary-text-color,#f3f3f5); font-size:var(--subtitle-font); font-weight:700; line-height:1.08; overflow-wrap:anywhere; }
+        .subtitle:first-child { margin-top:0; }
         .header-action { position:relative; display:grid; flex:none; width:var(--header-action-size); aspect-ratio:1; place-items:center; border:2px solid #303239; border-radius:50%; background:linear-gradient(145deg,#272a30,#17191d); color:#ff8b2b; font:inherit; box-shadow:0 6px 15px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05); cursor:pointer; -webkit-tap-highlight-color:transparent; }
         .header-action.active { border-color:#ff8b2b; color:#ff9b4a; box-shadow:inset 0 0 20px rgba(255,139,43,.12),0 0 0 1px rgba(255,139,43,.2),0 6px 15px rgba(0,0,0,.25); }
         .header-action.inactive { color:#85878b; border-color:#45474b; } .header-action ha-icon { display:block; width:var(--header-icon-size); height:var(--header-icon-size); --mdc-icon-size:var(--header-icon-size); }
@@ -1350,7 +1372,7 @@ class GlassRgbCard extends HTMLElement {
         @media (max-width:380px) { .card { padding:18px; } .presets { gap:6px; } }
       </style>
       <article class="card" style="--subtitle-font:clamp(${22 * titleScale}px,${4.8 * titleScale}vw,${38 * titleScale}px);--header-action-size:clamp(${56 * menuScale}px,${11 * menuScale}vw,${88 * menuScale}px);--header-icon-size:calc((var(--header-action-size) - 16px) * .46)">
-        <header class="header"><div class="titles"><div class="title">${escapeRgb(this._config.title)}</div><h2 class="subtitle"></h2></div><button class="header-action" aria-label="Licht ein- oder ausschalten" title="Licht ein- oder ausschalten"><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}"></ha-icon><span class="action-state"></span></button></header>
+        <header class="header"><div class="titles">${String(this._config.title ?? "").trim() ? `<div class="title">${escapeRgb(String(this._config.title).trim())}</div>` : ""}<h2 class="subtitle" hidden></h2></div><button class="header-action" aria-label="Licht ein- oder ausschalten" title="Licht ein- oder ausschalten"><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}"></ha-icon><span class="action-state"></span></button></header>
         <p class="unavailable" hidden></p>
         <div class="controls" hidden><div class="color-control"><div class="wheel" role="slider" tabindex="0" aria-label="Farbton" aria-valuemin="0" aria-valuemax="359" aria-valuenow="0"><span class="wheel-marker"></span></div><button class="turn-off" type="button" aria-label="Licht ausschalten" title="Licht ausschalten" hidden><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}" aria-hidden="true"></ha-icon></button><button class="turn-on" type="button" aria-label="Licht mit erstem Preset einschalten" title="Licht einschalten" hidden><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}"></ha-icon><span class="turn-on-label">RGB</span></button><div class="brightness-control"><input class="brightness" type="range" min="0" max="100" aria-label="Helligkeit"><span class="brightness-number">0 %</span></div></div>
         ${this._config.show_presets && this._presets.length ? `<div class="presets">${this._presets.map((preset) => `<button class="preset" type="button" title="Farb-Preset ${preset.slot}" aria-label="Farb-Preset ${preset.slot}" aria-pressed="false"></button>`).join("")}</div>` : ""}
@@ -1381,7 +1403,7 @@ if (!window.customCards.some((card) => card.type === "glass-rgb-card")) window.c
 })();
 
 (() => {
-const ROOM_CARD_VERSION = "1.0.1";
+const ROOM_CARD_VERSION = "1.0.2";
 const ROOM_TEXT_COLORS = { black: "#151515", white: "#ffffff", gray: "#a0a2a6" };
 const escapeRoom = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 
@@ -1474,7 +1496,7 @@ class GlassRoomCard extends HTMLElement {
         .shade { position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,.28),rgba(0,0,0,.03) 40%,rgba(0,0,0,.72)); pointer-events:none; }
         .name,.sensor-value { position:relative; margin:0; color:${textColor}; text-shadow:${textShadow}; overflow-wrap:anywhere; pointer-events:none; }
         .name { font-size:${nameSize}px; line-height:1.2; font-weight:650; }
-        .sensor-value { font-size:${sensorSize}px; line-height:1.2; font-weight:600; color:${sensorColor}; text-shadow:${sensorShadow}; }
+        .sensor-value { font-size:${sensorSize}px; line-height:1.2; font-weight:600; color:${sensorColor}; text-shadow:${sensorShadow}; margin-top:auto; }
         .sensor-value:empty { display:none; }
         .sensor-action { position:absolute; inset:0; width:100%; height:100%; border:0; padding:0; border-radius:inherit; background:transparent; cursor:pointer; }
         .sensor-action:focus-visible { outline:3px solid #ff983e; outline-offset:-4px; }
@@ -1483,7 +1505,7 @@ class GlassRoomCard extends HTMLElement {
         ${this._config.image ? `<img class="image" src="${escapeRoom(this._config.image)}" alt="${escapeRoom(this._config.name)}">` : ""}
         <div class="shade"></div>
         ${this._config.entity ? `<button type="button" class="sensor-action" aria-label="${escapeRoom(this._config.name || "Raum")}: Sensordetails öffnen" title="Sensordetails öffnen"></button>` : ""}
-        <h2 class="name">${escapeRoom(this._config.name)}</h2>
+        ${String(this._config.name ?? "").trim() ? `<h2 class="name">${escapeRoom(String(this._config.name).trim())}</h2>` : ""}
         <div class="sensor-value"></div>
       </article>`;
     this.shadowRoot.querySelector(".sensor-action")?.addEventListener("click", () => this._openSensor());

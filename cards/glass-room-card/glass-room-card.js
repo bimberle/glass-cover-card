@@ -1,4 +1,4 @@
-const ROOM_CARD_VERSION = "1.0.1";
+const ROOM_CARD_VERSION = "1.0.2";
 const ROOM_TEXT_COLORS = { black: "#151515", white: "#ffffff", gray: "#a0a2a6" };
 const escapeRoom = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 
@@ -91,7 +91,7 @@ class GlassRoomCard extends HTMLElement {
         .shade { position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,.28),rgba(0,0,0,.03) 40%,rgba(0,0,0,.72)); pointer-events:none; }
         .name,.sensor-value { position:relative; margin:0; color:${textColor}; text-shadow:${textShadow}; overflow-wrap:anywhere; pointer-events:none; }
         .name { font-size:${nameSize}px; line-height:1.2; font-weight:650; }
-        .sensor-value { font-size:${sensorSize}px; line-height:1.2; font-weight:600; color:${sensorColor}; text-shadow:${sensorShadow}; }
+        .sensor-value { font-size:${sensorSize}px; line-height:1.2; font-weight:600; color:${sensorColor}; text-shadow:${sensorShadow}; margin-top:auto; }
         .sensor-value:empty { display:none; }
         .sensor-action { position:absolute; inset:0; width:100%; height:100%; border:0; padding:0; border-radius:inherit; background:transparent; cursor:pointer; }
         .sensor-action:focus-visible { outline:3px solid #ff983e; outline-offset:-4px; }
@@ -100,7 +100,7 @@ class GlassRoomCard extends HTMLElement {
         ${this._config.image ? `<img class="image" src="${escapeRoom(this._config.image)}" alt="${escapeRoom(this._config.name)}">` : ""}
         <div class="shade"></div>
         ${this._config.entity ? `<button type="button" class="sensor-action" aria-label="${escapeRoom(this._config.name || "Raum")}: Sensordetails öffnen" title="Sensordetails öffnen"></button>` : ""}
-        <h2 class="name">${escapeRoom(this._config.name)}</h2>
+        ${String(this._config.name ?? "").trim() ? `<h2 class="name">${escapeRoom(String(this._config.name).trim())}</h2>` : ""}
         <div class="sensor-value"></div>
       </article>`;
     this.shadowRoot.querySelector(".sensor-action")?.addEventListener("click", () => this._openSensor());

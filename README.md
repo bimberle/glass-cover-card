@@ -13,6 +13,14 @@ Die Quellen der fuenf Karten liegen jeweils in `cards/<kartenname>/`. Die gebaut
 
 ## Karten
 
+Titel, Untertitel und Namen koennen ausdruecklich leer gesetzt werden, um sie auszublenden. Ein leeres Feld wird nicht durch den Entitaetsnamen ersetzt. Nicht gesetzte Felder behalten ihre bisherigen Standardwerte. Das gilt fuer `title` und `name` der Cover- und RGB-Karte, `title` und `subtitle` der Panel-Karte sowie `name` der Button- und Room-Karte. Sensorwerte, Zustandsanzeigen und Bedienelemente bleiben sichtbar.
+
+```yaml
+# Beispiel: Cover- oder RGB-Karte ohne Ueberschriften
+title: ""
+name: ""
+```
+
 ### Glass Cover Card
 
 <img src="https://raw.githubusercontent.com/bimberle/glass-cover-card/main/designvorlage.png" alt="Vorschau der Glass Cover Card" width="50%">
@@ -27,6 +35,7 @@ title: Beschattung
 show_tilt: true
 show_main_controls: true
 show_close_tilt: true
+# Kopfbutton ausblenden: show_action_button: false
 show_preview: true
 invert_position: false
 button_size: 5
@@ -104,7 +113,7 @@ view_layout:
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle fuenf Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.21.3`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle fuenf Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.22.0`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
@@ -117,7 +126,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.21.2 installiert?** Aktualisiere auf v1.21.3 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.21.3 installiert?** Aktualisiere auf v1.22.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
@@ -179,6 +188,7 @@ icon: mdi:lightbulb-outline
 title_size: 5
 button_size: 5
 show_presets: true
+show_action_button: false
 preset_1: [255, 0, 0]
 preset_2: [0, 180, 255]
 ```
@@ -189,6 +199,7 @@ preset_2: [0, 180, 255]
 | `title` | `RGB` | Kleine Kopfzeile |
 | `name` | Friendly Name | Grosse Ueberschrift |
 | `icon` | `mdi:lightbulb-outline` | Icon des Schaltbuttons |
+| `show_action_button` | `true` | Kopfbutton zum Ein-/Ausschalten anzeigen; bei leerem Titel und Namen verschwindet damit die ganze Kopfzeile |
 | `title_size` | `5` | Groesse der Ueberschrift von `1` bis `5` |
 | `button_size` | `5` | Groesse des Kopfbuttons von `1` bis `5` |
 | `show_presets` | `false` | Konfigurierte Farb-Presets anzeigen |
@@ -249,6 +260,7 @@ Im Bearbeitungsmodus wählst du über **Karte hinzufügen** den normalen Home-As
 | `show_tilt` | `true` | Lamellen-Schieberegler anzeigen oder ausblenden |
 | `show_main_controls` | `true` | Buttons Hoch, Stopp und Runter anzeigen oder ausblenden |
 | `show_close_tilt` | `true` | Vierten Button fuer „100 % geschlossen und Lamellen 50 %“ anzeigen oder ausblenden |
+| `show_action_button` | `true` | Schnellwahl-Button ausblenden; bei leerem Titel und Namen verschwindet damit die ganze Kopfzeile |
 | `show_preview` | `true` | Vorschaubild und Prozentwert anzeigen; Positionsslider bleibt sichtbar |
 | `invert_position` | `false` | Slider-Richtung und Prozentbedeutung umkehren |
 | `button_size` | `5` | Groesse der Steuerbuttons von `1` bis `5` |

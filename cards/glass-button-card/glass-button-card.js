@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.6.3";
+const CARD_VERSION = "1.6.4";
 const BUTTON_COLORS = {
   orange: "#ff8b2b",
   white: "#f2f2f4",
@@ -33,7 +33,6 @@ class GlassButtonCard extends HTMLElement {
     this._dragging = false;
     this._config = {
       entity: "",
-      name: "",
       icon: "mdi:gesture-tap-button",
       action: "toggle",
       button_size: 5,
@@ -269,11 +268,12 @@ class GlassButtonCard extends HTMLElement {
     if (!this._dragging && !this._pendingBrightnessState) this._displayBrightness(isActive && Number.isFinite(state?.attributes?.brightness) ? state.attributes.brightness / 255 * 100 : 0);
     const stateLabel = this.shadowRoot.querySelector(".state-value");
     if (stateLabel) stateLabel.textContent = !dimmable && ["on", "off"].includes(state?.state) ? (binarySensor ? ((isActive ? this._config.state_active : this._config.state_inactive) || (state.state === "on" ? "Offen" : "Geschlossen")) : (state.state === "on" ? "An" : "Aus")) : "";
-    const name = this._config.name || state?.attributes?.friendly_name || this._config.entity || "Button";
-    button.setAttribute("aria-label", name);
-    button.setAttribute("title", name);
+    const name = String(this._config.name ?? state?.attributes?.friendly_name ?? this._config.entity ?? "Button").trim();
+    const accessibleName = name || state?.attributes?.friendly_name || this._config.entity || "Button";
+    button.setAttribute("aria-label", accessibleName);
+    button.setAttribute("title", accessibleName);
     const label = this.shadowRoot.querySelector(".name");
-    if (label && !this._config.name) label.textContent = name;
+    if (label && this._config.name == null) label.textContent = name;
   }
 
   _render() {
@@ -287,7 +287,7 @@ class GlassButtonCard extends HTMLElement {
     const inactiveColor = BUTTON_COLORS[this._config.color_inactive] || BUTTON_COLORS.gray;
     const state = this._hass?.states?.[this._config.entity];
     const isActive = state && !["off", "closed", "idle", "standby", "unavailable", "unknown", "not_home"].includes(state.state);
-    const name = this._config.name || state?.attributes?.friendly_name || this._config.entity || "Button";
+    const name = String(this._config.name ?? state?.attributes?.friendly_name ?? this._config.entity ?? "Button").trim();
     const icon = this._config.icon || "mdi:gesture-tap-button";
 
     this.shadowRoot.innerHTML = `
@@ -338,7 +338,7 @@ class GlassButtonCard extends HTMLElement {
           </button>
           <svg class="dimmer" viewBox="0 0 100 100" role="slider" aria-label="Helligkeit" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-hidden="true" tabindex="-1"><circle class="dimmer-track" cx="50" cy="50" r="43"></circle><circle class="dimmer-progress" cx="50" cy="50" r="43" pathLength="100"></circle><circle class="dimmer-hit" cx="50" cy="50" r="43"></circle><circle class="dimmer-thumb" cx="50" cy="7" r="4.5"></circle></svg>
           </div>
-          ${showName ? `<span class="name">${escapeHtml(name)}</span>` : ""}
+          ${showName && name ? `<span class="name">${escapeHtml(name)}</span>` : ""}
         </div>
       </article>`;
     this._bindEvents();

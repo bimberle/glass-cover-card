@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.5.1";
+const CARD_VERSION = "1.5.2";
 const escapePanelText = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -127,8 +127,8 @@ class GlassPanelCard extends HTMLElement {
   }
 
   _renderShell() {
-    const title = escapePanelText(this._config.title);
-    const subtitle = escapePanelText(this._config.subtitle);
+    const title = escapePanelText(String(this._config.title ?? "").trim());
+    const subtitle = escapePanelText(String(this._config.subtitle ?? "").trim());
     const titleLevel = Math.min(5, Math.max(1, Number(this._config.title_size) || 5));
     const titleScale = 0.65 + ((titleLevel - 1) / 4) * 0.35;
     const buttonLevel = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
@@ -141,9 +141,12 @@ class GlassPanelCard extends HTMLElement {
         * { box-sizing:border-box; }
         .panel { width:100%; padding:clamp(20px,4.7vw,38px); border:1px solid rgba(255,255,255,.1); border-radius:28px; background:radial-gradient(ellipse at 48% 0,#22252a 0,#15171a 62%,#101214 100%); box-shadow:inset 0 1px 1px rgba(255,255,255,.06),0 12px 30px rgba(0,0,0,.2); }
         .header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:clamp(20px,3vw,30px); }
+        .header[hidden] { display:none; }
+        .header:has(> .header-action:only-child) { justify-content:flex-end; }
         .titles { min-width:0; }
         .title { color:#9295a0; font-size:clamp(11px,2.1vw,15px); font-weight:700; letter-spacing:.12em; line-height:normal; text-transform:uppercase; }
         .subtitle { margin:7px 0 0; color:var(--primary-text-color,#f3f3f5); font-size:var(--subtitle-font); font-weight:700; line-height:1.08; overflow-wrap:anywhere; }
+        .subtitle:first-child { margin-top:0; }
         .header-action { position:relative; display:grid; flex:none; width:var(--header-action-size); aspect-ratio:1; place-items:center; border:2px solid #303239; border-radius:50%; background:linear-gradient(145deg,#272a30,#17191d); color:#ff8b2b; font:inherit; box-shadow:0 6px 15px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05); cursor:pointer; -webkit-tap-highlight-color:transparent; }
         .header-action.active { border-color:#ff8b2b; color:#ff9b4a; box-shadow:inset 0 0 20px rgba(255,139,43,.12),0 0 0 1px rgba(255,139,43,.2),0 6px 15px rgba(0,0,0,.25); }
         .header-action.inactive { color:#85878b; border-color:#45474b; }
@@ -155,8 +158,8 @@ class GlassPanelCard extends HTMLElement {
         @media (max-width:380px) { .panel { padding:18px; } }
       </style>
       <article class="panel" style="--subtitle-font:clamp(${22 * titleScale}px,${4.8 * titleScale}vw,${38 * titleScale}px);--header-action-size:clamp(${56 * menuButtonScale}px,${11 * menuButtonScale}vw,${88 * menuButtonScale}px);--header-icon-size:calc((var(--header-action-size) - 16px) * .46)">
-        <header class="header">
-          <div class="titles">${title ? `<div class="title">${title}</div>` : ""}${subtitle ? `<h2 class="subtitle">${subtitle}</h2>` : ""}</div>
+        <header class="header" ${!title && !subtitle && !actionVisible ? "hidden" : ""}>
+          ${title || subtitle ? `<div class="titles">${title ? `<div class="title">${title}</div>` : ""}${subtitle ? `<h2 class="subtitle">${subtitle}</h2>` : ""}</div>` : ""}
           ${actionVisible ? `<button class="header-action" aria-label="${escapePanelText(this._config.action_entity)}" title="${escapePanelText(this._config.action_entity)}"><ha-icon icon="${escapePanelText(this._config.action_icon || "mdi:gesture-tap-button")}"></ha-icon><span class="action-state"></span></button>` : ""}
         </header>
         <div class="children">${this._config.cards.length ? "" : `<div class="empty">Keine Karten konfiguriert.</div>`}</div>

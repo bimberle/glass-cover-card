@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.21.3";
+const CARD_VERSION = "1.22.0";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -19,10 +19,10 @@ class GlassCoverCard extends HTMLElement {
       throw new Error("Bitte eine Cover-Entitaet mit 'entity' angeben.");
     }
     this._config = {
-      name: "",
       show_tilt: true,
       show_main_controls: true,
       show_close_tilt: true,
+      show_action_button: true,
       show_preview: true,
       invert_position: false,
       button_size: 5,
@@ -77,6 +77,7 @@ class GlassCoverCard extends HTMLElement {
       { name: "show_tilt", default: true, selector: { boolean: {} } },
       { name: "show_main_controls", default: true, selector: { boolean: {} } },
       { name: "show_close_tilt", default: true, selector: { boolean: {} } },
+      { name: "show_action_button", default: true, selector: { boolean: {} } },
       { name: "show_preview", default: true, selector: { boolean: {} } },
       { name: "invert_position", default: false, selector: { boolean: {} } },
       { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
@@ -93,6 +94,7 @@ class GlassCoverCard extends HTMLElement {
         show_tilt: "Lamellenregler anzeigen",
         show_main_controls: "Hoch/Stopp/Runter anzeigen",
         show_close_tilt: "Schließen-und-Lamellen-Button anzeigen",
+        show_action_button: "Schnellwahl-Button anzeigen",
         show_preview: "Vorschau und Prozentanzeige anzeigen",
         invert_position: "Position umkehren",
         button_size: "Button-Größe",
@@ -201,11 +203,12 @@ class GlassCoverCard extends HTMLElement {
     const displayedPosition = Math.round(uiPosition);
     const targetUiPosition = this._targetPosition === null ? null : (invertPosition ? this._targetPosition : 100 - this._targetPosition);
     const tilt = this._pendingTilt ?? this._tilt();
-    const title = this._escape(this._config.title || "Beschattung");
-    const name = this._escape(this._config.name || this._state()?.attributes?.friendly_name || this._config.entity);
+    const title = this._escape(String(this._config.title ?? "Beschattung").trim());
+    const name = this._escape(String(this._config.name ?? this._state()?.attributes?.friendly_name ?? this._config.entity).trim());
     const showTilt = this._config.show_tilt !== false;
     const showMainControls = this._config.show_main_controls !== false;
     const showCloseTilt = this._config.show_close_tilt !== false;
+    const showActionButton = this._config.show_action_button !== false;
     const showPreview = this._config.show_preview !== false;
     const buttonLevel = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
     const titleLevel = Math.min(5, Math.max(1, Number(this._config.title_size) || 5));
@@ -225,8 +228,11 @@ class GlassCoverCard extends HTMLElement {
         * { box-sizing:border-box; }
         .card { position:relative; overflow:hidden; width:100%; min-width:260px; padding:clamp(20px,4.7vw,38px); border:1px solid rgba(255,255,255,.1); border-radius:clamp(22px,4vw,36px); background:radial-gradient(ellipse at 32% 22%,#25272c 0,#17191d 43%,#101215 100%); box-shadow:inset 0 1px 1px rgba(255,255,255,.07),0 12px 30px rgba(0,0,0,.2); }
         .header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+        .header[hidden] { display:none; }
+        .header:has(> .menu-wrap:only-child) { justify-content:flex-end; }
         .eyebrow { color:#9295a0; font-size:clamp(11px,2.1vw,15px); font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
         h2 { margin:7px 0 0; font-size:var(--title-font); line-height:1.08; font-weight:700; overflow-wrap:anywhere; }
+        h2:first-child { margin-top:0; }
         button { color:inherit; font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
         .menu-wrap { position:relative; z-index:2; flex:none; }
         .menu-toggle,.round { display:grid; place-items:center; border-radius:50%; background:linear-gradient(145deg,#272a30,#17191d); border:2px solid #303239; box-shadow:0 6px 15px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05); }
@@ -271,15 +277,15 @@ class GlassCoverCard extends HTMLElement {
         @media (prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none !important; } }
       </style>
       <article class="card ${showPreview ? "" : "compact"}" style="${controlsStyle}">
-        <header class="header">
-          <div><div class="eyebrow">${title}</div><h2>${name}</h2></div>
-          <div class="menu-wrap"><button class="menu-toggle" aria-label="Schnellwahl anzeigen" aria-expanded="${this._menuOpen}">${this._icon("blinds")}</button>
+        <header class="header" ${!title && !name && !showActionButton ? "hidden" : ""}>
+          ${title || name ? `<div>${title ? `<div class="eyebrow">${title}</div>` : ""}${name ? `<h2>${name}</h2>` : ""}</div>` : ""}
+          ${showActionButton ? `<div class="menu-wrap"><button class="menu-toggle" aria-label="Schnellwahl anzeigen" aria-expanded="${this._menuOpen}">${this._icon("blinds")}</button>
             <div class="quick-menu ${this._menuOpen ? "open" : ""}" role="group" aria-label="Schnellwahl" aria-hidden="${!this._menuOpen}">
               <button class="quick" data-action="open" title="Ganz auf" aria-label="Ganz auf">${this._icon("up")}</button>
               <button class="quick" data-action="close" title="Ganz zu" aria-label="Ganz zu">${this._icon("down")}</button>
               <button class="quick" data-action="close-tilt" title="Ganz zu, Lamellen 50 Prozent (durchsichtig)" aria-label="Ganz zu, Lamellen 50 Prozent">${this._icon("half")}</button>
             </div>
-          </div>
+          </div>` : ""}
         </header>
         <section class="visual" aria-label="Jalousienposition">
           <div class="window" style="--position:${position}%;--tilt:${tilt}"><div class="glass"></div><div class="slats">${slats}</div></div>

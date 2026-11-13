@@ -386,6 +386,7 @@ const coverForm = coverModule.Card.getConfigForm();
 const coverSchema = Object.fromEntries(coverForm.schema.map((field) => [field.name, field]));
 assert.equal(coverSchema.entity.selector.entity.filter.domain, "cover");
 assert.equal(coverSchema.tilt_entity.selector.entity.filter.domain, "cover");
+assert.equal(coverSchema.show_action_button.default, true);
 assert.equal(coverSchema.button_size.selector.number.mode, "slider");
 assert.equal(coverModule.Card.getConfigElement, undefined);
 
@@ -396,6 +397,7 @@ assert.ok(marketplaceEntry.definitions.has("glass-panel-card"));
 assert.ok(marketplaceEntry.definitions.has("glass-rgb-card"));
 const rgbForm = marketplaceEntry.definitions.get("glass-rgb-card").getConfigForm();
 assert.equal(rgbForm.schema.filter((field) => /^preset_[1-6]$/.test(field.name) && field.selector.color_rgb).length, 6);
+assert.equal(rgbForm.schema.find((field) => field.name === "show_action_button").default, true);
 const rgbValidationCard = new (marketplaceEntry.definitions.get("glass-rgb-card"))();
 rgbValidationCard._render = () => {};
 rgbValidationCard._sync = () => {};
@@ -513,7 +515,7 @@ rgbCard._hue = 120;
 rgbCard._brightness = 55;
 assert.equal(rgbCard._presets[1].rgb.join(","), "0,255,0");
 const rgbNodes = {
-  ".card": {}, ".header-action": { classList: { toggle() {} } }, ".action-state": {}, ".subtitle": {},
+  ".card": {}, ".header": {}, ".header-action": { classList: { toggle() {} } }, ".action-state": {}, ".subtitle": {}, ".titles": {},
   ".controls": { classList: { toggle(name, value) { this[name] = value; } } }, ".unavailable": {}, ".temperature": {}, ".temperature input": {},
   ".turn-on": {}, ".turn-off": {}, ".wheel": { setAttribute() {} }, ".brightness": {},
 };
@@ -635,5 +637,56 @@ panelEditor._handleCardPicked({
 });
 assert.equal(panelEditor._config.cards.length, 1);
 assert.equal(panelEditor._config.cards[0].entity, "light.deckenlampe");
+
+coverCard.setConfig({ entity: "cover.office", title: "", name: "" });
+coverCard.hass = { states: { "cover.office": { state: "open", attributes: { friendly_name: "Office", current_position: 55 } } } };
+assert.doesNotMatch(coverCard.shadowRoot.innerHTML, /<div class="eyebrow">|<h2>/);
+assert.match(coverCard.shadowRoot.innerHTML, /class="menu-wrap"/);
+coverCard.setConfig({ entity: "cover.office", title: "", name: "", show_action_button: false });
+assert.match(coverCard.shadowRoot.innerHTML, /<header class="header" hidden>/);
+assert.doesNotMatch(coverCard.shadowRoot.innerHTML, /class="menu-wrap"/);
+assert.match(coverCard.shadowRoot.innerHTML, /class="controls"/);
+coverCard.setConfig({ entity: "cover.office" });
+assert.match(coverCard.shadowRoot.innerHTML, /<div class="eyebrow">Beschattung<\/div><h2>Office<\/h2>/);
+coverCard.setConfig({ entity: "cover.office", title: " ", name: "Office" });
+assert.doesNotMatch(coverCard.shadowRoot.innerHTML, /<div class="eyebrow">/);
+assert.match(coverCard.shadowRoot.innerHTML, /<h2>Office<\/h2>/);
+
+buttonCard.setConfig({ entity: "light.living_room", name: "", show_name: true });
+buttonCard.hass = { states: { "light.living_room": { state: "on", attributes: { friendly_name: "Living Room" } } } };
+assert.doesNotMatch(buttonCard.shadowRoot.innerHTML, /<span class="name">/);
+assert.equal(buttonCard.shadowRoot.querySelector(".button").getAttribute("aria-label"), "Living Room");
+buttonCard.setConfig({ entity: "light.living_room" });
+assert.match(buttonCard.shadowRoot.innerHTML, /<span class="name">Living Room<\/span>/);
+
+await panelCard.setConfig({ title: " ", subtitle: "", show_action_button: false, cards: [] });
+assert.match(panelCard.shadowRoot.innerHTML, /<header class="header" hidden>/);
+assert.doesNotMatch(panelCard.shadowRoot.innerHTML, /<div class="titles">|<h2 class="subtitle">/);
+await panelCard.setConfig({ title: "", subtitle: "Room", cards: [] });
+assert.doesNotMatch(panelCard.shadowRoot.innerHTML, /<div class="title">/);
+assert.match(panelCard.shadowRoot.innerHTML, /<h2 class="subtitle">Room<\/h2>/);
+
+rgbCard._config = { ...rgbCard._config, title: "", name: "" };
+rgbCard._sync();
+assert.equal(rgbNodes[".subtitle"].textContent, "");
+assert.equal(rgbNodes[".subtitle"].hidden, true);
+assert.equal(rgbNodes[".titles"].hidden, true);
+rgbCard._config.show_action_button = false;
+rgbCard._sync();
+assert.equal(rgbNodes[".header-action"].hidden, true);
+assert.equal(rgbNodes[".header"].hidden, true);
+rgbCard._config.show_action_button = true;
+rgbCard._sync();
+assert.equal(rgbNodes[".header"].hidden, false);
+delete rgbCard._config.name;
+rgbCard._sync();
+assert.equal(rgbNodes[".subtitle"].textContent, "light.rgb_test");
+assert.equal(rgbNodes[".subtitle"].hidden, false);
+
+roomCard.setConfig({ name: "", entity: "sensor.temperature" });
+assert.doesNotMatch(roomCard.shadowRoot.innerHTML, /<h2 class="name">/);
+assert.match(roomCard.shadowRoot.innerHTML, /<div class="sensor-value">/);
+roomCard.setConfig({});
+assert.match(roomCard.shadowRoot.innerHTML, /<h2 class="name">Wohnzimmer<\/h2>/);
 
 console.log("OK: Marketplace entry registers all cards; standard card picker, nested-card editing, actions, and panel rendering pass");
