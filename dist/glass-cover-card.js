@@ -1,5 +1,5 @@
 (() => {
-const CARD_VERSION = "1.20.1";
+const CARD_VERSION = "1.20.2";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -1049,7 +1049,7 @@ if (!window.customCards.some((card) => card.type === "glass-panel-card")) {
 })();
 
 (() => {
-const RGB_CARD_VERSION = "1.1.1";
+const RGB_CARD_VERSION = "1.1.2";
 const RGB_PRESET_COUNT = 6;
 const rgbToHs = (rgb) => {
   const [red, green, blue] = rgb.map((value) => value / 255);
@@ -1227,6 +1227,7 @@ class GlassRgbCard extends HTMLElement {
     const colorControl = this.shadowRoot.querySelector(".color-control");
     colorControl.style.setProperty("--hue", this._hue);
     colorControl.style.setProperty("--saturation", `${this._saturation}%`);
+    colorControl.style.setProperty("--light-level", `${Math.max(0, Math.min(100, this._brightness))}%`);
     wheel.setAttribute("aria-valuenow", String(Math.round(this._hue)));
     this.shadowRoot.querySelector(".brightness-number").textContent = `${Math.round(this._brightness)} %`;
     const brightness = this.shadowRoot.querySelector(".brightness");
@@ -1256,7 +1257,7 @@ class GlassRgbCard extends HTMLElement {
         .header-action.inactive { color:#85878b; border-color:#45474b; } .header-action ha-icon { display:block; width:var(--header-icon-size); height:var(--header-icon-size); --mdc-icon-size:var(--header-icon-size); }
         .action-state { position:absolute; bottom:11%; font-size:clamp(5px,calc(var(--header-action-size) * .15),13px); line-height:1; color:inherit; }
         .controls[hidden],.temperature[hidden],.unavailable[hidden],.turn-on[hidden],.turn-off[hidden] { display:none; }
-        .color-control { position:relative; width:min(100%,360px); aspect-ratio:1; margin:0 auto; }
+        .color-control { --light-color:color-mix(in srgb,color-mix(in srgb,hsl(var(--hue,0) 100% 50%) var(--saturation,100%),white) var(--light-level,100%),black); position:relative; width:min(100%,360px); aspect-ratio:1; margin:0 auto; }
         .controls.is-off .wheel,.controls.is-off .brightness,.controls.is-off .preset { filter:grayscale(1) brightness(.65); }
         .controls.is-off .brightness-control { display:none; }
         .turn-on { position:absolute; inset:0; z-index:2; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; width:100%; height:100%; border:0; border-radius:50%; background:transparent; color:#85878b; cursor:pointer; }
@@ -1269,7 +1270,7 @@ class GlassRgbCard extends HTMLElement {
         .wheel-marker { position:absolute; inset:0; pointer-events:none; }
         .wheel-marker::after { content:""; position:absolute; box-sizing:border-box; width:10%; aspect-ratio:1; top:-2px; left:45%; border:2px solid #ddd; border-radius:50%; background:hsl(var(--hue) 100% 50%); transform:rotate(calc(var(--hue) * 1deg)); transform-origin:50% calc(500% + 2px); }
         .wheel:focus-visible { outline:2px solid white; outline-offset:3px; }
-        .turn-off { position:absolute; inset:18%; z-index:1; display:grid; place-items:center; border:clamp(4.5px,1.5vw,9px) solid color-mix(in srgb,hsl(var(--hue,0) 100% 50%) var(--saturation,100%),white); border-radius:50%; background:#15171a; color:color-mix(in srgb,hsl(var(--hue,0) 100% 50%) var(--saturation,100%),white); cursor:pointer; }
+        .turn-off { position:absolute; inset:18%; z-index:1; display:grid; place-items:center; border:clamp(4.5px,1.5vw,9px) solid var(--light-color); border-radius:50%; background:#15171a; color:var(--light-color); cursor:pointer; }
         .turn-off ha-icon { display:block; transform:translateY(-25%); --mdc-icon-size:clamp(42px,18vw,96px); }
         .turn-off:focus-visible { outline:2px solid white; outline-offset:3px; }
         .brightness-control { position:absolute; z-index:2; top:60%; left:27%; width:46%; display:flex; flex-direction:column; align-items:center; gap:3px; color:#a0a2ad; font-size:12px; }

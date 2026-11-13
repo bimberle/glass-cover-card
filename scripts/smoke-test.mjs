@@ -368,6 +368,7 @@ assert.match(rgbSource, /\.brightness-control \{[^}]*flex-direction:column/);
 assert.match(rgbSource, /\.brightness \{[^}]*accent-color:color-mix\(in srgb,hsl\(var\(--hue,0\) 100% 50%\) var\(--saturation,100%\),white\)/);
 assert.match(rgbSource, /\.turn-off ha-icon \{[^}]*--mdc-icon-size:clamp\(42px,18vw,96px\)/);
 assert.match(rgbSource, /\.wheel-marker::after \{[^}]*box-sizing:border-box;[^}]*top:-2px;[^}]*transform-origin:50% calc\(500% \+ 2px\)/);
+assert.match(rgbSource, /\.turn-off \{[^}]*solid var\(--light-color\);[^}]*color:var\(--light-color\)/);
 assert.match(rgbSource, /<button class="turn-on"[^>]*><ha-icon icon=/);
 assert.match(rgbSource, /<span class="turn-on-label">RGB<\/span>/);
 assert.deepEqual(marketplaceEntry.customCards.map((card) => card.type).sort(), ["glass-button-card", "glass-cover-card", "glass-panel-card", "glass-rgb-card"]);
@@ -375,6 +376,20 @@ await marketplaceEntry.runSource(await readFile("dist/glass-button-card.js", "ut
 assert.equal(marketplaceEntry.customCards.length, 4, "Loading standalone cards must not register duplicate card entries");
 
 const rgbCard = new (marketplaceEntry.definitions.get("glass-rgb-card"))();
+const rgbViewCard = new (marketplaceEntry.definitions.get("glass-rgb-card"))();
+const rgbViewStyle = { setProperty(name, value) { this[name] = value; } };
+const rgbViewNodes = {
+  ".wheel": { setAttribute() {} }, ".color-control": { style: rgbViewStyle },
+  ".brightness-number": {}, ".brightness": { style: { setProperty() {} } },
+};
+rgbViewCard.shadowRoot.querySelector = (selector) => rgbViewNodes[selector];
+rgbViewCard._hue = 180;
+rgbViewCard._saturation = 100;
+for (const level of [0, 25, 50, 100]) {
+  rgbViewCard._brightness = level;
+  rgbViewCard._updateView();
+  assert.equal(rgbViewStyle["--light-level"], `${level}%`);
+}
 const rgbUpdateCard = new (marketplaceEntry.definitions.get("glass-rgb-card"))();
 rgbUpdateCard._config = { entity: "light.rgb_tv" };
 let rgbUpdates = 0;
