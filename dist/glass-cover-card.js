@@ -1,5 +1,5 @@
 (() => {
-const CARD_VERSION = "1.20.3";
+const CARD_VERSION = "1.20.4";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -328,7 +328,7 @@ if (!window.customCards.some((card) => card.type === "glass-cover-card")) {
 })();
 
 (() => {
-const CARD_VERSION = "1.6.1";
+const CARD_VERSION = "1.6.2";
 const BUTTON_COLORS = {
   orange: "#ff8b2b",
   white: "#f2f2f4",
@@ -402,8 +402,10 @@ class GlassButtonCard extends HTMLElement {
       { name: "entity", required: true, selector: { entity: {} } },
       { name: "icon", selector: { icon: {} } },
       { name: "icon_active", selector: { icon: {} } },
+      { name: "state_active", selector: { text: {} } },
       { name: "color_active", selector: { select: { mode: "dropdown", options: BUTTON_COLOR_OPTIONS } } },
       { name: "icon_inactive", selector: { icon: {} } },
+      { name: "state_inactive", selector: { text: {} } },
       { name: "color_inactive", default: "gray", selector: { select: { mode: "dropdown", options: BUTTON_COLOR_OPTIONS } } },
       { name: "binary_sensor_active_state", default: "on", selector: { select: { mode: "dropdown", options: [{ value: "on", label: "Offen" }, { value: "off", label: "Geschlossen" }] } } },
       { name: "name", selector: { text: {} } },
@@ -428,8 +430,10 @@ class GlassButtonCard extends HTMLElement {
           entity: "Entität",
           icon: "Icon",
           icon_active: "Binary Sensor: Icon für aktiven Zustand",
+          state_active: "Binary Sensor: Name des aktiven Zustands",
           color_active: "Binary Sensor: Farbe für aktiven Zustand",
           icon_inactive: "Binary Sensor: Icon für inaktiven Zustand",
+          state_inactive: "Binary Sensor: Name des inaktiven Zustands",
           color_inactive: "Binary Sensor: Farbe für inaktiven Zustand",
           binary_sensor_active_state: "Binary Sensor: Zustand mit Akzentfarbe",
           name: "Text",
@@ -582,7 +586,7 @@ class GlassButtonCard extends HTMLElement {
     }
     if (!this._dragging && !this._pendingBrightnessState) this._displayBrightness(isActive && Number.isFinite(state?.attributes?.brightness) ? state.attributes.brightness / 255 * 100 : 0);
     const stateLabel = this.shadowRoot.querySelector(".state-value");
-    if (stateLabel) stateLabel.textContent = !dimmable && ["on", "off"].includes(state?.state) ? (binarySensor ? (state.state === "on" ? "Offen" : "Geschlossen") : (state.state === "on" ? "An" : "Aus")) : "";
+    if (stateLabel) stateLabel.textContent = !dimmable && ["on", "off"].includes(state?.state) ? (binarySensor ? ((isActive ? this._config.state_active : this._config.state_inactive) || (state.state === "on" ? "Offen" : "Geschlossen")) : (state.state === "on" ? "An" : "Aus")) : "";
     const name = this._config.name || state?.attributes?.friendly_name || this._config.entity || "Button";
     button.setAttribute("aria-label", name);
     button.setAttribute("title", name);
@@ -690,7 +694,7 @@ class GlassButtonCardEditor extends HTMLElement {
     const domain = this._config.entity?.split(".")[0] || "";
     if (domain !== this._domain) {
       this._domain = domain;
-      const binaryFields = ["icon_active", "icon_inactive", "color_active", "color_inactive", "binary_sensor_active_state"];
+      const binaryFields = ["icon_active", "icon_inactive", "state_active", "state_inactive", "color_active", "color_inactive", "binary_sensor_active_state"];
       const nonBinaryFields = ["icon", "color", "action"];
       const definition = GlassButtonCard.getConfigForm();
       form.schema = definition.schema.filter((field) => {

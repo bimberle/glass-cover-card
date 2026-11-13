@@ -77,7 +77,7 @@ cards:
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle vier Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.20.3`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle vier Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.20.4`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
@@ -90,7 +90,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.20.2 installiert?** Aktualisiere auf v1.20.3 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.20.3 installiert?** Aktualisiere auf v1.20.4 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
@@ -106,6 +106,8 @@ Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/
 | `icon` | `mdi:gesture-tap-button` | Ein MDI-Icon, z. B. `mdi:sofa-outline`, `mdi:lightbulb-outline` oder `mdi:television` |
 | `icon_active` | `icon` | Icon des aktiven Zustands bei `binary_sensor` |
 | `icon_inactive` | `icon` | Icon des inaktiven Zustands bei `binary_sensor` |
+| `state_active` | Offen/Geschlossen | Optionaler Text fuer den aktiven Zustand bei `binary_sensor` |
+| `state_inactive` | Offen/Geschlossen | Optionaler Text fuer den inaktiven Zustand bei `binary_sensor` |
 | `color_active` | `color` | Farbe des aktiven Zustands bei `binary_sensor` |
 | `color_inactive` | `gray` | Farbe des inaktiven Zustands bei `binary_sensor` |
 | `binary_sensor_active_state` | `on` | Aktiver Zustand bei `binary_sensor`: `on` (offen) oder `off` (geschlossen) |
@@ -129,6 +131,8 @@ color_active: red
 icon_inactive: mdi:door-closed
 color_inactive: green
 binary_sensor_active_state: 'on'
+state_active: Offen
+state_inactive: Geschlossen
 ```
 
 ### Glass RGB Card
