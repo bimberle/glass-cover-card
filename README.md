@@ -114,7 +114,7 @@ view_layout:
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle fuenf Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.22.1`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle fuenf Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.22.2`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
@@ -127,7 +127,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.22.0 installiert?** Aktualisiere auf v1.22.1 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.22.1 installiert?** Aktualisiere auf v1.22.2 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
@@ -148,7 +148,7 @@ Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/
 | `color_active` | `color` | Farbe des aktiven Zustands bei `binary_sensor` |
 | `color_inactive` | `gray` | Farbe des inaktiven Zustands bei `binary_sensor` |
 | `binary_sensor_active_state` | `on` | Aktiver Zustand bei `binary_sensor`: `on` (offen) oder `off` (geschlossen) |
-| `name` | Friendly Name | Buttontext; kann mit `show_name: false` ausgeblendet werden |
+| `name` | Friendly Name | Buttontext; leer oder nur Leerzeichen blendet den Text aus, alternativ `show_name: false` |
 | `action` | `toggle` | `toggle` schaltet die Entitaet; `more-info` oeffnet deren Detaildialog. Bei `binary_sensor` wird immer der Detaildialog geoeffnet. |
 | `button_size` | `5` | Groesse von `1` (ein Drittel) bis `5` (entspricht den grossen Jalousiebuttons) |
 | `show_name` | `true` | Buttontext unabhaengig vom Kartenrahmen ein- oder ausblenden |
@@ -186,6 +186,7 @@ entity: light.wohnzimmer
 title: RGB
 name: Sofa
 icon: mdi:lightbulb-outline
+turn_on_text: RGB
 title_size: 5
 button_size: 5
 show_presets: true
@@ -200,6 +201,7 @@ preset_2: [0, 180, 255]
 | `title` | `RGB` | Kleine Kopfzeile |
 | `name` | Friendly Name | Grosse Ueberschrift |
 | `icon` | `mdi:lightbulb-outline` | Icon des Schaltbuttons |
+| `turn_on_text` | `RGB` | Text unter dem Icon beim Einschalten; leer zum Ausblenden |
 | `show_action_button` | `true` | Kopfbutton zum Ein-/Ausschalten anzeigen; bei leerem Titel und Namen verschwindet damit die ganze Kopfzeile |
 | `title_size` | `5` | Groesse der Ueberschrift von `1` bis `5` |
 | `button_size` | `5` | Groesse des Kopfbuttons von `1` bis `5` |

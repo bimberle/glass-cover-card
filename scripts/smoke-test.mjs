@@ -404,6 +404,8 @@ assert.ok(marketplaceEntry.definitions.has("glass-rgb-card"));
 const rgbForm = marketplaceEntry.definitions.get("glass-rgb-card").getConfigForm();
 assert.equal(rgbForm.schema.filter((field) => /^preset_[1-6]$/.test(field.name) && field.selector.color_rgb).length, 6);
 assert.equal(rgbForm.schema.find((field) => field.name === "show_action_button").default, true);
+assert.equal(rgbForm.schema.find((field) => field.name === "turn_on_text").default, "RGB");
+assert.equal(rgbForm.computeLabel(rgbForm.schema.find((field) => field.name === "turn_on_text")), "Text unter dem Einschalt-Icon");
 const rgbValidationCard = new (marketplaceEntry.definitions.get("glass-rgb-card"))();
 rgbValidationCard._render = () => {};
 rgbValidationCard._sync = () => {};
@@ -411,7 +413,13 @@ assert.throws(() => rgbValidationCard.setConfig({ entity: "light.test", preset_1
 assert.throws(() => rgbValidationCard.setConfig({ entity: "light.test", preset_2: [1, 2] }), /Preset 2/);
 rgbValidationCard.setConfig({ entity: "light.test", preset_6: [0, 128, 255] });
 assert.equal(rgbValidationCard._presets[0].slot, 6);
+assert.equal(rgbValidationCard._config.turn_on_text, "RGB");
+rgbValidationCard.setConfig({ entity: "light.test", turn_on_text: "Einschalten" });
+assert.equal(rgbValidationCard._config.turn_on_text, "Einschalten");
+rgbValidationCard.setConfig({ entity: "light.test", turn_on_text: "" });
+assert.equal(rgbValidationCard._config.turn_on_text, "");
 const rgbSource = await readFile("dist/glass-rgb-card.js", "utf8");
+assert.match(rgbSource, /turn_on_text/);
 assert.doesNotMatch(rgbSource, /--mdc-icon-size:100%/);
 assert.match(rgbSource, /\.header-action ha-icon \{ display:block; width:var\(--header-icon-size\); height:var\(--header-icon-size\); --mdc-icon-size:var\(--header-icon-size\); \}/);
 assert.doesNotMatch(rgbSource, /class="brightness-arc"/);
@@ -425,7 +433,8 @@ assert.match(rgbSource, /\.turn-off ha-icon \{[^}]*--mdc-icon-size:clamp\(42px,1
 assert.match(rgbSource, /\.wheel-marker::after \{[^}]*box-sizing:border-box;[^}]*top:-2px;[^}]*transform-origin:50% calc\(500% \+ 2px\)/);
 assert.match(rgbSource, /\.turn-off \{[^}]*solid var\(--light-color\);[^}]*color:var\(--light-color\)/);
 assert.match(rgbSource, /<button class="turn-on"[^>]*><ha-icon icon=/);
-assert.match(rgbSource, /<span class="turn-on-label">RGB<\/span>/);
+assert.match(rgbSource, /this\._config\.turn_on_text/);
+assert.match(rgbSource, /class="turn-on-label"/);
 assert.deepEqual(marketplaceEntry.customCards.map((card) => card.type).sort(), ["glass-button-card", "glass-cover-card", "glass-panel-card", "glass-rgb-card", "glass-room-card"]);
 await marketplaceEntry.runSource(await readFile("dist/glass-button-card.js", "utf8"), "dist/glass-button-card.js");
 assert.equal(marketplaceEntry.customCards.length, 5, "Loading standalone cards must not register duplicate card entries");
@@ -662,6 +671,8 @@ buttonCard.setConfig({ entity: "light.living_room", name: "", show_name: true })
 buttonCard.hass = { states: { "light.living_room": { state: "on", attributes: { friendly_name: "Living Room" } } } };
 assert.doesNotMatch(buttonCard.shadowRoot.innerHTML, /<span class="name">/);
 assert.equal(buttonCard.shadowRoot.querySelector(".button").getAttribute("aria-label"), "Living Room");
+buttonCard.setConfig({ entity: "light.living_room", name: "   ", show_name: true });
+assert.doesNotMatch(buttonCard.shadowRoot.innerHTML, /<span class="name">/);
 buttonCard.setConfig({ entity: "light.living_room" });
 assert.match(buttonCard.shadowRoot.innerHTML, /<span class="name">Living Room<\/span>/);
 

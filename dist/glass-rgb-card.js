@@ -1,4 +1,4 @@
-const RGB_CARD_VERSION = "1.2.0";
+const RGB_CARD_VERSION = "1.2.1";
 const RGB_PRESET_COUNT = 6;
 const rgbToHs = (rgb) => {
   const [red, green, blue] = rgb.map((value) => value / 255);
@@ -34,7 +34,7 @@ class GlassRgbCard extends HTMLElement {
     this._pendingTimer = null;
   }
 
-  static getStubConfig() { return { entity: "light.wohnzimmer", title: "RGB", title_size: 5, button_size: 5, show_action_button: true, show_presets: false }; }
+  static getStubConfig() { return { entity: "light.wohnzimmer", title: "RGB", turn_on_text: "RGB", title_size: 5, button_size: 5, show_action_button: true, show_presets: false }; }
   static getConfigForm() {
     return {
       schema: [
@@ -42,13 +42,14 @@ class GlassRgbCard extends HTMLElement {
         { name: "title", default: "RGB", selector: { text: {} } },
         { name: "name", selector: { text: {} } },
         { name: "icon", selector: { icon: {} } },
+        { name: "turn_on_text", default: "RGB", selector: { text: {} } },
         { name: "show_action_button", default: true, selector: { boolean: {} } },
         { name: "title_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
         { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
         { name: "show_presets", default: false, selector: { boolean: {} } },
         ...Array.from({ length: RGB_PRESET_COUNT }, (_, index) => ({ name: `preset_${index + 1}`, selector: { color_rgb: {} } })),
       ],
-      computeLabel: (field) => ({ entity: "Licht", title: "Titel", name: "Name", icon: "Icon", show_action_button: "Kopfbutton anzeigen", title_size: "Überschrift-Größe", button_size: "Button-Größe", show_presets: "Farb-Presets anzeigen" })[field.name] || (field.name.startsWith("preset_") ? `Farb-Preset ${field.name.slice(7)}` : field.name),
+      computeLabel: (field) => ({ entity: "Licht", title: "Titel", name: "Name", icon: "Icon", turn_on_text: "Text unter dem Einschalt-Icon", show_action_button: "Kopfbutton anzeigen", title_size: "Überschrift-Größe", button_size: "Button-Größe", show_presets: "Farb-Presets anzeigen" })[field.name] || (field.name.startsWith("preset_") ? `Farb-Preset ${field.name.slice(7)}` : field.name),
     };
   }
 
@@ -59,7 +60,7 @@ class GlassRgbCard extends HTMLElement {
       if (color != null && (!Array.isArray(color) || color.length !== 3 || color.some((channel) => !Number.isInteger(channel) || channel < 0 || channel > 255))) throw new Error(`Preset ${index} muss eine RGB-Farbe mit drei Werten von 0 bis 255 sein.`);
     }
     const changed = this._config?.entity !== config.entity;
-    this._config = { title: "RGB", title_size: 5, button_size: 5, show_action_button: true, show_presets: false, ...config };
+    this._config = { title: "RGB", turn_on_text: "RGB", title_size: 5, button_size: 5, show_action_button: true, show_presets: false, ...config };
     if (changed) this._selected = -1;
     this._loadPresets();
     this._selected = -1;
@@ -248,7 +249,7 @@ class GlassRgbCard extends HTMLElement {
       <article class="card" style="--subtitle-font:clamp(${22 * titleScale}px,${4.8 * titleScale}vw,${38 * titleScale}px);--header-action-size:clamp(${56 * menuScale}px,${11 * menuScale}vw,${88 * menuScale}px);--header-icon-size:calc((var(--header-action-size) - 16px) * .46)">
         <header class="header"><div class="titles">${String(this._config.title ?? "").trim() ? `<div class="title">${escapeRgb(String(this._config.title).trim())}</div>` : ""}<h2 class="subtitle" hidden></h2></div><button class="header-action" aria-label="Licht ein- oder ausschalten" title="Licht ein- oder ausschalten"><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}"></ha-icon><span class="action-state"></span></button></header>
         <p class="unavailable" hidden></p>
-        <div class="controls" hidden><div class="color-control"><div class="wheel" role="slider" tabindex="0" aria-label="Farbton" aria-valuemin="0" aria-valuemax="359" aria-valuenow="0"><span class="wheel-marker"></span></div><button class="turn-off" type="button" aria-label="Licht ausschalten" title="Licht ausschalten" hidden><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}" aria-hidden="true"></ha-icon></button><button class="turn-on" type="button" aria-label="Licht mit erstem Preset einschalten" title="Licht einschalten" hidden><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}"></ha-icon><span class="turn-on-label">RGB</span></button><div class="brightness-control"><input class="brightness" type="range" min="0" max="100" aria-label="Helligkeit"><span class="brightness-number">0 %</span></div></div>
+        <div class="controls" hidden><div class="color-control"><div class="wheel" role="slider" tabindex="0" aria-label="Farbton" aria-valuemin="0" aria-valuemax="359" aria-valuenow="0"><span class="wheel-marker"></span></div><button class="turn-off" type="button" aria-label="Licht ausschalten" title="Licht ausschalten" hidden><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}" aria-hidden="true"></ha-icon></button><button class="turn-on" type="button" aria-label="Licht mit erstem Preset einschalten" title="Licht einschalten" hidden><ha-icon icon="${escapeRgb(this._config.icon || "mdi:lightbulb-outline")}"></ha-icon>${String(this._config.turn_on_text ?? "RGB").trim() ? `<span class="turn-on-label">${escapeRgb(String(this._config.turn_on_text).trim())}</span>` : ""}</button><div class="brightness-control"><input class="brightness" type="range" min="0" max="100" aria-label="Helligkeit"><span class="brightness-number">0 %</span></div></div>
         ${this._config.show_presets && this._presets.length ? `<div class="presets">${this._presets.map((preset) => `<button class="preset" type="button" title="Farb-Preset ${preset.slot}" aria-label="Farb-Preset ${preset.slot}" aria-pressed="false"></button>`).join("")}</div>` : ""}
         <div class="temperature" hidden><span>Warm</span><input type="range" aria-label="Farbtemperatur" step="50"><span>Kalt</span></div></div>
       </article>`;
