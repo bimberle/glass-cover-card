@@ -1,4 +1,4 @@
-const ROOM_CARD_VERSION = "1.0.0";
+const ROOM_CARD_VERSION = "1.0.1";
 const ROOM_TEXT_COLORS = { black: "#151515", white: "#ffffff", gray: "#a0a2a6" };
 const escapeRoom = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 
@@ -12,6 +12,10 @@ class GlassRoomCard extends HTMLElement {
 
   static getStubConfig() {
     return { name: "Wohnzimmer", image: "/local/glass_design/rooms/Wohnzimmer.png", height: 430, image_position: 60 };
+  }
+
+  static getConfigElement() {
+    return document.createElement("glass-room-card-editor");
   }
 
   static getConfigForm() {
@@ -35,7 +39,12 @@ class GlassRoomCard extends HTMLElement {
     if (config.entity && !config.entity.startsWith("sensor.")) throw new Error("Bitte eine Sensor-Entität auswählen.");
     const image = String(config.image || "").trim();
     if (image && !/^(?:https?:\/\/|\/[^/]|\.\.?\/)/i.test(image)) throw new Error("Bitte einen lokalen Bildpfad oder eine HTTP(S)-Bild-URL angeben.");
-    this._config = { name: "Wohnzimmer", height: 430, image_position: 60, ...config, image };
+    const nextConfig = { name: "Wohnzimmer", height: 430, image_position: 60, ...config, image };
+    if (JSON.stringify(this._config) === JSON.stringify(nextConfig)) {
+      this._syncSensor();
+      return;
+    }
+    this._config = nextConfig;
     this._render();
     this._syncSensor();
   }
@@ -99,6 +108,33 @@ class GlassRoomCard extends HTMLElement {
   }
 }
 
+class GlassRoomCardEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this.shadowRoot.innerHTML = "<ha-form></ha-form>";
+    const form = this.shadowRoot.querySelector("ha-form");
+    const definition = GlassRoomCard.getConfigForm();
+    form.schema = definition.schema;
+    form.computeLabel = definition.computeLabel;
+    form.addEventListener("value-changed", (event) => {
+      event.stopPropagation();
+      this._config = { ...this._config, ...event.detail.value };
+      this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
+    });
+  }
+
+  setConfig(config) {
+    this._config = { ...config };
+    this.shadowRoot.querySelector("ha-form").data = this._config;
+  }
+
+  set hass(hass) {
+    this.shadowRoot.querySelector("ha-form").hass = hass;
+  }
+}
+
 if (!customElements.get("glass-room-card")) customElements.define("glass-room-card", GlassRoomCard);
+if (!customElements.get("glass-room-card-editor")) customElements.define("glass-room-card-editor", GlassRoomCardEditor);
 window.customCards = window.customCards || [];
 if (!window.customCards.some((card) => card.type === "glass-room-card")) window.customCards.push({ type: "glass-room-card", name: "Glass Room Card", description: "Raumfoto mit optionalem Sensorwert.", preview: true, version: ROOM_CARD_VERSION });
