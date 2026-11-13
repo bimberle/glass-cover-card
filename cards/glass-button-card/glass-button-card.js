@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.6.4";
+const CARD_VERSION = "1.6.5";
 const BUTTON_COLORS = {
   orange: "#ff8b2b",
   white: "#f2f2f4",
@@ -105,7 +105,7 @@ class GlassButtonCard extends HTMLElement {
           state_inactive: "Binary Sensor: Name des inaktiven Zustands",
           color_inactive: "Binary Sensor: Farbe für inaktiven Zustand",
           binary_sensor_active_state: "Binary Sensor: Zustand mit Akzentfarbe",
-          name: "Text",
+          name: "Beschriftung",
           action: "Aktion",
           color: "Farbe",
           button_size: "Button-Größe",

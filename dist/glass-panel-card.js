@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.5.2";
+const CARD_VERSION = "1.5.3";
 const escapePanelText = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -215,7 +215,7 @@ class GlassPanelCardEditor extends HTMLElement {
       form.schema = PANEL_FORM_SCHEMA;
       form.data = this._config;
       form.hass = this._hass;
-      form.computeLabel = (field) => ({ title: "Titel", subtitle: "Untertitel", title_size: "Überschrift-Größe", button_size: "Button-Größe", show_action_button: "Aktionsbutton anzeigen", action_entity: "Aktions-Entität", action_icon: "Aktions-Icon", action: "Aktion" })[field.name] || field.name;
+      form.computeLabel = (field) => ({ title: "Titel", subtitle: "Beschriftung", title_size: "Beschriftungsgröße", button_size: "Button-Größe", show_action_button: "Aktionsbutton anzeigen", action_entity: "Aktions-Entität", action_icon: "Aktions-Icon", action: "Aktion" })[field.name] || field.name;
     }
     if (previousCards !== JSON.stringify(this._config.cards)) {
       this._selectedCard = Math.min(this._selectedCard, this._config.cards.length - 1);

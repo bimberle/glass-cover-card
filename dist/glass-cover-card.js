@@ -1,5 +1,5 @@
 (() => {
-const CARD_VERSION = "1.22.2";
+const CARD_VERSION = "1.22.3";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -91,7 +91,7 @@ class GlassCoverCard extends HTMLElement {
       schema,
       computeLabel: (field) => ({
         entity: "Jalousie",
-        name: "Große Überschrift",
+        name: "Beschriftung",
         title: "Titel",
         tilt_entity: "Lamellen-Entität",
         show_tilt: "Lamellenregler anzeigen",
@@ -102,7 +102,7 @@ class GlassCoverCard extends HTMLElement {
         show_preview: "Vorschau und Prozentanzeige anzeigen",
         invert_position: "Position umkehren",
         button_size: "Button-Größe",
-        title_size: "Überschrift-Größe",
+        title_size: "Beschriftungsgröße",
         preview_size: "Bild- und Prozentgröße",
       })[field.name],
     };
@@ -342,7 +342,7 @@ if (!window.customCards.some((card) => card.type === "glass-cover-card")) {
 })();
 
 (() => {
-const CARD_VERSION = "1.6.4";
+const CARD_VERSION = "1.6.5";
 const BUTTON_COLORS = {
   orange: "#ff8b2b",
   white: "#f2f2f4",
@@ -449,7 +449,7 @@ class GlassButtonCard extends HTMLElement {
           state_inactive: "Binary Sensor: Name des inaktiven Zustands",
           color_inactive: "Binary Sensor: Farbe für inaktiven Zustand",
           binary_sensor_active_state: "Binary Sensor: Zustand mit Akzentfarbe",
-          name: "Text",
+          name: "Beschriftung",
           action: "Aktion",
           color: "Farbe",
           button_size: "Button-Größe",
@@ -746,7 +746,7 @@ if (!window.customCards.some((card) => card.type === "glass-button-card")) {
 })();
 
 (() => {
-const CARD_VERSION = "1.5.2";
+const CARD_VERSION = "1.5.3";
 const escapePanelText = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -963,7 +963,7 @@ class GlassPanelCardEditor extends HTMLElement {
       form.schema = PANEL_FORM_SCHEMA;
       form.data = this._config;
       form.hass = this._hass;
-      form.computeLabel = (field) => ({ title: "Titel", subtitle: "Untertitel", title_size: "Überschrift-Größe", button_size: "Button-Größe", show_action_button: "Aktionsbutton anzeigen", action_entity: "Aktions-Entität", action_icon: "Aktions-Icon", action: "Aktion" })[field.name] || field.name;
+      form.computeLabel = (field) => ({ title: "Titel", subtitle: "Beschriftung", title_size: "Beschriftungsgröße", button_size: "Button-Größe", show_action_button: "Aktionsbutton anzeigen", action_entity: "Aktions-Entität", action_icon: "Aktions-Icon", action: "Aktion" })[field.name] || field.name;
     }
     if (previousCards !== JSON.stringify(this._config.cards)) {
       this._selectedCard = Math.min(this._selectedCard, this._config.cards.length - 1);
@@ -1132,7 +1132,7 @@ if (!window.customCards.some((card) => card.type === "glass-panel-card")) {
 })();
 
 (() => {
-const RGB_CARD_VERSION = "1.2.1";
+const RGB_CARD_VERSION = "1.2.2";
 const RGB_PRESET_COUNT = 6;
 const rgbToHs = (rgb) => {
   const [red, green, blue] = rgb.map((value) => value / 255);
@@ -1183,7 +1183,7 @@ class GlassRgbCard extends HTMLElement {
         { name: "show_presets", default: false, selector: { boolean: {} } },
         ...Array.from({ length: RGB_PRESET_COUNT }, (_, index) => ({ name: `preset_${index + 1}`, selector: { color_rgb: {} } })),
       ],
-      computeLabel: (field) => ({ entity: "Licht", title: "Titel", name: "Name", icon: "Icon", turn_on_text: "Text unter dem Einschalt-Icon", show_action_button: "Kopfbutton anzeigen", title_size: "Überschrift-Größe", button_size: "Button-Größe", show_presets: "Farb-Presets anzeigen" })[field.name] || (field.name.startsWith("preset_") ? `Farb-Preset ${field.name.slice(7)}` : field.name),
+      computeLabel: (field) => ({ entity: "Licht", title: "Titel", name: "Beschriftung", icon: "Icon", turn_on_text: "Text unter dem Einschalt-Icon", show_action_button: "Kopfbutton anzeigen", title_size: "Beschriftungsgröße", button_size: "Button-Größe", show_presets: "Farb-Presets anzeigen" })[field.name] || (field.name.startsWith("preset_") ? `Farb-Preset ${field.name.slice(7)}` : field.name),
     };
   }
 
@@ -1286,7 +1286,7 @@ class GlassRgbCard extends HTMLElement {
     header.classList.toggle("active", state?.state === "on");
     header.classList.toggle("inactive", state?.state === "off");
     this.shadowRoot.querySelector(".action-state").textContent = state?.state === "on" ? "An" : state?.state === "off" ? "Aus" : "";
-    const name = String(this._config.name ?? state?.attributes?.friendly_name ?? this._config.entity).trim();
+    const name = String(this._config.name ?? "").trim();
     const subtitle = this.shadowRoot.querySelector(".subtitle");
     subtitle.textContent = name;
     subtitle.hidden = !name;
@@ -1412,7 +1412,7 @@ if (!window.customCards.some((card) => card.type === "glass-rgb-card")) window.c
 })();
 
 (() => {
-const ROOM_CARD_VERSION = "1.0.2";
+const ROOM_CARD_VERSION = "1.0.3";
 const ROOM_TEXT_COLORS = { black: "#151515", white: "#ffffff", gray: "#a0a2a6" };
 const escapeRoom = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 
@@ -1445,7 +1445,7 @@ class GlassRoomCard extends HTMLElement {
         { name: "height", default: 430, selector: { number: { min: 180, max: 800, step: 10, mode: "slider", unit_of_measurement: "px" } } },
         { name: "image_position", default: 60, selector: { number: { min: 0, max: 100, step: 1, mode: "slider", unit_of_measurement: "%" } } },
       ],
-      computeLabel: (field) => ({ name: "Raumname", image: "Bildpfad oder Bild-URL", entity: "Sensor (optional)", text_color: "Schriftfarbe Raumname", sensor_color: "Schriftfarbe Sensorwert", name_size: "Schriftgröße Raumname", sensor_size: "Schriftgröße Sensorwert", height: "Kartenhöhe", image_position: "Vertikaler Bildausschnitt" })[field.name],
+      computeLabel: (field) => ({ name: "Beschriftung", image: "Bildpfad oder Bild-URL", entity: "Sensor (optional)", text_color: "Schriftfarbe Beschriftung", sensor_color: "Schriftfarbe Sensorwert", name_size: "Beschriftungsgröße", sensor_size: "Schriftgröße Sensorwert", height: "Kartenhöhe", image_position: "Vertikaler Bildausschnitt" })[field.name],
     };
   }
 

@@ -13,7 +13,7 @@ Die Quellen der fuenf Karten liegen jeweils in `cards/<kartenname>/`. Die gebaut
 
 ## Karten
 
-Titel, Untertitel und Namen koennen ausdruecklich leer gesetzt werden, um sie auszublenden. Ein leeres Feld wird nicht durch den Entitaetsnamen ersetzt. Nicht gesetzte Felder behalten ihre bisherigen Standardwerte. Das gilt fuer `title` und `name` der Cover- und RGB-Karte, `title` und `subtitle` der Panel-Karte sowie `name` der Button- und Room-Karte. Sensorwerte, Zustandsanzeigen und Bedienelemente bleiben sichtbar.
+Die Texteingaben sind in allen Karteneditoren einheitlich als **Titel** und **Beschriftung** bezeichnet. Die YAML-Schlüssel bleiben aus Kompatibilitätsgründen kartenabhängig. Leere Texte werden ausgeblendet. Bei RGB bleibt die Beschriftung auch dann leer, wenn `name` nicht angegeben ist; bei anderen Karten bleiben deren bisherige Friendly-Name- oder Standardtexte erhalten. Sensorwerte, Zustandsanzeigen und Bedienelemente bleiben sichtbar.
 
 ```yaml
 # Beispiel: Cover- oder RGB-Karte ohne Ueberschriften
@@ -102,19 +102,19 @@ view_layout:
 
 | Option | Standard | Beschreibung |
 | --- | --- | --- |
-| `name` | `Wohnzimmer` | Raumname |
+| `name` | `Wohnzimmer` | Beschriftung |
 | `image` | leer | Lokaler Bildpfad oder HTTP(S)-Bild-URL |
 | `entity` | keine | Optionale Sensor-Entitaet; ohne Entitaet kein Sensorwert und keine Klickaktion |
 | `height` | `430` | Kartenhoehe in Pixeln, begrenzt auf 180 bis 800 |
 | `image_position` | `60` | Vertikaler Bildausschnitt von 0 bis 100 Prozent |
-| `text_color` | `white` | Schriftfarbe fuer den Raumnamen: `black`, `white` oder `gray` |
+| `text_color` | `white` | Schriftfarbe der Beschriftung: `black`, `white` oder `gray` |
 | `sensor_color` | `white` | Unabhaengige Schriftfarbe fuer den Sensorwert: `black`, `white` oder `gray` |
-| `name_size` | `19` | Schriftgroesse des Raumnamens in Pixeln, 12 bis 48 |
+| `name_size` | `19` | Schriftgroesse der Beschriftung in Pixeln, 12 bis 48 |
 | `sensor_size` | `29` | Schriftgroesse des Sensorwerts in Pixeln, 12 bis 64 |
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle fuenf Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die große Unterüberschrift. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.22.2`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle fuenf Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die Beschriftung. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.22.3`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
@@ -127,7 +127,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.22.1 installiert?** Aktualisiere auf v1.22.2 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.22.2 installiert?** Aktualisiere auf v1.22.3 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
@@ -148,7 +148,7 @@ Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/
 | `color_active` | `color` | Farbe des aktiven Zustands bei `binary_sensor` |
 | `color_inactive` | `gray` | Farbe des inaktiven Zustands bei `binary_sensor` |
 | `binary_sensor_active_state` | `on` | Aktiver Zustand bei `binary_sensor`: `on` (offen) oder `off` (geschlossen) |
-| `name` | Friendly Name | Buttontext; leer oder nur Leerzeichen blendet den Text aus, alternativ `show_name: false` |
+| `name` | Friendly Name | Beschriftung; leer oder nur Leerzeichen blendet sie aus, alternativ `show_name: false` |
 | `action` | `toggle` | `toggle` schaltet die Entitaet; `more-info` oeffnet deren Detaildialog. Bei `binary_sensor` wird immer der Detaildialog geoeffnet. |
 | `button_size` | `5` | Groesse von `1` (ein Drittel) bis `5` (entspricht den grossen Jalousiebuttons) |
 | `show_name` | `true` | Buttontext unabhaengig vom Kartenrahmen ein- oder ausblenden |
@@ -198,12 +198,12 @@ preset_2: [0, 180, 255]
 | Option | Standard | Beschreibung |
 | --- | --- | --- |
 | `entity` | erforderlich | Farbfähige Licht-Entitaet |
-| `title` | `RGB` | Kleine Kopfzeile |
-| `name` | Friendly Name | Grosse Ueberschrift |
+| `title` | `RGB` | Titel |
+| `name` | leer | Beschriftung; leer oder nicht angegeben blendet sie aus |
 | `icon` | `mdi:lightbulb-outline` | Icon des Schaltbuttons |
 | `turn_on_text` | `RGB` | Text unter dem Icon beim Einschalten; leer zum Ausblenden |
 | `show_action_button` | `true` | Kopfbutton zum Ein-/Ausschalten anzeigen; bei leerem Titel und Namen verschwindet damit die ganze Kopfzeile |
-| `title_size` | `5` | Groesse der Ueberschrift von `1` bis `5` |
+| `title_size` | `5` | Beschriftungsgröße von `1` bis `5` |
 | `button_size` | `5` | Groesse des Kopfbuttons von `1` bis `5` |
 | `show_presets` | `false` | Konfigurierte Farb-Presets anzeigen |
 | `preset_1` bis `preset_6` | keine | Optionale RGB-Farbe als Liste mit drei Werten von `0` bis `255` |
@@ -243,9 +243,9 @@ Im Bearbeitungsmodus wählst du über **Karte hinzufügen** den normalen Home-As
 
 | Option | Standard | Beschreibung |
 | --- | --- | --- |
-| `title` | leer | Kleine obere Überschrift, zum Beispiel `AKTIONEN` |
-| `subtitle` | leer | Größere Überschrift unter dem Titel |
-| `title_size` | `5` | Größe der großen Unterüberschrift wie bei der Cover Card von `1` (klein) bis `5` (Vorlagengröße) |
+| `title` | leer | Titel, zum Beispiel `AKTIONEN` |
+| `subtitle` | leer | Beschriftung unter dem Titel |
+| `title_size` | `5` | Beschriftungsgröße wie bei der Cover Card von `1` (klein) bis `5` (Vorlagengröße) |
 | `show_action_button` | `false` | Runden Button rechts oben anzeigen; bei Ein/Aus-Entitaeten zeigt er den Zustand und ist ausgeschaltet grau |
 | `button_size` | `5` | Größe des Aktionsbuttons von `1` bis `5`, entsprechend der Cover Card |
 | `action_entity` | keine | Entität für den Aktionsbutton |
@@ -258,8 +258,8 @@ Im Bearbeitungsmodus wählst du über **Karte hinzufügen** den normalen Home-As
 | Option | Standard | Beschreibung |
 | --- | --- | --- |
 | `entity` | erforderlich | Cover-Entitaet fuer Fahrt und Position |
-| `title` | `Beschattung` | Titel oberhalb der großen Überschrift; mit `""` ausblendbar |
-| `name` | Friendly Name | Große Überschrift; mit `""` ausblendbar |
+| `title` | `Beschattung` | Titel oberhalb der Beschriftung; mit `""` ausblendbar |
+| `name` | Friendly Name | Beschriftung; mit `""` ausblendbar |
 | `show_tilt` | `true` | Lamellen-Schieberegler anzeigen oder ausblenden |
 | `show_position_slider` | `true` | Positionsslider mit Auf-/Zu-Beschriftung vor den Fahrtasten anzeigen oder ausblenden |
 | `show_main_controls` | `true` | Buttons Hoch, Stopp und Runter anzeigen oder ausblenden |
@@ -268,7 +268,7 @@ Im Bearbeitungsmodus wählst du über **Karte hinzufügen** den normalen Home-As
 | `show_preview` | `true` | Vorschaubild und Prozentwert anzeigen; Positionsslider bleibt sichtbar |
 | `invert_position` | `false` | Slider-Richtung und Prozentbedeutung umkehren |
 | `button_size` | `5` | Groesse der Steuerbuttons von `1` bis `5` |
-| `title_size` | `5` | Groesse der Ueberschrift von `1` bis `5` |
+| `title_size` | `5` | Beschriftungsgröße von `1` bis `5` |
 | `preview_size` | `5` | Groesse von Jalousienbild und Prozentanzeige von `1` bis `5` |
 | `tilt_entity` | `entity` | Optionale Cover-Entitaet fuer die Lamellenposition |
 

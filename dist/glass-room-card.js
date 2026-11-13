@@ -1,4 +1,4 @@
-const ROOM_CARD_VERSION = "1.0.2";
+const ROOM_CARD_VERSION = "1.0.3";
 const ROOM_TEXT_COLORS = { black: "#151515", white: "#ffffff", gray: "#a0a2a6" };
 const escapeRoom = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 
@@ -31,7 +31,7 @@ class GlassRoomCard extends HTMLElement {
         { name: "height", default: 430, selector: { number: { min: 180, max: 800, step: 10, mode: "slider", unit_of_measurement: "px" } } },
         { name: "image_position", default: 60, selector: { number: { min: 0, max: 100, step: 1, mode: "slider", unit_of_measurement: "%" } } },
       ],
-      computeLabel: (field) => ({ name: "Raumname", image: "Bildpfad oder Bild-URL", entity: "Sensor (optional)", text_color: "Schriftfarbe Raumname", sensor_color: "Schriftfarbe Sensorwert", name_size: "Schriftgröße Raumname", sensor_size: "Schriftgröße Sensorwert", height: "Kartenhöhe", image_position: "Vertikaler Bildausschnitt" })[field.name],
+      computeLabel: (field) => ({ name: "Beschriftung", image: "Bildpfad oder Bild-URL", entity: "Sensor (optional)", text_color: "Schriftfarbe Beschriftung", sensor_color: "Schriftfarbe Sensorwert", name_size: "Beschriftungsgröße", sensor_size: "Schriftgröße Sensorwert", height: "Kartenhöhe", image_position: "Vertikaler Bildausschnitt" })[field.name],
     };
   }
 

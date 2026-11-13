@@ -1,4 +1,4 @@
-const RGB_CARD_VERSION = "1.2.1";
+const RGB_CARD_VERSION = "1.2.2";
 const RGB_PRESET_COUNT = 6;
 const rgbToHs = (rgb) => {
   const [red, green, blue] = rgb.map((value) => value / 255);
@@ -49,7 +49,7 @@ class GlassRgbCard extends HTMLElement {
         { name: "show_presets", default: false, selector: { boolean: {} } },
         ...Array.from({ length: RGB_PRESET_COUNT }, (_, index) => ({ name: `preset_${index + 1}`, selector: { color_rgb: {} } })),
       ],
-      computeLabel: (field) => ({ entity: "Licht", title: "Titel", name: "Name", icon: "Icon", turn_on_text: "Text unter dem Einschalt-Icon", show_action_button: "Kopfbutton anzeigen", title_size: "Überschrift-Größe", button_size: "Button-Größe", show_presets: "Farb-Presets anzeigen" })[field.name] || (field.name.startsWith("preset_") ? `Farb-Preset ${field.name.slice(7)}` : field.name),
+      computeLabel: (field) => ({ entity: "Licht", title: "Titel", name: "Beschriftung", icon: "Icon", turn_on_text: "Text unter dem Einschalt-Icon", show_action_button: "Kopfbutton anzeigen", title_size: "Beschriftungsgröße", button_size: "Button-Größe", show_presets: "Farb-Presets anzeigen" })[field.name] || (field.name.startsWith("preset_") ? `Farb-Preset ${field.name.slice(7)}` : field.name),
     };
   }
 
@@ -152,7 +152,7 @@ class GlassRgbCard extends HTMLElement {
     header.classList.toggle("active", state?.state === "on");
     header.classList.toggle("inactive", state?.state === "off");
     this.shadowRoot.querySelector(".action-state").textContent = state?.state === "on" ? "An" : state?.state === "off" ? "Aus" : "";
-    const name = String(this._config.name ?? state?.attributes?.friendly_name ?? this._config.entity).trim();
+    const name = String(this._config.name ?? "").trim();
     const subtitle = this.shadowRoot.querySelector(".subtitle");
     subtitle.textContent = name;
     subtitle.hidden = !name;

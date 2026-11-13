@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.22.2";
+const CARD_VERSION = "1.22.3";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -90,7 +90,7 @@ class GlassCoverCard extends HTMLElement {
       schema,
       computeLabel: (field) => ({
         entity: "Jalousie",
-        name: "Große Überschrift",
+        name: "Beschriftung",
         title: "Titel",
         tilt_entity: "Lamellen-Entität",
         show_tilt: "Lamellenregler anzeigen",
@@ -101,7 +101,7 @@ class GlassCoverCard extends HTMLElement {
         show_preview: "Vorschau und Prozentanzeige anzeigen",
         invert_position: "Position umkehren",
         button_size: "Button-Größe",
-        title_size: "Überschrift-Größe",
+        title_size: "Beschriftungsgröße",
         preview_size: "Bild- und Prozentgröße",
       })[field.name],
     };
