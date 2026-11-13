@@ -1,4 +1,4 @@
-const NAV_CARD_VERSION = "1.0.1";
+const NAV_CARD_VERSION = "1.0.2";
 const NAV_COLORS = {
   orange: "#ff8b2b",
   white: "#f2f2f4",
@@ -232,7 +232,7 @@ class GlassNavigationCard extends HTMLElement {
         .shell { position:fixed; z-index:20; color:var(--nav-color); }
         .shell.position-top,.shell.position-bottom { left:50%; width:min(calc(100vw - 48px),748px); transform:translateX(-50%) scale(var(--nav-scale)); }
         .shell.position-top { top:max(12px,env(safe-area-inset-top)); transform-origin:50% 0; }
-        .shell.position-bottom { bottom:max(52px,env(safe-area-inset-bottom)); transform-origin:50% 100%; }
+        .shell.position-bottom { bottom:calc(env(safe-area-inset-bottom) + 6px); transform-origin:50% 100%; }
         .shell.position-left,.shell.position-right { top:50%; width:max-content; max-width:calc(100vw - 24px); transform:translateY(-50%) scale(var(--nav-scale)); }
         .shell.position-left { left:max(12px,env(safe-area-inset-left)); transform-origin:0 50%; }
         .shell.position-right { right:max(12px,env(safe-area-inset-right)); transform-origin:100% 50%; }
@@ -272,7 +272,7 @@ class GlassNavigationCard extends HTMLElement {
         .submenu-items .nav-item.active { border-color:var(--nav-color); background:color-mix(in srgb,var(--nav-color) 9%,transparent); color:var(--nav-color); box-shadow:0 0 34px color-mix(in srgb,var(--nav-color) 32%,transparent); opacity:1; }
         .submenu-items .nav-item.active span:not(.chevron) { color:#f2f2f4; }
         .submenu-items .nav-item.has-children .chevron { top:12px; right:18px; font-size:22px; }
-        @media(max-width:520px) { .shell.position-bottom { bottom:max(12px,env(safe-area-inset-bottom)); } .position-bottom .submenu { bottom:calc(100% + 24px); } .position-bottom .pointer { top:-24px; } .bar { min-height:66px; border-radius:40px; } .bar .nav-item { min-height:52px; padding-inline:4px; } .bar .nav-item ha-icon { width:26px; height:26px; --mdc-icon-size:26px; } .bar .nav-item span:not(.chevron) { font-size:12px; } .position-left .nav-separator,.position-right .nav-separator { width:32px; } .submenu { padding:18px 14px 20px; } .submenu-header h2 { font-size:26px; } .menu-segments { width:100%; min-height:56px; margin-bottom:20px; } .segment { min-height:48px; font-size:16px; } .position-left .submenu,.position-right .submenu { width:min(440px,calc(100vw - 108px)); } .submenu-items { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; } .submenu-items .nav-item { width:100%; min-width:0; min-height:0; } .submenu-items .nav-item ha-icon { width:48px; height:48px; --mdc-icon-size:48px; } .submenu-items .nav-item span:not(.chevron) { right:2px; bottom:8%; left:2px; font-size:14px; } }
+        @media(max-width:520px) { .shell.position-bottom { bottom:calc(env(safe-area-inset-bottom) + 6px); } .position-bottom .submenu { bottom:calc(100% + 24px); } .position-bottom .pointer { top:-24px; } .bar { min-height:66px; border-radius:40px; } .bar .nav-item { min-height:52px; padding-inline:4px; } .bar .nav-item ha-icon { width:26px; height:26px; --mdc-icon-size:26px; } .bar .nav-item span:not(.chevron) { font-size:12px; } .position-left .nav-separator,.position-right .nav-separator { width:32px; } .submenu { padding:18px 14px 20px; } .submenu-header h2 { font-size:26px; } .menu-segments { width:100%; min-height:56px; margin-bottom:20px; } .segment { min-height:48px; font-size:16px; } .position-left .submenu,.position-right .submenu { width:min(440px,calc(100vw - 108px)); } .submenu-items { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; } .submenu-items .nav-item { width:100%; min-width:0; min-height:0; } .submenu-items .nav-item ha-icon { width:48px; height:48px; --mdc-icon-size:48px; } .submenu-items .nav-item span:not(.chevron) { right:2px; bottom:8%; left:2px; font-size:14px; } }
         @media(prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto !important; } }
       </style>
       <div class="shell position-${position}" style="--nav-color:${color};--nav-scale:${scale}">

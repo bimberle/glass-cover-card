@@ -449,6 +449,7 @@ assert.equal(navigationCard._menuTitle(), "Raum wählen");
 navigationCard._render();
 assert.match(navigationCard.shadowRoot.innerHTML, /class="menu-segments"/);
 assert.match(navigationCard.shadowRoot.innerHTML, /class="nav-separator" role="separator" aria-orientation="horizontal"/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.shell\.position-bottom \{ bottom:calc\(env\(safe-area-inset-bottom\) \+ 6px\)/);
 assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu \{[^}]*width:min\(720px/);
 assert.match(navigationCard.shadowRoot.innerHTML, /\.menu-segments \{[^}]*width:min\(100%,620px\)/);
 assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \{ display:grid; grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
