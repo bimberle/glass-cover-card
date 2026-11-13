@@ -1,4 +1,4 @@
-const RGB_CARD_VERSION = "1.1.2";
+const RGB_CARD_VERSION = "1.1.3";
 const RGB_PRESET_COUNT = 6;
 const rgbToHs = (rgb) => {
   const [red, green, blue] = rgb.map((value) => value / 255);
@@ -210,7 +210,7 @@ class GlassRgbCard extends HTMLElement {
         .controls.is-off .wheel,.controls.is-off .brightness,.controls.is-off .preset { filter:grayscale(1) brightness(.65); }
         .controls.is-off .brightness-control { display:none; }
         .turn-on { position:absolute; inset:0; z-index:2; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; width:100%; height:100%; border:0; border-radius:50%; background:transparent; color:#85878b; cursor:pointer; }
-        .turn-on ha-icon { display:block; width:28%; height:28%; --mdc-icon-size:100%; }
+        .turn-on ha-icon { display:block; width:clamp(42px,18vw,96px); height:clamp(42px,18vw,96px); --mdc-icon-size:clamp(42px,18vw,96px); }
         .turn-on-label { color:inherit; font:inherit; font-size:14px; }
         .turn-on:focus-visible { outline:2px solid #ddd; outline-offset:3px; }
         .wheel { position:absolute; inset:0; border-radius:50%; background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red); touch-action:none; cursor:pointer; }

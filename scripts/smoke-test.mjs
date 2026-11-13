@@ -387,6 +387,7 @@ assert.throws(() => rgbValidationCard.setConfig({ entity: "light.test", preset_2
 rgbValidationCard.setConfig({ entity: "light.test", preset_6: [0, 128, 255] });
 assert.equal(rgbValidationCard._presets[0].slot, 6);
 const rgbSource = await readFile("dist/glass-rgb-card.js", "utf8");
+assert.doesNotMatch(rgbSource, /--mdc-icon-size:100%/);
 assert.match(rgbSource, /\.header-action ha-icon \{ display:block; width:var\(--header-icon-size\); height:var\(--header-icon-size\); --mdc-icon-size:var\(--header-icon-size\); \}/);
 assert.doesNotMatch(rgbSource, /class="brightness-arc"/);
 assert.match(rgbSource, /<button class="turn-off"[^>]*aria-label="Licht ausschalten"/);
