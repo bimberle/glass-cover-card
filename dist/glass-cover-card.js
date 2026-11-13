@@ -1,5 +1,5 @@
 (() => {
-const CARD_VERSION = "1.23.0";
+const CARD_VERSION = "1.23.1";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -1555,7 +1555,7 @@ if (!window.customCards.some((card) => card.type === "glass-room-card")) window.
 })();
 
 (() => {
-const NAV_CARD_VERSION = "1.0.0";
+const NAV_CARD_VERSION = "1.0.1";
 const NAV_COLORS = {
   orange: "#ff8b2b",
   white: "#f2f2f4",
@@ -1823,7 +1823,7 @@ class GlassNavigationCard extends HTMLElement {
         .segment { flex:1 1 0; min-width:0; min-height:56px; padding:8px 12px; border:0; border-radius:32px; background:transparent; color:#c3c4c8; opacity:1; font-size:20px; font-weight:600; cursor:pointer; }
         .segment.selected { background:var(--nav-color); color:#fff; opacity:1; box-shadow:0 6px 20px color-mix(in srgb,var(--nav-color) 28%,transparent); }
         .submenu-items { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); justify-items:center; gap:12px; }
-        .submenu-items .nav-item { width:min(100%,160px); aspect-ratio:1; min-height:0; border:2px solid #3b3d42; border-radius:50%; color:#f0f0f2; opacity:.92; }
+        .submenu-items .nav-item { width:min(100%,160px); aspect-ratio:1; min-height:0; border:3px solid #3b3d42; border-radius:50%; color:#f0f0f2; opacity:.92; }
         .submenu-items .nav-item ha-icon { position:absolute; top:50%; left:50%; width:72px; height:72px; --mdc-icon-size:72px; transform:translate(-50%,-50%); }
         .submenu-items .nav-item span:not(.chevron) { position:absolute; right:8px; bottom:12%; left:8px; font-size:20px; white-space:normal; }
         .submenu-items .nav-item.active { border-color:var(--nav-color); background:color-mix(in srgb,var(--nav-color) 9%,transparent); color:var(--nav-color); box-shadow:0 0 34px color-mix(in srgb,var(--nav-color) 32%,transparent); opacity:1; }

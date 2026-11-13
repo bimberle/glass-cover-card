@@ -453,6 +453,7 @@ assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu \{[^}]*width:min\(7
 assert.match(navigationCard.shadowRoot.innerHTML, /\.menu-segments \{[^}]*width:min\(100%,620px\)/);
 assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \{ display:grid; grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
 assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item \{ width:min\(100%,160px\)/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item \{[^}]*border:3px solid #3b3d42/);
 assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item ha-icon \{[^}]*width:72px; height:72px; --mdc-icon-size:72px;/);
 assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item span:not\(\.chevron\) \{[^}]*font-size:20px/);
 assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item span:not\(\.chevron\) \{[^}]*bottom:12%/);
