@@ -54,6 +54,7 @@ async function loadCard(filePath, cardTag, editorTag) {
         },
         querySelector: (selector) => selector === ".button ha-icon" ? cardIcon : (selector === ".action-state" ? actionStateLabel : (selector === ".state-value" ? stateLabel : (selector === ".dimmer" ? dimmer : (selector === ".brightness-value" ? brightnessLabel : (selector === "ha-form" ? form : (selector === ".children" ? childContainer : (selector === ".header-action" ? headerButton : (selector === ".button" ? cardButton : (selector === ".name" ? nameLabel : null))))))))),
         querySelectorAll: () => [],
+        addEventListener() {},
       };
       return this.shadowRoot;
     }
@@ -494,6 +495,21 @@ assert.match(navigationCard.shadowRoot.innerHTML, /aria-label="Küche"/);
 assert.doesNotMatch(navigationCard.shadowRoot.innerHTML, /<span>Küche<\/span>/);
 assert.match(navigationCard.shadowRoot.innerHTML, /<span>Wohnbereich<\/span>/);
 assert.match(navigationCard.shadowRoot.innerHTML, /class="segment selected"/);
+navigationCard._menuRootIndex = 1;
+navigationCard._render();
+navigationCard._handleDocumentPointer({ composedPath: () => [{ outside: true }] });
+assert.equal(navigationCard._menuRootIndex, null, "Outside pointer must close the open submenu");
+navigationCard._menuRootIndex = 1;
+navigationCard._render();
+navigationCard._handleDocumentKey({ key: "Escape" });
+assert.equal(navigationCard._menuRootIndex, null, "Escape must close the open submenu");
+const navigationEditor = NavigationCard.getConfigElement();
+navigationEditor.setConfig({ items: NavigationCard.getStubConfig().items, position: "bottom" });
+assert.match(navigationEditor.shadowRoot.innerHTML, /Karte bearbeiten/);
+assert.match(navigationEditor.shadowRoot.innerHTML, /class="preview-bar"/);
+navigationEditor._handleClick({ composedPath: () => [{ dataset: { action: "toggle-edit" } }] });
+assert.match(navigationEditor.shadowRoot.innerHTML, /Menüstruktur/);
+assert.match(navigationEditor.shadowRoot.innerHTML, /data-action="add-group"/);
 assert.throws(() => navigationCard.setConfig({ items: [{ name: "Invalid", label: 42, icon: "mdi:home", url: "/home" }] }), /label.*muss Text sein/);
 assert.throws(() => navigationCard.setConfig({ items: [{ name: "Bad URL", icon: "mdi:alert", url: "javascript:alert(1)" }] }), /HTTP\(S\)-URL/);
 assert.throws(() => navigationCard.setConfig({ items: [{ name: "External", icon: "mdi:alert", url: "//example.com" }] }), /HTTP\(S\)-URL/);

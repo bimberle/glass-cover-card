@@ -1,4 +1,4 @@
-const NAV_CARD_VERSION = "1.0.3";
+const NAV_CARD_VERSION = "1.0.4";
 const NAV_COLORS = {
   orange: "#ff8b2b",
   white: "#f2f2f4",
@@ -31,6 +31,31 @@ class GlassNavigationCard extends HTMLElement {
     this._config = null;
     this._menuRootIndex = null;
     this._menuPath = [];
+    this._handleDocumentPointer = (event) => {
+      if (this._menuRootIndex === null || event.composedPath?.().includes(this)) return;
+      this._closeMenu();
+    };
+    this._handleDocumentKey = (event) => {
+      if (event.key === "Escape" && this._menuRootIndex !== null) {
+        this._closeMenu();
+      }
+    };
+  }
+
+  connectedCallback() {
+    document.addEventListener("pointerdown", this._handleDocumentPointer, true);
+    document.addEventListener("keydown", this._handleDocumentKey);
+  }
+
+  disconnectedCallback() {
+    document.removeEventListener("pointerdown", this._handleDocumentPointer, true);
+    document.removeEventListener("keydown", this._handleDocumentKey);
+  }
+
+  _closeMenu() {
+    this._menuRootIndex = null;
+    this._menuPath = [];
+    this._render();
   }
 
   static getStubConfig() {
@@ -317,24 +342,196 @@ class GlassNavigationCardEditor extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
     this._config = {};
-    this.shadowRoot.innerHTML = "<ha-form></ha-form>";
-    const form = this.shadowRoot.querySelector("ha-form");
+    this._editing = false;
+    this._hass = null;
+    this._onClick = (event) => this._handleClick(event);
+    this._onInput = (event) => this._handleInput(event);
+    this._onChange = (event) => this._handleInput(event);
+    this.shadowRoot.addEventListener("click", this._onClick);
+    this.shadowRoot.addEventListener("input", this._onInput);
+    this.shadowRoot.addEventListener("change", this._onChange);
+    this._render();
+  }
+
+  _emitConfig() {
+    this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
+  }
+
+  _itemList(items, path = [], root = false) {
+    const rows = items.map((item, index) => {
+      const itemPath = [...path, index];
+      const pathValue = itemPath.join(".");
+      if (item.type === "separator") {
+        return `<div class="tree-separator"><span>Trenner</span><button type="button" class="remove" data-action="remove" data-path="${pathValue}" aria-label="Trenner entfernen">Entfernen</button></div>`;
+      }
+      const group = Array.isArray(item.children) && item.children.length > 0;
+      return `<section class="tree-item ${group ? "is-group" : ""}">
+        <div class="item-heading"><span class="item-kind">${group ? "Gruppe" : "Link"}</span><button type="button" class="remove" data-action="remove" data-path="${pathValue}" aria-label="${escapeNav(item.name)} entfernen">Entfernen</button></div>
+        <div class="fields">
+          <label>Name<input type="text" data-path="${pathValue}" data-field="name" value="${escapeNav(item.name)}"></label>
+          <label>Icon<input type="text" data-path="${pathValue}" data-field="icon" value="${escapeNav(item.icon)}" placeholder="mdi:home-outline"></label>
+          <label>Beschriftung<input type="text" data-path="${pathValue}" data-field="label" value="${escapeNav(item.label ?? item.name)}" placeholder="Name verwenden; leer blendet aus"></label>
+          ${group ? `<label>Menütitel<input type="text" data-path="${pathValue}" data-field="menu_title" value="${escapeNav(item.menu_title ?? "")}" placeholder="${escapeNav(item.name)} wählen"></label>` : `<label>URL<input type="text" data-path="${pathValue}" data-field="url" value="${escapeNav(item.url ?? "")}" placeholder="/lovelace/seite"></label>`}
+          <label class="default-option"><input type="checkbox" data-path="${pathValue}" data-field="default" ${item.default ? "checked" : ""}> Standardauswahl</label>
+        </div>
+        ${group ? `<div class="children"><h4>Unterpunkte</h4>${this._itemList(item.children, itemPath)}${this._addButtons(itemPath, false)}</div>` : ""}
+      </section>`;
+    }).join("");
+    return `${rows}${root ? this._addButtons(path, true) : ""}`;
+  }
+
+  _addButtons(path, root) {
+    const parentPath = path.join(".");
+    return `<div class="add-actions"><button type="button" data-action="add-link" data-parent="${parentPath}">+ Link</button><button type="button" data-action="add-group" data-parent="${parentPath}">+ Gruppe</button>${root ? `<button type="button" data-action="add-separator" data-parent="${parentPath}">+ Trenner</button>` : ""}</div>`;
+  }
+
+  _previewMarkup() {
+    return (this._config.items || []).map((item, index) => {
+      if (item.type === "separator") return `<span class="preview-separator" role="separator"></span>`;
+      const label = item.label == null ? item.name : item.label.trim();
+      const active = this._config.active === item.name;
+      return `<div class="preview-item ${active ? "active" : ""}"><ha-icon icon="${escapeNav(item.icon || "mdi:gesture-tap-button")}"></ha-icon>${label ? `<span>${escapeNav(label)}</span>` : ""}${item.children?.length ? `<i>${index === this._config.items.findIndex((entry) => entry.name === this._config.active) ? "⌃" : ""}</i>` : ""}</div>`;
+    }).join("");
+  }
+
+  _render() {
     const definition = GlassNavigationCard.getConfigForm();
-    form.schema = definition.schema;
+    const formSchema = definition.schema.filter((field) => field.name !== "items");
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host { display:block; color:var(--primary-text-color); font-family:var(--paper-font-body1_-_font-family,Arial,sans-serif); }
+        * { box-sizing:border-box; }
+        .editor { display:grid; gap:16px; }
+        .preview { position:relative; min-height:110px; display:flex; align-items:flex-end; padding:16px; border:1px solid var(--divider-color,#444); border-radius:12px; background:var(--card-background-color,#17191c); overflow:hidden; }
+        .preview-content { position:absolute; inset:0; display:grid; place-items:center; color:var(--secondary-text-color,#999); font-size:14px; }
+        .preview-bar { position:relative; z-index:1; display:flex; align-items:center; justify-content:space-around; gap:6px; width:100%; min-height:64px; padding:5px 12px; border:1px solid var(--divider-color,#444); border-radius:40px; background:rgba(20,21,23,.96); color:var(--primary-text-color,#eee); }
+        .preview-item { position:relative; flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:3px; font-size:12px; }
+        .preview-item ha-icon { --mdc-icon-size:24px; width:24px; height:24px; }
+        .preview-item.active { color:var(--nav-color,#ff8b2b); }
+        .preview-separator { flex:none; height:30px; border-left:1px solid var(--divider-color,#666); }
+        .editor-toggle,.add-actions button,.remove { min-height:36px; padding:6px 12px; border:1px solid var(--divider-color,#666); border-radius:8px; background:var(--secondary-background-color,#242629); color:var(--primary-text-color,#eee); cursor:pointer; }
+        .editor-toggle { position:absolute; z-index:2; top:10px; right:10px; }
+        .tree { display:grid; gap:12px; }
+        .tree-item { display:grid; gap:10px; padding:12px; border:1px solid var(--divider-color,#555); border-radius:8px; background:var(--card-background-color,#17191c); }
+        .item-heading { display:flex; align-items:center; justify-content:space-between; color:var(--primary-text-color,#eee); font-weight:600; }
+        .item-kind { color:var(--secondary-text-color,#aaa); font-size:13px; }
+        .fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+        .fields label { display:grid; gap:4px; min-width:0; color:var(--secondary-text-color,#aaa); font-size:12px; }
+        .fields input[type=text] { width:100%; min-width:0; min-height:38px; padding:7px 9px; border:1px solid var(--divider-color,#666); border-radius:6px; background:var(--primary-background-color,#111); color:var(--primary-text-color,#eee); font:inherit; font-size:14px; }
+        .fields .default-option { display:flex; align-items:center; gap:8px; }
+        .children { display:grid; gap:10px; margin-left:12px; padding-left:12px; border-left:2px solid var(--divider-color,#555); }
+        .children h4 { margin:2px 0; color:var(--secondary-text-color,#aaa); font-size:13px; }
+        .add-actions { display:flex; flex-wrap:wrap; gap:8px; }
+        ha-form[hidden],.tree[hidden] { display:none; }
+        @media(max-width:600px) { .fields { grid-template-columns:1fr; } .preview { min-height:96px; padding:10px; } .preview-bar { min-height:58px; } }
+      </style>
+      <section class="editor">
+        <div class="preview" style="--nav-color:${NAV_COLORS[this._config.color] || NAV_COLORS.orange}">
+          <div class="preview-content">Vorschau der Navigationsleiste</div>
+          <button type="button" class="editor-toggle" data-action="toggle-edit">${this._editing ? "Fertig" : "Karte bearbeiten"}</button>
+          <nav class="preview-bar" aria-label="Navigationsvorschau">${this._previewMarkup()}</nav>
+        </div>
+        <ha-form ${this._editing ? "" : "hidden"}></ha-form>
+        <div class="tree" ${this._editing ? "" : "hidden"}><h3>Menüstruktur</h3>${this._itemList(this._config.items || [], [], true)}</div>
+      </section>`;
+    const form = this.shadowRoot.querySelector("ha-form");
+    form.schema = formSchema;
+    form.data = this._config;
+    form.hass = this._hass;
     form.computeLabel = definition.computeLabel;
     form.addEventListener("value-changed", (event) => {
       event.stopPropagation();
       this._config = { ...this._config, ...event.detail.value };
-      this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
+      this._updatePreview();
+      this._emitConfig();
     });
   }
 
-  setConfig(config) {
-    this._config = { ...config };
-    this.shadowRoot.querySelector("ha-form").data = this._config;
+  _pathParts(path) { return path === "" ? [] : path.split(".").map(Number); }
+
+  _getItem(path) {
+    const parts = this._pathParts(path);
+    let items = this._config.items;
+    let item;
+    for (const index of parts) {
+      item = items[index];
+      items = item?.children || [];
+    }
+    return item;
   }
 
-  set hass(hass) { this.shadowRoot.querySelector("ha-form").hass = hass; }
+  _getList(path) {
+    const parts = this._pathParts(path);
+    let items = this._config.items;
+    for (const index of parts) items = items[index]?.children || [];
+    return items;
+  }
+
+  _handleClick(event) {
+    const button = event.composedPath?.().find((node) => node?.dataset?.action);
+    if (!button) return;
+    const action = button.dataset.action;
+    if (action === "toggle-edit") {
+      this._editing = !this._editing;
+      this._render();
+      return;
+    }
+    const path = button.dataset.parent || button.dataset.path || "";
+    const list = this._getList(path);
+    if (action === "remove") {
+      const parts = this._pathParts(button.dataset.path);
+      const index = parts.pop();
+      const parent = parts.reduce((items, part) => items[part]?.children || [], this._config.items);
+      parent.splice(index, 1);
+    } else if (action === "add-link") {
+      list.push({ name: "Neuer Link", icon: "mdi:link", url: "/lovelace/seite" });
+    } else if (action === "add-group") {
+      list.push({ name: "Neue Gruppe", icon: "mdi:folder-outline", children: [{ name: "Neuer Link", icon: "mdi:link", url: "/lovelace/seite" }] });
+    } else if (action === "add-separator") {
+      list.push({ type: "separator" });
+    }
+    this._render();
+    this._emitConfig();
+  }
+
+  _handleInput(event) {
+    const input = event.composedPath?.().find((node) => node?.dataset?.field);
+    if (!input) return;
+    if (event.type === "input" && input.type === "checkbox") return;
+    if (event.type === "change" && input.type !== "checkbox") return;
+    const item = this._getItem(input.dataset.path);
+    if (!item) return;
+    const field = input.dataset.field;
+    if (field === "default") {
+      const siblings = this._getList(this._pathParts(input.dataset.path).slice(0, -1).join("."));
+      if (input.checked) siblings.forEach((sibling) => { sibling.default = false; });
+      item.default = input.checked;
+    } else item[field] = input.value;
+    this._updatePreview();
+    this._emitConfig();
+  }
+
+  _updatePreview() {
+    const preview = this.shadowRoot.querySelector(".preview-bar");
+    if (preview) preview.innerHTML = this._previewMarkup();
+    const previewShell = this.shadowRoot.querySelector(".preview");
+    if (previewShell) previewShell.style.setProperty("--nav-color", NAV_COLORS[this._config.color] || NAV_COLORS.orange);
+  }
+
+  _emitConfig() {
+    this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
+  }
+
+  setConfig(config) {
+    this._config = { ...GlassNavigationCard.getStubConfig(), ...config };
+    if (!Array.isArray(config.items)) this._config.items = GlassNavigationCard.getStubConfig().items;
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this.shadowRoot.querySelector("ha-form").hass = hass;
+  }
 }
 
 if (!customElements.get("glass-navigation-card")) customElements.define("glass-navigation-card", GlassNavigationCard);
