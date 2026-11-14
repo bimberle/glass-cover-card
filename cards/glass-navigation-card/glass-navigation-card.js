@@ -1,4 +1,4 @@
-const NAV_CARD_VERSION = "1.0.2";
+const NAV_CARD_VERSION = "1.0.3";
 const NAV_COLORS = {
   orange: "#ff8b2b",
   white: "#f2f2f4",
@@ -43,11 +43,12 @@ class GlassNavigationCard extends HTMLElement {
         {
           name: "Räume",
           icon: "mdi:view-grid",
-            menu_title: "Raum wählen",
+          menu_title: "Raum wählen",
           children: [
             {
               name: "EG",
               icon: "mdi:home-floor-0",
+              default: true,
               children: [
                 { name: "Küche", icon: "mdi:pot-steam", url: "/lovelace/kueche" },
                 { name: "Wohnen", icon: "mdi:sofa-outline", url: "/lovelace/wohnen" },
@@ -66,6 +67,7 @@ class GlassNavigationCard extends HTMLElement {
       { name: "color", default: "orange", selector: { select: { mode: "dropdown", options: NAV_COLOR_OPTIONS } } },
       { name: "position", default: "bottom", selector: { select: { mode: "dropdown", options: NAV_POSITION_OPTIONS } } },
       { name: "scale", default: 100, selector: { number: { min: 70, max: 140, step: 5, mode: "slider", unit_of_measurement: "%" } } },
+      { name: "active", selector: { text: {} } },
     ];
     return {
       schema,
@@ -74,6 +76,7 @@ class GlassNavigationCard extends HTMLElement {
         color: "Farbe für Icons und Texte",
         position: "Position der Navigationsleiste",
         scale: "Gesamte Navigation skalieren",
+        active: "Aktiver Hauptpunkt (Name)",
       })[field.name],
     };
   }
@@ -87,6 +90,7 @@ class GlassNavigationCard extends HTMLElement {
       color: "orange",
       position: "bottom",
       scale: 100,
+      active: "",
       items: [],
       ...config,
     };
@@ -108,13 +112,16 @@ class GlassNavigationCard extends HTMLElement {
 
   _validateItems(items, depth = 0) {
     if (depth > 8) throw new Error("Navigationsmenüs dürfen höchstens acht Ebenen tief sein.");
+    let defaultCount = 0;
     for (const item of items) {
       if (!item || typeof item !== "object" || Array.isArray(item)) throw new Error("Jeder Navigationspunkt muss ein Objekt sein.");
       if (item.type === "separator") {
         if (depth !== 0) throw new Error("Trenner sind nur in der Hauptnavigation erlaubt.");
         continue;
       }
+      if (item.default === true) defaultCount += 1;
       if (typeof item.name !== "string" || !item.name.trim()) throw new Error("Jeder Navigationspunkt benötigt einen Namen.");
+      if (item.label != null && typeof item.label !== "string") throw new Error(`'label' für '${item.name}' muss Text sein.`);
       if (typeof item.icon !== "string" || !item.icon.trim()) throw new Error(`Bitte ein Icon für '${item.name}' angeben.`);
       if (item.menu_title != null && typeof item.menu_title !== "string") throw new Error(`'menu_title' für '${item.name}' muss Text sein.`);
       const hasChildren = Array.isArray(item.children) && item.children.length > 0;
@@ -127,6 +134,7 @@ class GlassNavigationCard extends HTMLElement {
         throw new Error(`'${item.name}' benötigt eine interne URL oder eine HTTP(S)-URL.`);
       }
     }
+    if (defaultCount > 1) throw new Error("Pro Menüebene darf nur ein Punkt als Standard ausgewählt sein.");
   }
 
   _visibleItems() {
@@ -140,7 +148,8 @@ class GlassNavigationCard extends HTMLElement {
     const isGroup = (item) => Array.isArray(item?.children) && item.children.length > 0;
     while (items.length) {
       if (items.every(isGroup)) {
-        const selectedIndex = Math.min(this._menuPath[level] ?? 0, items.length - 1);
+        const defaultIndex = Math.max(0, items.findIndex((item) => item.default === true));
+        const selectedIndex = Math.min(this._menuPath[level] ?? defaultIndex, items.length - 1);
         segments.push({ items, selectedIndex, level });
         items = items[selectedIndex].children;
         level += 1;
@@ -157,6 +166,19 @@ class GlassNavigationCard extends HTMLElement {
     return item?.menu_title?.trim() || `${item?.name || "Menü"} wählen`;
   }
 
+  _itemLabel(item) {
+    return item.label == null ? item.name : item.label.trim();
+  }
+
+  _maxMenuRows(items) {
+    if (!items?.length) return 1;
+    const leafCount = items.filter((item) => !Array.isArray(item.children) || item.children.length === 0).length;
+    const childRows = items
+      .filter((item) => Array.isArray(item.children) && item.children.length > 0)
+      .map((item) => this._maxMenuRows(item.children));
+    return Math.max(1, Math.ceil(leafCount / 3), ...childRows);
+  }
+
   _itemMarkup(item, index, root = false) {
     if (item.type === "separator" && root) {
       const orientation = this._config.position === "left" || this._config.position === "right" ? "horizontal" : "vertical";
@@ -164,9 +186,15 @@ class GlassNavigationCard extends HTMLElement {
     }
     const hasChildren = Array.isArray(item.children) && item.children.length > 0;
     const url = item.url ? item.url.trim() : "";
-    const active = (root && this._menuRootIndex === index) || (url.startsWith("/") && window.location?.pathname === url.split(/[?#]/)[0]);
+    const siblings = root ? this._config.items : this._visibleItems();
+    const hasLocationMatch = siblings.some((candidate) => candidate.url?.startsWith("/") && window.location?.pathname === candidate.url.split(/[?#]/)[0]);
+    const defaultIndex = siblings.findIndex((candidate) => candidate.default === true);
+    const active = (root && (this._menuRootIndex === index || this._config.active === item.name))
+      || (url.startsWith("/") && window.location?.pathname === url.split(/[?#]/)[0])
+      || (!hasLocationMatch && defaultIndex === index);
     const dataAttribute = root ? `data-root-index="${index}"` : `data-child-index="${index}"`;
-    return `<button type="button" class="nav-item ${active ? "active" : ""} ${hasChildren ? "has-children" : ""}" ${dataAttribute} ${hasChildren ? `aria-haspopup="menu" aria-expanded="${root ? this._menuRootIndex === index : false}"` : `aria-current="${active ? "page" : "false"}"`} ${!hasChildren ? `data-url="${escapeNav(url)}"` : ""} aria-label="${escapeNav(item.name)}" title="${escapeNav(item.name)}"><ha-icon icon="${escapeNav(item.icon)}"></ha-icon><span>${escapeNav(item.name)}</span>${hasChildren ? `<span class="chevron" aria-hidden="true">${root ? "⌃" : "›"}</span>` : ""}</button>`;
+    const label = this._itemLabel(item);
+    return `<button type="button" class="nav-item ${active ? "active" : ""} ${hasChildren ? "has-children" : ""}" ${dataAttribute} ${hasChildren ? `aria-haspopup="menu" aria-expanded="${root ? this._menuRootIndex === index : false}"` : `aria-current="${active ? "page" : "false"}"`} ${!hasChildren ? `data-url="${escapeNav(url)}"` : ""} aria-label="${escapeNav(item.name)}" title="${escapeNav(item.name)}"><ha-icon icon="${escapeNav(item.icon)}"></ha-icon>${label ? `<span>${escapeNav(label)}</span>` : ""}${hasChildren ? `<span class="chevron" aria-hidden="true">${root ? "⌃" : "›"}</span>` : ""}</button>`;
   }
 
   _navigate(url) {
@@ -221,8 +249,9 @@ class GlassNavigationCard extends HTMLElement {
     const rootItems = this._config.items.map((item, index) => this._itemMarkup(item, index, true)).join("");
     const menuModel = this._menuRootIndex === null ? { items: [], segments: [] } : this._menuModel();
     const menuItems = menuModel.items.map((item, index) => this._itemMarkup(item, index)).join("");
-    const menuSegments = menuModel.segments.map(({ items, selectedIndex, level }) => `<div class="menu-segments" role="tablist" aria-label="Ebene ${level + 1}">${items.map((item, index) => `<button type="button" class="segment ${index === selectedIndex ? "selected" : ""}" role="tab" aria-selected="${index === selectedIndex}" data-segment-level="${level}" data-segment-index="${index}">${escapeNav(item.name)}</button>`).join("")}</div>`).join("");
-    const menu = this._menuRootIndex === null ? "" : `<section class="submenu" role="menu" aria-label="${escapeNav(this._menuTitle())}"><header class="submenu-header"><h2>${escapeNav(this._menuTitle())}</h2></header>${menuSegments}<div class="submenu-items ${vertical ? "vertical" : ""}">${menuItems}</div></section><span class="pointer" aria-hidden="true"></span>`;
+    const menuSegments = menuModel.segments.map(({ items, selectedIndex, level }) => `<div class="menu-segments" role="tablist" aria-label="Ebene ${level + 1}">${items.map((item, index) => `<button type="button" class="segment ${index === selectedIndex ? "selected" : ""}" role="tab" aria-selected="${index === selectedIndex}" data-segment-level="${level}" data-segment-index="${index}">${escapeNav(this._itemLabel(item))}</button>`).join("")}</div>`).join("");
+    const menuRows = this._menuRootIndex === null ? 1 : this._maxMenuRows(this._config.items[this._menuRootIndex]?.children);
+    const menu = this._menuRootIndex === null ? "" : `<section class="submenu" role="menu" aria-label="${escapeNav(this._menuTitle())}" style="--submenu-rows:${menuRows}"><header class="submenu-header"><h2>${escapeNav(this._menuTitle())}</h2></header>${menuSegments}<div class="submenu-items ${vertical ? "vertical" : ""}">${menuItems}</div></section><span class="pointer" aria-hidden="true"></span>`;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -236,7 +265,7 @@ class GlassNavigationCard extends HTMLElement {
         .shell.position-left,.shell.position-right { top:50%; width:max-content; max-width:calc(100vw - 24px); transform:translateY(-50%) scale(var(--nav-scale)); }
         .shell.position-left { left:max(12px,env(safe-area-inset-left)); transform-origin:0 50%; }
         .shell.position-right { right:max(12px,env(safe-area-inset-right)); transform-origin:100% 50%; }
-        .bar { position:relative; display:flex; align-items:stretch; justify-content:space-around; gap:4px; width:100%; min-height:104px; padding:7px; border:1px solid rgba(255,255,255,.1); border-radius:54px; background:rgba(25,26,29,.94); box-shadow:0 12px 32px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06); backdrop-filter:blur(20px); }
+        .bar { position:relative; display:flex; align-items:stretch; justify-content:space-around; gap:4px; width:100%; min-height:92px; padding:7px; border:1px solid rgba(255,255,255,.1); border-radius:50px; background:rgba(25,26,29,.94); box-shadow:0 12px 32px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06); backdrop-filter:blur(20px); }
         .position-left .bar,.position-right .bar { flex-direction:column; width:82px; max-height:min(76dvh,680px); overflow:auto; }
         .nav-separator { flex:none; align-self:center; width:1px; height:42px; margin:0 8px; background:rgba(255,255,255,.18); }
         .position-left .nav-separator,.position-right .nav-separator { width:42px; height:1px; margin:8px 0; }
@@ -265,14 +294,14 @@ class GlassNavigationCard extends HTMLElement {
         .menu-segments { display:flex; width:min(100%,620px); min-height:64px; gap:4px; margin:0 auto 42px; padding:3px; border:1px solid rgba(255,255,255,.05); border-radius:40px; background:rgba(112,114,119,.19); }
         .segment { flex:1 1 0; min-width:0; min-height:56px; padding:8px 12px; border:0; border-radius:32px; background:transparent; color:#c3c4c8; opacity:1; font-size:20px; font-weight:600; cursor:pointer; }
         .segment.selected { background:var(--nav-color); color:#fff; opacity:1; box-shadow:0 6px 20px color-mix(in srgb,var(--nav-color) 28%,transparent); }
-        .submenu-items { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); justify-items:center; gap:12px; }
-        .submenu-items .nav-item { width:min(100%,160px); aspect-ratio:1; min-height:0; border:3px solid #3b3d42; border-radius:50%; color:#f0f0f2; opacity:.92; }
-        .submenu-items .nav-item ha-icon { position:absolute; top:50%; left:50%; width:72px; height:72px; --mdc-icon-size:72px; transform:translate(-50%,-50%); }
-        .submenu-items .nav-item span:not(.chevron) { position:absolute; right:8px; bottom:12%; left:8px; font-size:20px; white-space:normal; }
+        .submenu-items { --menu-row-size:clamp(72px,calc((min(720px,100vw - 32px) - 82px) / 3),144px); display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); grid-template-rows:repeat(var(--submenu-rows,1),var(--menu-row-size)); justify-items:center; gap:12px; }
+        .submenu-items .nav-item { width:min(100%,144px); height:var(--menu-row-size); min-height:0; border:3px solid #3b3d42; border-radius:50%; color:#f0f0f2; opacity:.92; }
+        .submenu-items .nav-item ha-icon { position:absolute; top:50%; left:50%; width:64px; height:64px; --mdc-icon-size:64px; transform:translate(-50%,-50%); }
+        .submenu-items .nav-item span:not(.chevron) { position:absolute; right:8px; bottom:12%; left:8px; font-size:18px; white-space:normal; }
         .submenu-items .nav-item.active { border-color:var(--nav-color); background:color-mix(in srgb,var(--nav-color) 9%,transparent); color:var(--nav-color); box-shadow:0 0 34px color-mix(in srgb,var(--nav-color) 32%,transparent); opacity:1; }
         .submenu-items .nav-item.active span:not(.chevron) { color:#f2f2f4; }
         .submenu-items .nav-item.has-children .chevron { top:12px; right:18px; font-size:22px; }
-        @media(max-width:520px) { .shell.position-bottom { bottom:calc(env(safe-area-inset-bottom) + 6px); } .position-bottom .submenu { bottom:calc(100% + 24px); } .position-bottom .pointer { top:-24px; } .bar { min-height:66px; border-radius:40px; } .bar .nav-item { min-height:52px; padding-inline:4px; } .bar .nav-item ha-icon { width:26px; height:26px; --mdc-icon-size:26px; } .bar .nav-item span:not(.chevron) { font-size:12px; } .position-left .nav-separator,.position-right .nav-separator { width:32px; } .submenu { padding:18px 14px 20px; } .submenu-header h2 { font-size:26px; } .menu-segments { width:100%; min-height:56px; margin-bottom:20px; } .segment { min-height:48px; font-size:16px; } .position-left .submenu,.position-right .submenu { width:min(440px,calc(100vw - 108px)); } .submenu-items { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; } .submenu-items .nav-item { width:100%; min-width:0; min-height:0; } .submenu-items .nav-item ha-icon { width:48px; height:48px; --mdc-icon-size:48px; } .submenu-items .nav-item span:not(.chevron) { right:2px; bottom:8%; left:2px; font-size:14px; } }
+        @media(max-width:520px) { .shell.position-bottom { bottom:calc(env(safe-area-inset-bottom) + 6px); } .position-bottom .submenu { bottom:calc(100% + 24px); } .position-bottom .pointer { top:-24px; } .bar { min-height:56px; border-radius:32px; } .bar .nav-item { min-height:46px; padding-inline:4px; } .bar .nav-item ha-icon { width:26px; height:26px; --mdc-icon-size:26px; } .bar .nav-item span:not(.chevron) { font-size:12px; } .position-left .nav-separator,.position-right .nav-separator { width:32px; } .submenu { padding:18px 14px 20px; } .submenu-header h2 { font-size:26px; } .menu-segments { width:100%; min-height:56px; margin-bottom:20px; } .segment { min-height:48px; font-size:16px; } .position-left .submenu,.position-right .submenu { width:min(440px,calc(100vw - 108px)); } .submenu-items { --menu-row-size:clamp(72px,calc((min(720px,100vw - 32px) - 42px) / 3),126px); grid-template-rows:repeat(var(--submenu-rows,1),var(--menu-row-size)); gap:6px; } .submenu-items .nav-item { width:100%; height:var(--menu-row-size); min-width:0; min-height:0; } .submenu-items .nav-item ha-icon { width:42px; height:42px; --mdc-icon-size:42px; } .submenu-items .nav-item span:not(.chevron) { right:2px; bottom:8%; left:2px; font-size:13px; } }
         @media(prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto !important; } }
       </style>
       <div class="shell position-${position}" style="--nav-color:${color};--nav-scale:${scale}">

@@ -137,12 +137,16 @@ items:
             url: /lovelace/waschkueche
       - name: EG
         icon: mdi:home-floor-0
+        default: true
         children:
           - name: Küche
             icon: mdi:pot-steam
+            label: ""
+            default: true
             url: /lovelace/kueche
           - name: Wohnen
             icon: mdi:sofa-outline
+            label: Wohnbereich
             url: /lovelace/wohnen
   - type: separator
   - name: Mehr
@@ -156,15 +160,18 @@ items:
 | `color` | `orange` | Gemeinsame Farbe für Icons und Texte: `orange`, `white`, `gray`, `green` oder `red` |
 | `position` | `bottom` | `top` oder `bottom` für horizontal; `left` oder `right` für vertikal |
 | `scale` | `100` | Gesamte Navigation skalieren, von `70` bis `140` Prozent |
+| `active` | leer | Name eines Hauptpunkts, der dauerhaft als aktiv hervorgehoben wird |
 
 Gruppen können optional `menu_title` setzen, zum Beispiel `menu_title: Raum wählen`.
+Mit `default: true` markierst du pro Gruppe einen Eintrag, der beim Öffnen vorausgewählt wird. Für Gruppen wählt das den Start-Stock; für Ziele markiert es den Standardraum. Ohne expliziten Standard wird der erste Eintrag genommen. Die Höhe des Raum-Popovers richtet sich nach der größten Kindgruppe, damit sie beim Wechseln des Stocks stabil bleibt.
+Mit `label` überschreibst du den sichtbaren Text eines Eintrags. `label: ""` blendet ihn aus; der `name` bleibt als barrierefreier Name erhalten.
 Mit `{ type: separator }` fügst du zwischen Punkten der Hauptnavigation einen Trenner ein; er steht bei horizontaler Leiste senkrecht und bei vertikaler Leiste waagerecht.
 
 Interne URLs beginnen mit `/`, zum Beispiel `/lovelace/kueche`; externe Links müssen mit `http://` oder `https://` beginnen. Die Leiste ist am Bildschirmrand fixiert und liegt über dem Dashboard-Inhalt.
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle sechs Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die Beschriftung. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.23.2`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle sechs Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die Beschriftung. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.23.3`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
@@ -177,7 +184,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.23.1 installiert?** Aktualisiere auf v1.23.2 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.23.2 installiert?** Aktualisiere auf v1.23.3 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 

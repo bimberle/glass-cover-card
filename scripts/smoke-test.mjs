@@ -415,6 +415,7 @@ assert.equal(navigationSchema.scale.default, 100);
 assert.equal(navigationSchema.scale.selector.number.min, 70);
 assert.equal(navigationSchema.scale.selector.number.max, 140);
 assert.equal(navigationSchema.scale.selector.number.step, 5);
+assert.ok(navigationSchema.active.selector.text);
 assert.equal(navigationSchema.color.selector.select.options.map(({ value }) => value).join(","), "orange,white,gray,green,red");
 assert.equal(navigationSchema.position.selector.select.options.map(({ value }) => value).join(","), "top,bottom,left,right");
 assert.equal(navigationForm.computeLabel(navigationSchema.color), "Farbe für Icons und Texte");
@@ -423,13 +424,14 @@ navigationCard.setConfig({
   color: "green",
   position: "left",
   scale: 80,
+  active: "Home",
   items: [
     { name: "Home", icon: "mdi:home", url: "/lovelace/home" },
     { name: "Räume", icon: "mdi:view-grid", menu_title: "Raum wählen", children: [
       { name: "UG", icon: "mdi:home-floor-b", children: [{ name: "Waschküche", icon: "mdi:washing-machine", url: "/lovelace/waschkueche" }] },
-      { name: "EG", icon: "mdi:home-floor-0", children: [
-        { name: "Küche", icon: "mdi:pot-steam", url: "/lovelace/kueche" },
-        { name: "Wohnen", icon: "mdi:sofa", url: "/lovelace/wohnen" },
+      { name: "EG", icon: "mdi:home-floor-0", default: true, children: [
+        { name: "Küche", icon: "mdi:pot-steam", label: "", default: true, url: "/lovelace/kueche" },
+        { name: "Wohnen", icon: "mdi:sofa", label: "Wohnbereich", url: "/lovelace/wohnen" },
         { name: "Flur", icon: "mdi:door", url: "/lovelace/flur" },
         { name: "Bad", icon: "mdi:shower", url: "/lovelace/bad" },
         { name: "Büro", icon: "mdi:desk", url: "/lovelace/buero" },
@@ -444,41 +446,59 @@ assert.equal(navigationCard._config.position, "left");
 assert.equal(navigationCard._config.scale, 80);
 assert.match(navigationCard.shadowRoot.innerHTML, /class="shell position-left"/);
 assert.match(navigationCard.shadowRoot.innerHTML, /--nav-scale:0\.8/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.bar \.nav-item\.active/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.bar \{[^}]*min-height:92px/);
 navigationCard._menuRootIndex = 1;
 assert.equal(navigationCard._menuTitle(), "Raum wählen");
 navigationCard._render();
+assert.match(navigationCard.shadowRoot.innerHTML, /--submenu-rows:2/);
 assert.match(navigationCard.shadowRoot.innerHTML, /class="menu-segments"/);
+assert.match(navigationCard.shadowRoot.innerHTML, /class="segment selected"[^>]*data-segment-index="1"/);
 assert.match(navigationCard.shadowRoot.innerHTML, /class="nav-separator" role="separator" aria-orientation="horizontal"/);
 assert.match(navigationCard.shadowRoot.innerHTML, /\.shell\.position-bottom \{ bottom:calc\(env\(safe-area-inset-bottom\) \+ 6px\)/);
 assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu \{[^}]*width:min\(720px/);
 assert.match(navigationCard.shadowRoot.innerHTML, /\.menu-segments \{[^}]*width:min\(100%,620px\)/);
-assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \{ display:grid; grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
-assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item \{ width:min\(100%,160px\)/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \{[^}]*display:grid; grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item \{ width:min\(100%,144px\)/);
 assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item \{[^}]*border:3px solid #3b3d42/);
-assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item ha-icon \{[^}]*width:72px; height:72px; --mdc-icon-size:72px;/);
-assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item span:not\(\.chevron\) \{[^}]*font-size:20px/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item ha-icon \{[^}]*width:64px; height:64px; --mdc-icon-size:64px;/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item span:not\(\.chevron\) \{[^}]*font-size:18px/);
 assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item span:not\(\.chevron\) \{[^}]*bottom:12%/);
 assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item ha-icon \{ position:absolute; top:50%; left:50%;/);
 assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item span:not\(\.chevron\) \{ position:absolute;/);
 assert.match(navigationCard.shadowRoot.innerHTML, /\.position-bottom \.bar \.nav-item\.has-children \.chevron \{ top:-3px; right:50%; transform:translateX\(50%\)/);
-assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \{ grid-template-columns:repeat\(3,minmax\(0,1fr\)\); gap:6px; \}/);
-assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item ha-icon \{ width:48px; height:48px; --mdc-icon-size:48px; \}/);
-assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item span:not\(\.chevron\) \{[^}]*font-size:14px/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \{[^}]*gap:6px/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item ha-icon \{ width:42px; height:42px; --mdc-icon-size:42px; \}/);
+assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item span:not\(\.chevron\) \{[^}]*font-size:13px/);
 assert.match(navigationCard.shadowRoot.innerHTML, /\.submenu-items \.nav-item span:not\(\.chevron\) \{[^}]*bottom:8%/);
 assert.match(navigationCard.shadowRoot.innerHTML, /UG/);
 navigationCard._menuPath = [1];
 navigationCard._render();
 assert.equal(navigationCard._visibleItems().length, 5, "Five rooms must fit a fixed three-column grid over two rows");
+assert.match(navigationCard.shadowRoot.innerHTML, /class="nav-item active "[^>]*data-child-index="0"/);
+const egReservedRows = navigationCard.shadowRoot.innerHTML.match(/style="--submenu-rows:(\d+)"/)?.[1];
+navigationCard._menuPath = [0];
+navigationCard._render();
+assert.equal(navigationCard.shadowRoot.innerHTML.match(/style="--submenu-rows:(\d+)"/)?.[1], egReservedRows, "Popover height must reserve rows for the floor with the most rooms");
+assert.match(navigationCard.shadowRoot.innerHTML, /class="segment selected"[^>]*data-segment-index="0"/);
+navigationCard._menuPath = [1];
+navigationCard._render();
 const navigationScaleCard = new NavigationCard();
 navigationScaleCard.setConfig({ scale: 200, items: [{ name: "Home", icon: "mdi:home", url: "/lovelace/home" }] });
 assert.equal(navigationScaleCard._config.scale, 140);
 navigationScaleCard.setConfig({ scale: 0, items: [{ name: "Home", icon: "mdi:home", url: "/lovelace/home" }] });
 assert.equal(navigationScaleCard._config.scale, 70);
 assert.match(navigationCard.shadowRoot.innerHTML, /Küche/);
+assert.match(navigationCard.shadowRoot.innerHTML, /aria-label="Küche"/);
+assert.doesNotMatch(navigationCard.shadowRoot.innerHTML, /<span>Küche<\/span>/);
+assert.match(navigationCard.shadowRoot.innerHTML, /<span>Wohnbereich<\/span>/);
 assert.match(navigationCard.shadowRoot.innerHTML, /class="segment selected"/);
+assert.throws(() => navigationCard.setConfig({ items: [{ name: "Invalid", label: 42, icon: "mdi:home", url: "/home" }] }), /label.*muss Text sein/);
 assert.throws(() => navigationCard.setConfig({ items: [{ name: "Bad URL", icon: "mdi:alert", url: "javascript:alert(1)" }] }), /HTTP\(S\)-URL/);
 assert.throws(() => navigationCard.setConfig({ items: [{ name: "External", icon: "mdi:alert", url: "//example.com" }] }), /HTTP\(S\)-URL/);
 assert.throws(() => navigationCard.setConfig({ items: [{ name: "Ambiguous", icon: "mdi:alert", url: "/home", children: [{ name: "Child", icon: "mdi:home", url: "/child" }] }] }), /nicht beides/);
+assert.throws(() => navigationCard.setConfig({ items: [{ name: "A", icon: "mdi:a", default: true, url: "/a" }, { name: "B", icon: "mdi:b", default: true, url: "/b" }] }), /nur ein Punkt als Standard/);
 const rgbForm = marketplaceEntry.definitions.get("glass-rgb-card").getConfigForm();
 assert.equal(rgbForm.schema.filter((field) => /^preset_[1-6]$/.test(field.name) && field.selector.color_rgb).length, 6);
 assert.equal(rgbForm.schema.find((field) => field.name === "show_action_button").default, true);
