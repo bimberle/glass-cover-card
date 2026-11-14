@@ -506,9 +506,11 @@ assert.equal(navigationCard._menuRootIndex, null, "Escape must close the open su
 const navigationEditor = NavigationCard.getConfigElement();
 navigationEditor.setConfig({ items: NavigationCard.getStubConfig().items, position: "bottom" });
 assert.match(navigationEditor.shadowRoot.innerHTML, /Karte bearbeiten/);
+assert.match(navigationEditor.shadowRoot.innerHTML, /class="preview-title">Glass Navigation<\/h3>/);
 assert.match(navigationEditor.shadowRoot.innerHTML, /class="preview-bar"/);
 assert.match(navigationEditor.shadowRoot.innerHTML, /class="editor-toggle"[^>]*aria-label="Karte bearbeiten"[^>]*><ha-icon icon="mdi:pencil"/);
-assert.match(navigationEditor.shadowRoot.innerHTML, /\.preview:hover \.editor-toggle,\.preview:focus-within \.editor-toggle/);
+assert.match(navigationEditor.shadowRoot.innerHTML, /\.editor-toggle \{ display:grid; flex:none; width:38px; height:38px; min-height:0; place-items:center; padding:7px; \}/);
+assert.doesNotMatch(navigationEditor.shadowRoot.innerHTML, /\.editor-toggle[^}]*opacity:0/);
 navigationEditor._handleClick({ composedPath: () => [{ dataset: { action: "toggle-edit" } }] });
 assert.match(navigationEditor.shadowRoot.innerHTML, /Menüstruktur/);
 assert.match(navigationEditor.shadowRoot.innerHTML, /data-action="add-group"/);

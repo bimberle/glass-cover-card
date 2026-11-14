@@ -1,4 +1,4 @@
-const NAV_CARD_VERSION = "1.0.5";
+const NAV_CARD_VERSION = "1.0.6";
 const NAV_COLORS = {
   orange: "#ff8b2b",
   white: "#f2f2f4",
@@ -402,16 +402,17 @@ class GlassNavigationCardEditor extends HTMLElement {
         :host { display:block; color:var(--primary-text-color); font-family:var(--paper-font-body1_-_font-family,Arial,sans-serif); }
         * { box-sizing:border-box; }
         .editor { display:grid; gap:16px; }
-        .preview { position:relative; min-height:110px; display:flex; align-items:flex-end; padding:16px; border:1px solid var(--divider-color,#444); border-radius:12px; background:var(--card-background-color,#17191c); overflow:hidden; }
-        .preview-content { position:absolute; inset:0; display:grid; place-items:center; color:var(--secondary-text-color,#999); font-size:14px; }
+        .preview { position:relative; min-height:136px; display:flex; flex-direction:column; justify-content:space-between; gap:12px; padding:14px; border:1px solid var(--divider-color,#444); border-radius:12px; background:var(--card-background-color,#17191c); overflow:hidden; }
+        .preview-header { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:38px; }
+        .preview-title { margin:0; color:var(--primary-text-color,#eee); font-size:16px; font-weight:600; }
         .preview-bar { position:relative; z-index:1; display:flex; align-items:center; justify-content:space-around; gap:6px; width:100%; min-height:64px; padding:5px 12px; border:1px solid var(--divider-color,#444); border-radius:40px; background:rgba(20,21,23,.96); color:var(--primary-text-color,#eee); }
         .preview-item { position:relative; flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:3px; font-size:12px; }
         .preview-item ha-icon { --mdc-icon-size:24px; width:24px; height:24px; }
         .preview-item.active { color:var(--nav-color,#ff8b2b); }
         .preview-separator { flex:none; height:30px; border-left:1px solid var(--divider-color,#666); }
         .editor-toggle,.add-actions button,.remove { min-height:36px; padding:6px 12px; border:1px solid var(--divider-color,#666); border-radius:8px; background:var(--secondary-background-color,#242629); color:var(--primary-text-color,#eee); cursor:pointer; }
-        .editor-toggle { position:absolute; z-index:2; top:8px; right:8px; display:grid; width:38px; height:38px; min-height:0; place-items:center; padding:7px; opacity:0; pointer-events:none; transition:opacity .15s ease; }
-        .preview:hover .editor-toggle,.preview:focus-within .editor-toggle { opacity:1; pointer-events:auto; }
+        .editor-toggle { display:grid; flex:none; width:38px; height:38px; min-height:0; place-items:center; padding:7px; }
+        .preview:hover .editor-toggle,.preview:focus-within .editor-toggle { border-color:var(--primary-color,#03a9f4); }
         .editor-toggle ha-icon { display:block; width:20px; height:20px; --mdc-icon-size:20px; }
         .tree { display:grid; gap:12px; }
         .tree-item { display:grid; gap:10px; padding:12px; border:1px solid var(--divider-color,#555); border-radius:8px; background:var(--card-background-color,#17191c); }
@@ -425,13 +426,11 @@ class GlassNavigationCardEditor extends HTMLElement {
         .children h4 { margin:2px 0; color:var(--secondary-text-color,#aaa); font-size:13px; }
         .add-actions { display:flex; flex-wrap:wrap; gap:8px; }
         ha-form[hidden],.tree[hidden] { display:none; }
-        @media(max-width:600px) { .fields { grid-template-columns:1fr; } .preview { min-height:96px; padding:10px; } .preview-bar { min-height:58px; } }
-        @media(hover:none) { .editor-toggle { opacity:1; pointer-events:auto; } }
+        @media(max-width:600px) { .fields { grid-template-columns:1fr; } .preview { min-height:122px; padding:10px; } .preview-bar { min-height:58px; } }
       </style>
       <section class="editor">
         <div class="preview" style="--nav-color:${NAV_COLORS[this._config.color] || NAV_COLORS.orange}">
-          <div class="preview-content">Vorschau der Navigationsleiste</div>
-          <button type="button" class="editor-toggle" data-action="toggle-edit" aria-label="${this._editing ? "Bearbeitung abschließen" : "Karte bearbeiten"}" title="${this._editing ? "Bearbeitung abschließen" : "Karte bearbeiten"}"><ha-icon icon="mdi:pencil"></ha-icon></button>
+          <div class="preview-header"><h3 class="preview-title">Glass Navigation</h3><button type="button" class="editor-toggle" data-action="toggle-edit" aria-label="${this._editing ? "Bearbeitung abschließen" : "Karte bearbeiten"}" title="${this._editing ? "Bearbeitung abschließen" : "Karte bearbeiten"}"><ha-icon icon="mdi:pencil"></ha-icon></button></div>
           <nav class="preview-bar" aria-label="Navigationsvorschau">${this._previewMarkup()}</nav>
         </div>
         <ha-form ${this._editing ? "" : "hidden"}></ha-form>
