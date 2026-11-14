@@ -1,4 +1,4 @@
-const NAV_CARD_VERSION = "1.0.4";
+const NAV_CARD_VERSION = "1.0.5";
 const NAV_COLORS = {
   orange: "#ff8b2b",
   white: "#f2f2f4",
@@ -410,7 +410,9 @@ class GlassNavigationCardEditor extends HTMLElement {
         .preview-item.active { color:var(--nav-color,#ff8b2b); }
         .preview-separator { flex:none; height:30px; border-left:1px solid var(--divider-color,#666); }
         .editor-toggle,.add-actions button,.remove { min-height:36px; padding:6px 12px; border:1px solid var(--divider-color,#666); border-radius:8px; background:var(--secondary-background-color,#242629); color:var(--primary-text-color,#eee); cursor:pointer; }
-        .editor-toggle { position:absolute; z-index:2; top:10px; right:10px; }
+        .editor-toggle { position:absolute; z-index:2; top:8px; right:8px; display:grid; width:38px; height:38px; min-height:0; place-items:center; padding:7px; opacity:0; pointer-events:none; transition:opacity .15s ease; }
+        .preview:hover .editor-toggle,.preview:focus-within .editor-toggle { opacity:1; pointer-events:auto; }
+        .editor-toggle ha-icon { display:block; width:20px; height:20px; --mdc-icon-size:20px; }
         .tree { display:grid; gap:12px; }
         .tree-item { display:grid; gap:10px; padding:12px; border:1px solid var(--divider-color,#555); border-radius:8px; background:var(--card-background-color,#17191c); }
         .item-heading { display:flex; align-items:center; justify-content:space-between; color:var(--primary-text-color,#eee); font-weight:600; }
@@ -424,11 +426,12 @@ class GlassNavigationCardEditor extends HTMLElement {
         .add-actions { display:flex; flex-wrap:wrap; gap:8px; }
         ha-form[hidden],.tree[hidden] { display:none; }
         @media(max-width:600px) { .fields { grid-template-columns:1fr; } .preview { min-height:96px; padding:10px; } .preview-bar { min-height:58px; } }
+        @media(hover:none) { .editor-toggle { opacity:1; pointer-events:auto; } }
       </style>
       <section class="editor">
         <div class="preview" style="--nav-color:${NAV_COLORS[this._config.color] || NAV_COLORS.orange}">
           <div class="preview-content">Vorschau der Navigationsleiste</div>
-          <button type="button" class="editor-toggle" data-action="toggle-edit">${this._editing ? "Fertig" : "Karte bearbeiten"}</button>
+          <button type="button" class="editor-toggle" data-action="toggle-edit" aria-label="${this._editing ? "Bearbeitung abschließen" : "Karte bearbeiten"}" title="${this._editing ? "Bearbeitung abschließen" : "Karte bearbeiten"}"><ha-icon icon="mdi:pencil"></ha-icon></button>
           <nav class="preview-bar" aria-label="Navigationsvorschau">${this._previewMarkup()}</nav>
         </div>
         <ha-form ${this._editing ? "" : "hidden"}></ha-form>
