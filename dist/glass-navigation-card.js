@@ -219,7 +219,10 @@ class GlassNavigationCard extends HTMLElement {
       || (!hasLocationMatch && defaultIndex === index);
     const dataAttribute = root ? `data-root-index="${index}"` : `data-child-index="${index}"`;
     const label = this._itemLabel(item);
-    return `<button type="button" class="nav-item ${active ? "active" : ""} ${hasChildren ? "has-children" : ""}" ${dataAttribute} ${hasChildren ? `aria-haspopup="menu" aria-expanded="${root ? this._menuRootIndex === index : false}"` : `aria-current="${active ? "page" : "false"}"`} ${!hasChildren ? `data-url="${escapeNav(url)}"` : ""} aria-label="${escapeNav(item.name)}" title="${escapeNav(item.name)}"><ha-icon icon="${escapeNav(item.icon)}"></ha-icon>${label ? `<span>${escapeNav(label)}</span>` : ""}${hasChildren ? `<span class="chevron" aria-hidden="true">${root ? "⌃" : "›"}</span>` : ""}</button>`;
+    const chevronIcon = root
+      ? ({ top: "mdi:chevron-down", bottom: "mdi:chevron-up", left: "mdi:chevron-right", right: "mdi:chevron-left" }[this._config.position])
+      : "mdi:chevron-right";
+    return `<button type="button" class="nav-item ${active ? "active" : ""} ${hasChildren ? "has-children" : ""}" ${dataAttribute} ${hasChildren ? `aria-haspopup="menu" aria-expanded="${root ? this._menuRootIndex === index : false}"` : `aria-current="${active ? "page" : "false"}"`} ${!hasChildren ? `data-url="${escapeNav(url)}"` : ""} aria-label="${escapeNav(item.name)}" title="${escapeNav(item.name)}"><ha-icon icon="${escapeNav(item.icon)}"></ha-icon>${label ? `<span>${escapeNav(label)}</span>` : ""}${hasChildren ? `<span class="chevron" aria-hidden="true"><ha-icon icon="${chevronIcon}"></ha-icon></span>` : ""}</button>`;
   }
 
   _navigate(url) {
@@ -284,25 +287,27 @@ class GlassNavigationCard extends HTMLElement {
         * { box-sizing:border-box; }
         button { color:inherit; font:inherit; }
         .shell { position:fixed; z-index:20; color:var(--nav-color); }
-        .shell.position-top,.shell.position-bottom { left:50%; width:min(calc(100vw - 48px),748px); transform:translateX(-50%) scale(var(--nav-scale)); }
+        .shell.position-top,.shell.position-bottom { left:50%; width:min(calc(100vw - 48px),520px); transform:translateX(-50%) scale(var(--nav-scale)); }
         .shell.position-top { top:max(12px,env(safe-area-inset-top)); transform-origin:50% 0; }
         .shell.position-bottom { bottom:calc(env(safe-area-inset-bottom) + 6px); transform-origin:50% 100%; }
         .shell.position-left,.shell.position-right { top:50%; width:max-content; max-width:calc(100vw - 24px); transform:translateY(-50%) scale(var(--nav-scale)); }
         .shell.position-left { left:max(12px,env(safe-area-inset-left)); transform-origin:0 50%; }
         .shell.position-right { right:max(12px,env(safe-area-inset-right)); transform-origin:100% 50%; }
-        .bar { position:relative; display:flex; align-items:stretch; justify-content:space-around; gap:4px; width:100%; min-height:92px; padding:7px; border:1px solid rgba(255,255,255,.1); border-radius:50px; background:rgba(25,26,29,.94); box-shadow:0 12px 32px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06); backdrop-filter:blur(20px); }
+        .bar { position:relative; display:flex; align-items:center; justify-content:space-around; gap:4px; width:100%; min-height:clamp(72px,31vw,164px); padding:12px; border:1px solid rgba(255,255,255,.1); border-radius:100px; background:rgba(20,21,23,.96); box-shadow:0 12px 32px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06); backdrop-filter:blur(20px); }
         .position-left .bar,.position-right .bar { flex-direction:column; width:82px; max-height:min(76dvh,680px); overflow:auto; }
         .nav-separator { flex:none; align-self:center; width:1px; height:42px; margin:0 8px; background:rgba(255,255,255,.18); }
         .position-left .nav-separator,.position-right .nav-separator { width:42px; height:1px; margin:8px 0; }
-        .nav-item { position:relative; display:flex; flex:1 1 0; min-width:0; min-height:84px; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:5px 8px; border:0; border-radius:40px; background:transparent; color:#c3c4c8; opacity:.9; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-        .nav-item ha-icon { display:block; width:38px; height:38px; --mdc-icon-size:38px; }
+        .nav-item { position:relative; display:flex; flex:1 1 0; min-width:0; max-width:142px; min-height:0; aspect-ratio:1; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:5px 8px; border:1px solid transparent; border-radius:50%; background:transparent; color:#e4e4e6; opacity:.94; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+        .nav-item > ha-icon { display:block; width:clamp(30px,9vw,48px); height:clamp(30px,9vw,48px); --mdc-icon-size:clamp(30px,9vw,48px); }
         .nav-item span:not(.chevron) { max-width:100%; overflow:hidden; font-size:18px; line-height:1.15; text-align:center; text-overflow:ellipsis; white-space:nowrap; }
+        .bar .nav-item > span:not(.chevron) { display:none; }
         .nav-item.active { background:color-mix(in srgb,var(--nav-color) 20%,transparent); color:var(--nav-color); opacity:1; }
-        .bar .nav-item.active { background:transparent; box-shadow:none; }
-        .position-bottom .bar .nav-item.has-children .chevron { top:-3px; right:50%; transform:translateX(50%); color:var(--nav-color); font-size:20px; }
+        .bar .nav-item.active { border-color:color-mix(in srgb,var(--nav-color) 68%,transparent); background:radial-gradient(circle at 48% 42%,color-mix(in srgb,var(--nav-color) 34%,#28221b),color-mix(in srgb,var(--nav-color) 17%,#171719) 72%); box-shadow:0 0 28px color-mix(in srgb,var(--nav-color) 20%,transparent),inset 0 1px 2px rgba(255,255,255,.12); }
+        .bar .nav-item.has-children .chevron { top:9%; right:50%; bottom:auto; display:grid; width:24px; height:24px; place-items:center; transform:translateX(50%); color:#f2f2f4; }
+        .chevron ha-icon { display:block; width:18px; height:18px; --mdc-icon-size:18px; }
         .nav-item:focus-visible,.menu-back:focus-visible { outline:2px solid var(--nav-color); outline-offset:2px; }
         .chevron { position:absolute; top:2px; right:12px; font-size:16px; }
-        .position-left .nav-item,.position-right .nav-item { flex:none; width:100%; min-height:68px; }
+        .position-left .nav-item,.position-right .nav-item { flex:none; width:100%; max-width:none; min-height:68px; aspect-ratio:auto; }
         .submenu { position:absolute; width:min(720px,calc(100vw - 32px)); max-height:min(72dvh,640px); overflow:auto; padding:32px 28px 30px; border:1px solid rgba(255,255,255,.13); border-radius:28px; background:rgba(26,27,30,.97); color:var(--nav-color); box-shadow:0 16px 42px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.06); backdrop-filter:blur(24px); }
         .pointer { position:absolute; z-index:1; width:0; height:0; border:12px solid transparent; pointer-events:none; }
         .position-bottom .submenu { bottom:calc(100% + 34px); left:50%; transform:translateX(-50%); }
@@ -326,7 +331,7 @@ class GlassNavigationCard extends HTMLElement {
         .submenu-items .nav-item.active { border-color:var(--nav-color); background:color-mix(in srgb,var(--nav-color) 9%,transparent); color:var(--nav-color); box-shadow:0 0 34px color-mix(in srgb,var(--nav-color) 32%,transparent); opacity:1; }
         .submenu-items .nav-item.active span:not(.chevron) { color:#f2f2f4; }
         .submenu-items .nav-item.has-children .chevron { top:12px; right:18px; font-size:22px; }
-        @media(max-width:520px) { .shell.position-bottom { bottom:calc(env(safe-area-inset-bottom) + 6px); } .position-bottom .submenu { bottom:calc(100% + 24px); } .position-bottom .pointer { top:-24px; } .bar { min-height:56px; border-radius:32px; } .bar .nav-item { min-height:46px; padding-inline:4px; } .bar .nav-item ha-icon { width:26px; height:26px; --mdc-icon-size:26px; } .bar .nav-item span:not(.chevron) { font-size:12px; } .position-left .nav-separator,.position-right .nav-separator { width:32px; } .submenu { padding:18px 14px 20px; } .submenu-header h2 { font-size:26px; } .menu-segments { width:100%; min-height:56px; margin-bottom:20px; } .segment { min-height:48px; font-size:16px; } .position-left .submenu,.position-right .submenu { width:min(440px,calc(100vw - 108px)); } .submenu-items { --menu-row-size:clamp(72px,calc((min(720px,100vw - 32px) - 42px) / 3),126px); grid-template-rows:repeat(var(--submenu-rows,1),var(--menu-row-size)); gap:6px; } .submenu-items .nav-item { width:100%; height:var(--menu-row-size); min-width:0; min-height:0; } .submenu-items .nav-item ha-icon { width:42px; height:42px; --mdc-icon-size:42px; } .submenu-items .nav-item span:not(.chevron) { right:2px; bottom:8%; left:2px; font-size:13px; } }
+        @media(max-width:520px) { .shell.position-bottom { bottom:calc(env(safe-area-inset-bottom) + 6px); } .position-bottom .submenu { bottom:calc(100% + 24px); } .position-bottom .pointer { top:-24px; } .bar { min-height:clamp(72px,31vw,112px); padding:7px; border-radius:60px; } .bar .nav-item { min-height:0; padding-inline:4px; } .bar .nav-item > ha-icon { width:clamp(28px,8.5vw,36px); height:clamp(28px,8.5vw,36px); --mdc-icon-size:clamp(28px,8.5vw,36px); } .bar .nav-item.has-children .chevron { top:9%; right:50%; bottom:auto; width:20px; height:20px; transform:translateX(50%); } .bar .nav-item.has-children .chevron ha-icon { width:15px; height:15px; --mdc-icon-size:15px; } .position-left .nav-separator,.position-right .nav-separator { width:32px; } .submenu { padding:18px 14px 20px; } .submenu-header h2 { font-size:26px; } .menu-segments { width:100%; min-height:56px; margin-bottom:20px; } .segment { min-height:48px; font-size:16px; } .position-left .submenu,.position-right .submenu { width:min(440px,calc(100vw - 108px)); } .submenu-items { --menu-row-size:clamp(72px,calc((min(720px,100vw - 32px) - 42px) / 3),126px); grid-template-rows:repeat(var(--submenu-rows,1),var(--menu-row-size)); gap:6px; } .submenu-items .nav-item { width:100%; height:var(--menu-row-size); min-width:0; min-height:0; } .submenu-items .nav-item ha-icon { width:42px; height:42px; --mdc-icon-size:42px; } .submenu-items .nav-item span:not(.chevron) { right:2px; bottom:8%; left:2px; font-size:13px; } }
         @media(prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto !important; } }
       </style>
       <div class="shell position-${position}" style="--nav-color:${color};--nav-scale:${scale}">
