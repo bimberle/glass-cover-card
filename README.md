@@ -9,7 +9,7 @@ npm run build
 npm test
 ```
 
-Die Quellen der sechs Karten liegen jeweils in `cards/<kartenname>/`. Die gebauten `dist/*.js`-Dateien werden mit versioniert, damit HACS sie direkt aus einer GitHub-Release installieren kann.
+Die Quellen der acht Karten liegen jeweils in `cards/<kartenname>/`. Die gebauten `dist/*.js`-Dateien werden mit versioniert, damit HACS sie direkt aus einer GitHub-Release installieren kann.
 
 ## Karten
 
@@ -173,26 +173,74 @@ Interne URLs beginnen mit `/`, zum Beispiel `/lovelace/kueche`; externe Links m�
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle sechs Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die Beschriftung. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.23.6`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle acht Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die Beschriftung. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.23.7`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
 3. Fuege `https://github.com/bimberle/glass-cover-card` hinzu und waehle den Typ **Dashboard**.
 4. Suche nach **Glass Cover Cards**, oeffne den Eintrag und installiere ihn.
-5. Lade die Dashboard-Ressource neu. Die Ressource `glass-cover-card.js` registriert `custom:glass-cover-card`, `custom:glass-button-card`, `custom:glass-panel-card`, `custom:glass-rgb-card`, `custom:glass-room-card` und `custom:glass-navigation-card`.
+5. Lade die Dashboard-Ressource neu. Die Ressource `glass-cover-card.js` registriert `custom:glass-cover-card`, `custom:glass-button-card`, `custom:glass-panel-card`, `custom:glass-rgb-card`, `custom:glass-room-card`, `custom:glass-navigation-card`, `custom:glass-ventilation-card` und `custom:glass-timer-bar-card`.
 
   - Home Assistant 2026.11+: `/local/community/glass-cover-card/glass-cover-card.js`
   - Aeltere HACS-Versionen: `/hacsfiles/glass-cover-card.js`
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.23.5 installiert?** Aktualisiere auf v1.23.6 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.23.6 installiert?** Aktualisiere auf v1.23.7 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
-Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/local/glass-cover-card.js` unter **Einstellungen > Dashboards > Ressourcen** als **JavaScript-Modul**. Die Datei enthaelt alle sechs Karten. Optional kann fuer eine isolierte Buttonkarten-Installation stattdessen nur `glass-button-card.js` kopiert und `/local/glass-button-card.js` registriert werden.
+Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/local/glass-cover-card.js` unter **Einstellungen > Dashboards > Ressourcen** als **JavaScript-Modul**. Die Datei enthaelt alle acht Karten. Optional kann fuer eine isolierte Buttonkarten-Installation stattdessen nur `glass-button-card.js` kopiert und `/local/glass-button-card.js` registriert werden.
 
 ## Optionen
+
+### Glass Timer Bar Card
+
+Eigenständige Timerleiste mit Start, Countdown, verbleibendem Fortschritt, Pause, Fortsetzen und Stopp. Die Timer-Entität muss in Home Assistant bereits vorhanden sein. Ohne `duration` verwendet der Start die in Home Assistant konfigurierte Timerdauer; ein pausierter Timer wird mit seiner Restzeit fortgesetzt.
+
+```yaml
+type: custom:glass-timer-bar-card
+entity: timer.stosslueftung
+name: Stoßlüftung
+duration: "00:30:00"
+```
+
+| Option | Standard | Beschreibung |
+| --- | --- | --- |
+| `entity` | erforderlich | Home-Assistant-Timer-Entität |
+| `name` | Friendly Name | Beschriftung der Timerleiste |
+| `duration` | Timerdauer | Optionale Startdauer im Format `HH:MM:SS` |
+
+### Glass Ventilation Card
+
+Mehrstufige Steuerung einer Home-Assistant-Fan-Entität mit optionalem Timer für Stoßlüftung. Im Ruhezustand kann der Timer gestartet werden; während er läuft, zeigt die Karte den Countdown und Fortschritt sowie Pause- und Stoppsteuerung. Ein pausierter Timer kann fortgesetzt oder gestoppt werden.
+
+```yaml
+type: custom:glass-ventilation-card
+entity: fan.wohnzimmer
+title: Raumklima
+name: Lüftung
+speed_levels: 3
+timer_entity: timer.stosslueften
+timer_duration: "00:30:00"
+title_size: 5
+button_size: 5
+preview_size: 5
+```
+
+| Option | Standard | Beschreibung |
+| --- | --- | --- |
+| `entity` | erforderlich | Zu steuernde Fan-Entität |
+| `title` | `Raumklima` | Titel über der Lüfterbeschriftung |
+| `name` | Friendly Name | Lüfterbeschriftung; leer blendet Titelzeile aus, sofern auch `title` leer ist |
+| `timer_entity` | keine | Optionale Timer-Entität für Stoßlüftung |
+| `timer_duration` | `00:30:00` | Startdauer des Timers im Format `HH:MM:SS` |
+| `speed_levels` | `3` | Anzahl der Lüftungsstufen von `1` bis `6`; Stufe 1 bis N wird auf 1 bis 100 Prozent verteilt |
+| `title_size` | `5` | Beschriftungsgröße von `1` bis `5` |
+| `button_size` | `5` | Größe der Stufenknöpfe von `1` bis `5` |
+| `preview_size` | `5` | Größe der Lüftergrafik und Prozentanzeige von `1` bis `5` |
+
+Ohne `timer_entity` wird der Timerbereich nicht angezeigt. Eine Stufe von `0` schaltet den Lüfter aus. Die Timer-Steuerung verwendet `timer.start`, `timer.pause` und `timer.cancel`.
 
 ### Glass Button Card
 

@@ -86,6 +86,8 @@ async function loadCard(filePath, cardTag, editorTag) {
     CustomEvent,
     setTimeout,
     clearTimeout,
+    setInterval,
+    clearInterval,
     localStorage: { getItem: (key) => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
     customElements: {
       get: (name) => definitions.get(name),
@@ -98,6 +100,8 @@ async function loadCard(filePath, cardTag, editorTag) {
       customCards,
       setTimeout,
       clearTimeout,
+      setInterval,
+      clearInterval,
       loadCardHelpers: async () => ({
         createCardElement: (config) => {
           const element = {
@@ -406,6 +410,88 @@ assert.equal(typeof marketplaceEntry.Card.getConfigForm, "function");
 assert.ok(marketplaceEntry.definitions.has("glass-panel-card"));
 assert.ok(marketplaceEntry.definitions.has("glass-rgb-card"));
 assert.ok(marketplaceEntry.definitions.has("glass-navigation-card"));
+assert.ok(marketplaceEntry.definitions.has("glass-ventilation-card"));
+const TimerBarCard = marketplaceEntry.definitions.get("glass-timer-bar-card");
+assert.ok(TimerBarCard);
+assert.equal(TimerBarCard.getConfigForm().schema[0].selector.entity.filter.domain, "timer");
+const timerBar = new TimerBarCard();
+assert.throws(() => timerBar.setConfig({ entity: "fan.test" }), /Timer-Entität/);
+assert.throws(() => timerBar.setConfig({ entity: "timer.test", duration: "00:99:00" }), /Dauer/);
+timerBar.setConfig({ entity: "timer.test", name: "Stoßlüftung", duration: "00:30:00" });
+const timerBarCalls = [];
+const timerBarStates = { "timer.test": { state: "idle", attributes: { duration: "00:30:00" } } };
+const timerBarHass = { states: timerBarStates, callService: (...args) => timerBarCalls.push(args) };
+timerBar.hass = timerBarHass;
+assert.match(timerBar.shadowRoot.innerHTML, /Bereit/);
+assert.match(timerBar.shadowRoot.innerHTML, /Starten/);
+timerBar._action("start");
+assert.equal(JSON.stringify(timerBarCalls.at(-1)), JSON.stringify(["timer", "start", { entity_id: "timer.test", duration: "00:30:00" }]));
+timerBarStates["timer.test"] = { state: "active", attributes: { duration: "00:30:00", finishes_at: new Date(Date.now() + 900000).toISOString() } };
+timerBar.hass = timerBarHass;
+assert.match(timerBar.shadowRoot.innerHTML, /Läuft/);
+assert.match(timerBar.shadowRoot.innerHTML, /15:00/);
+assert.ok(timerBar._progress() > 49 && timerBar._progress() <= 50);
+timerBar._action("pause");
+assert.equal(JSON.stringify(timerBarCalls.at(-1)), JSON.stringify(["timer", "pause", { entity_id: "timer.test" }]));
+timerBarStates["timer.test"] = { state: "paused", attributes: { duration: "00:30:00", remaining: "00:12:34" } };
+timerBar.hass = timerBarHass;
+assert.match(timerBar.shadowRoot.innerHTML, /Pausiert/);
+assert.match(timerBar.shadowRoot.innerHTML, /12:34/);
+timerBar._action("resume");
+assert.equal(JSON.stringify(timerBarCalls.at(-1)), JSON.stringify(["timer", "start", { entity_id: "timer.test" }]));
+timerBar._action("cancel");
+assert.equal(JSON.stringify(timerBarCalls.at(-1)), JSON.stringify(["timer", "cancel", { entity_id: "timer.test" }]));
+timerBarStates["timer.test"] = { state: "unavailable", attributes: {} };
+timerBar.hass = timerBarHass;
+assert.match(timerBar.shadowRoot.innerHTML, /Nicht verfügbar/);
+assert.match(timerBar.shadowRoot.innerHTML, /disabled/);
+timerBar.disconnectedCallback();
+const VentilationCard = marketplaceEntry.definitions.get("glass-ventilation-card");
+const ventilationForm = VentilationCard.getConfigForm();
+const ventilationSchema = Object.fromEntries(ventilationForm.schema.map((field) => [field.name, field]));
+assert.equal(ventilationSchema.entity.selector.entity.filter.domain, "fan");
+assert.equal(ventilationSchema.timer_entity.selector.entity.filter.domain, "timer");
+assert.equal(ventilationSchema.timer_duration.default, "00:30:00");
+assert.equal(ventilationSchema.speed_levels.default, 3);
+assert.equal(ventilationSchema.title_size.default, 5);
+assert.equal(ventilationSchema.button_size.default, 5);
+assert.equal(ventilationSchema.preview_size.default, 5);
+const ventilationCalls = [];
+const ventilationCard = new VentilationCard();
+ventilationCard.setConfig({ entity: "fan.living_room", timer_entity: "timer.airing", timer_duration: "00:30:00", speed_levels: 3 });
+ventilationCard.hass = {
+  states: {
+    "fan.living_room": { state: "on", attributes: { percentage: 67, percentage_step: 1, preset_mode: "Stufe 2" } },
+    "timer.airing": { state: "active", attributes: { finishes_at: new Date(Date.now() + 29 * 60 * 1000 + 53 * 1000).toISOString(), duration: "00:30:00" } },
+  },
+  callService: (...args) => ventilationCalls.push(args),
+};
+assert.match(ventilationCard.shadowRoot.innerHTML, /67<small> %/);
+assert.match(ventilationCard.shadowRoot.innerHTML, /Stufe 2 aktiv/);
+assert.match(ventilationCard.shadowRoot.innerHTML, /<ha-icon icon="mdi:fan"/);
+assert.match(ventilationCard.shadowRoot.innerHTML, /<ha-icon icon="mdi:fan-off"/);
+assert.doesNotMatch(ventilationCard.shadowRoot.innerHTML, /undefined/);
+assert.match(ventilationCard.shadowRoot.innerHTML, /29:53/);
+assert.match(ventilationCard.shadowRoot.innerHTML, /class="timer-progress"/);
+ventilationCard._setFanLevel(2);
+assert.equal(JSON.stringify(ventilationCalls.at(-1)), JSON.stringify(["fan", "set_percentage", { entity_id: "fan.living_room", percentage: 67 }]));
+ventilationCard._timerAction("pause");
+assert.equal(JSON.stringify(ventilationCalls.at(-1)), JSON.stringify(["timer", "pause", { entity_id: "timer.airing" }]));
+ventilationCard._timerAction("cancel");
+assert.equal(JSON.stringify(ventilationCalls.at(-1)), JSON.stringify(["timer", "cancel", { entity_id: "timer.airing" }]));
+ventilationCard._timerAction("start");
+assert.equal(JSON.stringify(ventilationCalls.at(-1)), JSON.stringify(["timer", "start", { entity_id: "timer.airing", duration: "00:30:00" }]));
+ventilationCard.disconnectedCallback();
+ventilationCard._hass = { states: { "fan.living_room": { state: "off", attributes: {} }, "timer.airing": { state: "idle", attributes: {} } } };
+assert.match(ventilationCard._timerMarkup(ventilationCard._timerState()), /Starten/);
+assert.throws(() => ventilationCard.setConfig({ entity: "light.living_room" }), /Fan-Entität/);
+assert.throws(() => ventilationCard.setConfig({ entity: "fan.living_room", timer_entity: "light.timer" }), /Timer-Entität/);
+ventilationCard._hass = { states: { "fan.living_room": { state: "off", attributes: {} }, "timer.airing": { state: "paused", attributes: { remaining: "00:12:34" } } } };
+assert.match(ventilationCard._timerMarkup(ventilationCard._timerState()), /Fortsetzen/);
+assert.match(ventilationCard._timerMarkup(ventilationCard._timerState()), /12:34/);
+const ventilationWithoutTimer = new VentilationCard();
+ventilationWithoutTimer.setConfig({ entity: "fan.living_room" });
+assert.doesNotMatch(ventilationWithoutTimer.shadowRoot.innerHTML, /class="timer-panel/);
 const NavigationCard = marketplaceEntry.definitions.get("glass-navigation-card");
 const navigationForm = NavigationCard.getConfigForm();
 const navigationSchema = Object.fromEntries(navigationForm.schema.map((field) => [field.name, field]));
@@ -556,9 +642,9 @@ assert.match(rgbSource, /\.turn-off \{[^}]*solid var\(--light-color\);[^}]*color
 assert.match(rgbSource, /<button class="turn-on"[^>]*><ha-icon icon=/);
 assert.match(rgbSource, /this\._config\.turn_on_text/);
 assert.match(rgbSource, /class="turn-on-label"/);
-assert.deepEqual(marketplaceEntry.customCards.map((card) => card.type).sort(), ["glass-button-card", "glass-cover-card", "glass-navigation-card", "glass-panel-card", "glass-rgb-card", "glass-room-card"]);
+assert.deepEqual(marketplaceEntry.customCards.map((card) => card.type).sort(), ["glass-button-card", "glass-cover-card", "glass-navigation-card", "glass-panel-card", "glass-rgb-card", "glass-room-card", "glass-timer-bar-card", "glass-ventilation-card"]);
 await marketplaceEntry.runSource(await readFile("dist/glass-button-card.js", "utf8"), "dist/glass-button-card.js");
-assert.equal(marketplaceEntry.customCards.length, 6, "Loading standalone cards must not register duplicate card entries");
+assert.equal(marketplaceEntry.customCards.length, 8, "Loading standalone cards must not register duplicate card entries");
 const RoomCard = marketplaceEntry.definitions.get("glass-room-card");
 const roomEditor = RoomCard.getConfigElement();
 roomEditor.setConfig({ name: "Wohnzimmer", height: 430 });
