@@ -196,8 +196,7 @@ class GlassVentilationCard extends HTMLElement {
   _toggleAction() { this._call("homeassistant", "toggle", this._config.action_entity || this._config.entity); }
 
   _levelIconMarkup(isOff) {
-    const blade = '<path d="M11 11C8.6 9.1 7.7 4.5 9.3 2.2C10.6.3 14.2 1.4 14 4C13.8 6.5 12.4 9.4 12 11Z"/>';
-    return `<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor">${blade}<g transform="rotate(90 12 12)">${blade}</g><g transform="rotate(180 12 12)">${blade}</g><g transform="rotate(270 12 12)">${blade}</g></g><circle cx="12" cy="12" r="1.7" fill="var(--card-background-color,#17191d)"/>${isOff ? '<path d="M3.3 3.3 20.7 20.7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>' : ""}</svg>`;
+    return `<ha-icon icon="${isOff ? "mdi:fan-off" : "mdi:fan"}" aria-hidden="true"></ha-icon>`;
   }
 
   _render() {
@@ -210,6 +209,7 @@ class GlassVentilationCard extends HTMLElement {
     const isOn = fan?.state === "on";
     const speedLevels = Math.round(this._config.speed_levels);
     const activeLevel = isOn ? Math.max(1, Math.round(percentage / 100 * speedLevels)) : 0;
+    const spinDuration = isOn ? 2.4 - ((activeLevel - 1) / Math.max(speedLevels - 1, 1)) * 1.95 : 0;
     const buttonLevel = clampVentilation(this._config.button_size, 1, 5);
     const titleLevel = clampVentilation(this._config.title_size, 1, 5);
     const previewLevel = clampVentilation(this._config.preview_size, 1, 5);
@@ -233,7 +233,7 @@ class GlassVentilationCard extends HTMLElement {
     const timerScale = 0.6 + (clampVentilation(this._config.timer_text_size, 1, 5) - 1) * 0.1;
     const actionEntity = this._config.action_entity || this._config.entity;
     const actionOn = this._hass?.states?.[actionEntity]?.state === "on";
-    const style = `--button-size:${100 * buttonScale}px;--title-font:${titleFont}px;--readout-font:${readoutFont}px;--preview-scale:${previewScale};--timer-title:${24 * timerScale}px;--timer-status:${18 * timerScale}px;--timer-countdown:${30 * timerScale}px`;
+    const style = `--button-size:${100 * buttonScale}px;--level-icon-size:${65 * buttonScale}px;--title-font:${titleFont}px;--readout-font:${readoutFont}px;--preview-scale:${previewScale};--fan-spin-duration:${spinDuration.toFixed(2)}s;--timer-title:${24 * timerScale}px;--timer-status:${18 * timerScale}px;--timer-countdown:${30 * timerScale}px`;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -253,6 +253,8 @@ class GlassVentilationCard extends HTMLElement {
         .fan-visual { flex:0 1 calc(200px * var(--preview-scale)); min-width:0; }
         .fan-visual svg { display:block; width:100%; height:auto; }
         .fan-visual:not(.is-on) { filter:grayscale(1); }
+        .fan-visual.is-on .fan-rotor { transform-box:view-box; transform-origin:94px 95px; animation:fan-spin var(--fan-spin-duration) linear infinite; }
+        @keyframes fan-spin { to { transform:rotate(360deg); } }
         .readout { min-width:0; }
         .percentage { color:#f4f4f5; font-size:min(var(--readout-font), 15cqw); line-height:.95; font-weight:700; white-space:nowrap; }
         .percentage small { font-size:.58em; }
@@ -262,7 +264,7 @@ class GlassVentilationCard extends HTMLElement {
         .level-button { position:relative; display:grid; width:min(var(--button-size),100%); aspect-ratio:1; place-items:center; padding:0; border:2px solid #34363c; border-radius:50%; background:linear-gradient(145deg,#202226,#151619); color:#d5d6da; }
         .level-button.active { border-color:#ff8b2b; background:radial-gradient(circle,#3a2618,#17191d 72%); color:#ff9b35; box-shadow:0 0 24px rgba(255,139,43,.18); }
         .level-icon { position:relative; display:grid; width:65%; aspect-ratio:1; place-items:center; }
-        .level-icon svg { display:block; width:100%; height:100%; overflow:visible; }
+        .level-icon ha-icon { display:block; width:100%; height:100%; --mdc-icon-size:var(--level-icon-size); }
         .level-button sup { position:absolute; right:19%; bottom:13%; font-size:clamp(16px,3.2cqw,24px); font-weight:700; line-height:1; }
         .level-label { max-width:100%; font-size:clamp(10px,3cqw,18px); line-height:1.15; text-align:center; overflow-wrap:anywhere; }
         .divider { height:1px; margin:clamp(20px,3vw,30px) 0; background:#393b40; }
@@ -288,7 +290,7 @@ class GlassVentilationCard extends HTMLElement {
       </style>
       <article class="card" style="${style}">
         <header class="header" ${!title && !name && this._config.show_action_button === false ? "hidden" : ""}>${titleContent}${this._config.show_action_button !== false ? `<button type="button" class="header-action ${actionOn ? "active" : ""}" aria-label="Aktion schalten" title="Aktion schalten"><ha-icon icon="${escapeVentilation(this._config.action_icon || "mdi:fan")}"></ha-icon></button>` : ""}</header>
-        ${this._config.show_preview !== false ? `<section class="main" aria-label="Lüftungsstatus"><div class="fan-visual ${isOn ? "is-on" : ""}">${this._fanGraphic()}</div><div class="readout"><div class="percentage">${percentage}<small> %</small></div><div class="state">${escapeVentilation(stateText)}</div></div></section>` : ""}
+        ${this._config.show_preview !== false ? `<section class="main" aria-label="Lüftungsstatus"><div class="fan-visual ${isOn ? "is-on" : ""}" style="--fan-spin-duration:${spinDuration.toFixed(2)}s">${this._fanGraphic()}</div><div class="readout"><div class="percentage">${percentage}<small> %</small></div><div class="state">${escapeVentilation(stateText)}</div></div></section>` : ""}
         <nav class="levels" aria-label="Lüftungsstufe">${levels}</nav>
         ${this._config.timer_entity ? `<div class="divider"></div>${this._timerMarkup(timer)}` : ""}
       </article>`;
@@ -307,7 +309,7 @@ class GlassVentilationCard extends HTMLElement {
   }
 
   _fanGraphic() {
-    return `<svg viewBox="0 0 260 190" role="img" aria-label="Lüfter"><defs><radialGradient id="fan-ring"><stop stop-color="#353535"/><stop offset=".8" stop-color="#0c0c0c"/><stop offset="1" stop-color="#46372a"/></radialGradient><linearGradient id="fan-blade" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#4c4a49"/><stop offset=".68" stop-color="#222120"/><stop offset="1" stop-color="#b45b18"/></linearGradient><linearGradient id="fan-air"><stop stop-color="#b85d1b" stop-opacity=".35"/><stop offset="1" stop-color="#b85d1b" stop-opacity="0"/></linearGradient></defs><g fill="none" stroke="url(#fan-air)" stroke-width="4" stroke-linecap="round"><path d="M172 65 C205 72 211 40 256 38"/><path d="M174 95 C207 102 215 78 257 79"/><path d="M171 126 C207 135 216 110 256 112"/></g><circle cx="94" cy="95" r="87" fill="url(#fan-ring)" stroke="#544438" stroke-width="2"/><g fill="url(#fan-blade)" stroke="#67605a" stroke-width="1.5"><path d="M94 93 C76 80 73 21 93 19 C115 17 141 35 148 49 C152 58 122 73 103 93 Z"/><path d="M94 93 C107 75 166 74 168 94 C170 116 152 142 138 149 C129 153 114 123 94 104 Z"/><path d="M94 95 C112 108 115 167 95 169 C73 171 47 153 40 139 C36 130 66 115 85 95 Z"/><path d="M94 95 C81 113 22 114 20 94 C18 72 36 46 50 39 C59 35 74 65 94 84 Z"/></g><circle cx="94" cy="95" r="22" fill="#292929" stroke="#685544" stroke-width="3"/><circle cx="94" cy="95" r="17" fill="#373534"/></svg>`;
+    return `<svg viewBox="0 0 260 190" role="img" aria-label="Lüfter"><defs><radialGradient id="fan-ring"><stop stop-color="#353535"/><stop offset=".8" stop-color="#0c0c0c"/><stop offset="1" stop-color="#46372a"/></radialGradient><linearGradient id="fan-blade" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#4c4a49"/><stop offset=".68" stop-color="#222120"/><stop offset="1" stop-color="#b45b18"/></linearGradient><linearGradient id="fan-air"><stop stop-color="#b85d1b" stop-opacity=".35"/><stop offset="1" stop-color="#b85d1b" stop-opacity="0"/></linearGradient></defs><g fill="none" stroke="url(#fan-air)" stroke-width="4" stroke-linecap="round"><path d="M172 65 C205 72 211 40 256 38"/><path d="M174 95 C207 102 215 78 257 79"/><path d="M171 126 C207 135 216 110 256 112"/></g><circle cx="94" cy="95" r="87" fill="url(#fan-ring)" stroke="#544438" stroke-width="2"/><g class="fan-rotor"><g fill="url(#fan-blade)" stroke="#67605a" stroke-width="1.5"><path d="M94 93 C76 80 73 21 93 19 C115 17 141 35 148 49 C152 58 122 73 103 93 Z"/><path d="M94 93 C107 75 166 74 168 94 C170 116 152 142 138 149 C129 153 114 123 94 104 Z"/><path d="M94 95 C112 108 115 167 95 169 C73 171 47 153 40 139 C36 130 66 115 85 95 Z"/><path d="M94 95 C81 113 22 114 20 94 C18 72 36 46 50 39 C59 35 74 65 94 84 Z"/></g><circle cx="94" cy="95" r="22" fill="#292929" stroke="#685544" stroke-width="3"/><circle cx="94" cy="95" r="17" fill="#373534"/></g></svg>`;
   }
 
   _icon(name) {
