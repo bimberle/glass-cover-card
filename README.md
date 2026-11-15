@@ -173,7 +173,7 @@ Interne URLs beginnen mit `/`, zum Beispiel `/lovelace/kueche`; externe Links m�
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle acht Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die Beschriftung. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.23.7`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle acht Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die Beschriftung. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.23.8`.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
@@ -186,7 +186,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.23.6 installiert?** Aktualisiere auf v1.23.7 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.23.7 installiert?** Aktualisiere auf v1.23.8 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
 
 ## Manuelle Installation
 
@@ -236,9 +236,15 @@ preview_size: 5
 | `timer_entity` | keine | Optionale Timer-Entität für Stoßlüftung |
 | `timer_duration` | `00:30:00` | Startdauer des Timers im Format `HH:MM:SS` |
 | `speed_levels` | `3` | Anzahl der Lüftungsstufen von `1` bis `6`; Stufe 1 bis N wird auf 1 bis 100 Prozent verteilt |
+| `show_button_labels` | `true` | Beschriftung unter den Stufenknöpfen anzeigen |
+| `show_preview` | `true` | Lüftergrafik und Prozentanzeige anzeigen |
+| `show_action_button` | `true` | Aktionsbutton im Kopf anzeigen |
+| `action_entity` | Fan-Entität | Entität, die der Aktionsbutton umschaltet |
+| `action_icon` | `mdi:fan` | MDI-Icon des Aktionsbuttons |
 | `title_size` | `5` | Beschriftungsgröße von `1` bis `5` |
 | `button_size` | `5` | Größe der Stufenknöpfe von `1` bis `5` |
 | `preview_size` | `5` | Größe der Lüftergrafik und Prozentanzeige von `1` bis `5` |
+| `timer_text_size` | `5` | Textgröße im Timerbereich von `1` bis `5` |
 
 Ohne `timer_entity` wird der Timerbereich nicht angezeigt. Eine Stufe von `0` schaltet den Lüfter aus. Die Timer-Steuerung verwendet `timer.start`, `timer.pause` und `timer.cancel`.
 
