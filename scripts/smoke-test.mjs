@@ -470,11 +470,14 @@ ventilationCard.hass = {
   },
   callService: (...args) => ventilationCalls.push(args),
 };
+const ventilationLevelsMarkup = ventilationCard.shadowRoot.innerHTML.match(/<nav class="levels"[^]*?<\/nav>/)?.[0] || "";
 assert.match(ventilationCard.shadowRoot.innerHTML, /67<small> %/);
 assert.match(ventilationCard.shadowRoot.innerHTML, /Stufe 2 aktiv/);
-assert.match(ventilationCard.shadowRoot.innerHTML, /<ha-icon icon="mdi:fan"/);
-assert.match(ventilationCard.shadowRoot.innerHTML, /<ha-icon icon="mdi:fan-off"/);
+assert.match(ventilationCard.shadowRoot.innerHTML, /class="level-icon"><svg viewBox="0 0 24 24"/);
+assert.match(ventilationCard.shadowRoot.innerHTML, /M3\.3 3\.3 20\.7 20\.7/);
 assert.match(ventilationCard.shadowRoot.innerHTML, /class="level-label">Stufe 2/);
+assert.match(ventilationCard.shadowRoot.innerHTML, /<span class="level-icon"><svg viewBox="0 0 24 24"[^]*?<\/svg><\/span><sup>2<\/sup>/);
+assert.match(ventilationCard.shadowRoot.innerHTML, /\.level-button sup \{[^}]*right:19%; bottom:13%; font-size:clamp\(16px,3\.2cqw,24px\)/);
 assert.match(ventilationCard.shadowRoot.innerHTML, /aria-label="Lüfter"/);
 assert.match(ventilationCard.shadowRoot.innerHTML, /aria-label="Timer pausieren"/);
 assert.doesNotMatch(ventilationCard.shadowRoot.innerHTML, /undefined/);
@@ -482,7 +485,8 @@ assert.match(ventilationCard.shadowRoot.innerHTML, /29:53/);
 assert.match(ventilationCard.shadowRoot.innerHTML, /<div class="timer-status"><strong>Stoßlüftung<\/strong><span><i><\/i><span class="timer-countdown">29:53<\/span><\/span><\/div>/);
 assert.doesNotMatch(ventilationCard._timerMarkup(ventilationCard._timerState()), /Läuft/);
 assert.match(ventilationCard.shadowRoot.innerHTML, /\.level-icon \{[^}]*width:65%/);
-assert.match(ventilationCard.shadowRoot.innerHTML, /--mdc-icon-size:clamp\(36px,12vw,65px\)/);
+assert.match(ventilationCard.shadowRoot.innerHTML, /\.level-icon svg \{[^}]*width:100%; height:100%/);
+assert.doesNotMatch(ventilationLevelsMarkup, /<ha-icon/);
 assert.match(ventilationCard.shadowRoot.innerHTML, /class="timer-progress"/);
 ventilationCard._setFanLevel(2);
 assert.equal(JSON.stringify(ventilationCalls.at(-1)), JSON.stringify(["fan", "set_percentage", { entity_id: "fan.living_room", percentage: 67 }]));

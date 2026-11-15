@@ -2297,6 +2297,11 @@ class GlassVentilationCard extends HTMLElement {
 
   _toggleAction() { this._call("homeassistant", "toggle", this._config.action_entity || this._config.entity); }
 
+  _levelIconMarkup(isOff) {
+    const blade = '<path d="M11 11C8.6 9.1 7.7 4.5 9.3 2.2C10.6.3 14.2 1.4 14 4C13.8 6.5 12.4 9.4 12 11Z"/>';
+    return `<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor">${blade}<g transform="rotate(90 12 12)">${blade}</g><g transform="rotate(180 12 12)">${blade}</g><g transform="rotate(270 12 12)">${blade}</g></g><circle cx="12" cy="12" r="1.7" fill="var(--card-background-color,#17191d)"/>${isOff ? '<path d="M3.3 3.3 20.7 20.7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>' : ""}</svg>`;
+  }
+
   _render() {
     if (!this._config) return;
     const fan = this._fanState();
@@ -2320,9 +2325,8 @@ class GlassVentilationCard extends HTMLElement {
       : "";
     const levels = Array.from({ length: speedLevels + 1 }, (_, level) => {
       const label = level === 0 ? "Aus" : `Stufe ${level}`;
-      const icon = level === 0 ? "mdi:fan-off" : "mdi:fan";
       const active = level === activeLevel;
-      return `<div class="level-item"><button type="button" class="level-button ${active ? "active" : ""}" data-level="${level}" aria-label="${label}" aria-pressed="${active}"><span class="level-icon"><ha-icon icon="${icon}"></ha-icon>${level > 0 ? `<sup>${level}</sup>` : ""}</span></button>${this._config.show_button_labels !== false ? `<span class="level-label">${label}</span>` : ""}</div>`;
+      return `<div class="level-item"><button type="button" class="level-button ${active ? "active" : ""}" data-level="${level}" aria-label="${label}" aria-pressed="${active}"><span class="level-icon">${this._levelIconMarkup(level === 0)}</span>${level > 0 ? `<sup>${level}</sup>` : ""}</button>${this._config.show_button_labels !== false ? `<span class="level-label">${label}</span>` : ""}</div>`;
     }).join("");
     const attributes = fan?.attributes || {};
     const preset = attributes.preset_mode;
@@ -2360,8 +2364,8 @@ class GlassVentilationCard extends HTMLElement {
         .level-button { position:relative; display:grid; width:min(var(--button-size),100%); aspect-ratio:1; place-items:center; padding:0; border:2px solid #34363c; border-radius:50%; background:linear-gradient(145deg,#202226,#151619); color:#d5d6da; }
         .level-button.active { border-color:#ff8b2b; background:radial-gradient(circle,#3a2618,#17191d 72%); color:#ff9b35; box-shadow:0 0 24px rgba(255,139,43,.18); }
         .level-icon { position:relative; display:grid; width:65%; aspect-ratio:1; place-items:center; }
-        .level-icon ha-icon { display:block; width:100%; height:100%; --mdc-icon-size:clamp(${36 * buttonScale}px,${12 * buttonScale}vw,${65 * buttonScale}px); }
-        .level-button sup { position:absolute; right:-10%; bottom:-10%; font-size:clamp(10px,2.4cqw,16px); font-weight:700; line-height:1; }
+        .level-icon svg { display:block; width:100%; height:100%; overflow:visible; }
+        .level-button sup { position:absolute; right:19%; bottom:13%; font-size:clamp(16px,3.2cqw,24px); font-weight:700; line-height:1; }
         .level-label { max-width:100%; font-size:clamp(10px,3cqw,18px); line-height:1.15; text-align:center; overflow-wrap:anywhere; }
         .divider { height:1px; margin:clamp(20px,3vw,30px) 0; background:#393b40; }
         .timer-panel { display:grid; gap:16px; }
