@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.5.3";
+const CARD_VERSION = "2.0.0";
 const escapePanelText = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -7,7 +7,32 @@ const escapePanelText = (value) => String(value ?? "").replace(/[&<>"']/g, (char
   "'": "&#39;",
 })[char]);
 
+const normalizePanelConfig = (config: GlassCardConfig = {}) => {
+  const cards = Array.isArray(config.cards) ? [...config.cards] : [];
+  const hasLegacyHeader = Boolean(String(config.title ?? "").trim() || String(config.subtitle ?? "").trim() || (config.show_action_button && config.action_entity));
+  const hasTextCard = cards.some((card) => ["custom:glass-text-card", "glass-text-card"].includes(card?.type));
+  if (hasLegacyHeader && !hasTextCard) {
+    cards.unshift({
+      type: "custom:glass-text-card",
+      title: config.title ?? "",
+      subtitle: config.subtitle ?? "",
+      title_size: config.title_size ?? 5,
+      button_size: config.button_size ?? 5,
+      show_action_button: config.show_action_button ?? false,
+      action_entity: config.action_entity,
+      action_icon: config.action_icon ?? "mdi:gesture-tap-button",
+      action: config.action ?? "toggle",
+    });
+  }
+  const { title, subtitle, title_size, button_size, show_action_button, action_entity, action_icon, action, ...panelConfig } = config;
+  return { panel_size: 5, ...panelConfig, cards };
+};
+
 class GlassPanelCard extends HTMLElement {
+  [key: string]: any;
+  declare _config: GlassCardConfig | null;
+  declare _hass: GlassHass | null;
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -19,18 +44,7 @@ class GlassPanelCard extends HTMLElement {
   }
 
   setConfig(config) {
-    this._config = {
-      title: "",
-      subtitle: "",
-      title_size: 5,
-      button_size: 5,
-      show_action_button: false,
-      action_icon: "mdi:gesture-tap-button",
-      action: "toggle",
-      cards: [],
-      ...config,
-      cards: Array.isArray(config.cards) ? config.cards : [],
-    };
+    this._config = normalizePanelConfig(config);
     this._childrenGeneration += 1;
     this._children = [];
     this._renderShell();
@@ -40,7 +54,6 @@ class GlassPanelCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     for (const child of this._children) child.hass = hass;
-    this._updateActionState();
   }
 
   get hass() {
@@ -48,21 +61,11 @@ class GlassPanelCard extends HTMLElement {
   }
 
   getCardSize() {
-    return Math.max(3, (this._config?.cards?.length ?? 0) * 2 + 2);
+    return Math.max(1, (this._config?.cards?.length ?? 0) * 2 + 1);
   }
 
   static getStubConfig() {
-    return {
-      title: "Aktionen",
-      subtitle: "Wohnzimmer",
-      title_size: 5,
-      button_size: 5,
-      show_action_button: true,
-      action_entity: "light.wohnzimmer",
-      action_icon: "mdi:sofa-outline",
-      action: "toggle",
-      cards: [],
-    };
+    return { panel_size: 5, cards: [] };
   }
 
   static async getConfigElement() {
@@ -70,7 +73,7 @@ class GlassPanelCard extends HTMLElement {
     helpers.createCardElement({ type: "vertical-stack", cards: [] });
     await customElements.whenDefined("hui-vertical-stack-card");
     const stackCard = customElements.get("hui-vertical-stack-card");
-    await stackCard.getConfigElement();
+    await (stackCard as any).getConfigElement();
     await customElements.whenDefined("hui-card-picker");
     await customElements.whenDefined("hui-card-element-editor");
     return document.createElement("glass-panel-card-editor");
@@ -95,96 +98,40 @@ class GlassPanelCard extends HTMLElement {
         this._children = [stack];
         container.append(stack);
       }
-      this._updateActionState();
     } catch (error) {
       const container = this.shadowRoot.querySelector(".children");
       if (container) container.textContent = `Karten konnten nicht geladen werden: ${error.message}`;
     }
   }
 
-  _callHeaderAction() {
-    const entity = this._config.action_entity;
-    if (!this._hass || !entity) return;
-    if (this._config.action === "more-info") {
-      this.dispatchEvent(new CustomEvent("hass-more-info", {
-        bubbles: true,
-        composed: true,
-        detail: { entityId: entity },
-      }));
-      return;
-    }
-    this._hass.callService("homeassistant", "toggle", { entity_id: entity });
-  }
-
-  _updateActionState() {
-    const button = this.shadowRoot.querySelector(".header-action");
-    if (!button) return;
-    const state = this._hass?.states?.[this._config.action_entity];
-    button.classList.toggle("active", Boolean(state && !["off", "closed", "idle", "standby", "unavailable", "unknown", "not_home"].includes(state.state)));
-    button.classList.toggle("inactive", Boolean(state && ["off", "closed", "idle", "standby", "not_home"].includes(state.state)));
-    const label = this.shadowRoot.querySelector(".action-state");
-    if (label) label.textContent = ["on", "off"].includes(state?.state) ? (state.state === "on" ? "An" : "Aus") : "";
-  }
-
   _renderShell() {
-    const title = escapePanelText(String(this._config.title ?? "").trim());
-    const subtitle = escapePanelText(String(this._config.subtitle ?? "").trim());
-    const titleLevel = Math.min(5, Math.max(1, Number(this._config.title_size) || 5));
-    const titleScale = 0.65 + ((titleLevel - 1) / 4) * 0.35;
-    const buttonLevel = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
-    const buttonScale = 1 / 3 + ((buttonLevel - 1) / 4) * (2 / 3);
-    const menuButtonScale = 0.5 + buttonScale * 0.5;
-    const actionVisible = this._config.show_action_button && this._config.action_entity;
+    const level = Math.min(5, Math.max(1, Number(this._config.panel_size) || 5));
+    const minPadding = 10 + level * 2;
+    const maxPadding = 18 + level * 4;
+    const fluidPadding = 2.5 + level * 0.44;
     this.shadowRoot.innerHTML = `
       <style>
         :host { display:block; width:100%; color:var(--primary-text-color,#f3f3f5); font-family:var(--paper-font-body1_-_font-family,"Arial",sans-serif); }
         * { box-sizing:border-box; }
-        .panel { width:100%; padding:clamp(20px,4.7vw,38px); border:1px solid rgba(255,255,255,.1); border-radius:28px; background:radial-gradient(ellipse at 48% 0,#22252a 0,#15171a 62%,#101214 100%); box-shadow:inset 0 1px 1px rgba(255,255,255,.06),0 12px 30px rgba(0,0,0,.2); }
-        .header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:clamp(20px,3vw,30px); }
-        .header[hidden] { display:none; }
-        .header:has(> .header-action:only-child) { justify-content:flex-end; }
-        .titles { min-width:0; }
-        .title { color:#9295a0; font-size:clamp(11px,2.1vw,15px); font-weight:700; letter-spacing:.12em; line-height:normal; text-transform:uppercase; }
-        .subtitle { margin:7px 0 0; color:var(--primary-text-color,#f3f3f5); font-size:var(--subtitle-font); font-weight:700; line-height:1.08; overflow-wrap:anywhere; }
-        .subtitle:first-child { margin-top:0; }
-        .header-action { position:relative; display:grid; flex:none; width:var(--header-action-size); aspect-ratio:1; place-items:center; border:2px solid #303239; border-radius:50%; background:linear-gradient(145deg,#272a30,#17191d); color:#ff8b2b; font:inherit; box-shadow:0 6px 15px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05); cursor:pointer; -webkit-tap-highlight-color:transparent; }
-        .header-action.active { border-color:#ff8b2b; color:#ff9b4a; box-shadow:inset 0 0 20px rgba(255,139,43,.12),0 0 0 1px rgba(255,139,43,.2),0 6px 15px rgba(0,0,0,.25); }
-        .header-action.inactive { color:#85878b; border-color:#45474b; }
-        .header-action ha-icon { display:block; width:var(--header-icon-size); height:var(--header-icon-size); --mdc-icon-size:var(--header-icon-size); }
-        .action-state { position:absolute; bottom:11%; font-size:clamp(5px,calc(var(--header-action-size) * .15),13px); line-height:1; color:inherit; }
+        .panel { width:100%; padding:var(--panel-padding); border:1px solid rgba(255,255,255,.1); border-radius:28px; background:radial-gradient(ellipse at 48% 0,#22252a 0,#15171a 62%,#101214 100%); box-shadow:inset 0 1px 1px rgba(255,255,255,.06),0 12px 30px rgba(0,0,0,.2); }
         .children { display:block; min-width:0; }
         .children > * { min-width:0; }
         .empty { color:var(--secondary-text-color,#a0a2ad); }
-        @media (max-width:380px) { .panel { padding:18px; } }
+        @media (max-width:380px) { .panel { padding:var(--panel-mobile-padding); } }
       </style>
-      <article class="panel" style="--subtitle-font:clamp(${22 * titleScale}px,${4.8 * titleScale}vw,${38 * titleScale}px);--header-action-size:clamp(${56 * menuButtonScale}px,${11 * menuButtonScale}vw,${88 * menuButtonScale}px);--header-icon-size:calc((var(--header-action-size) - 16px) * .46)">
-        <header class="header" ${!title && !subtitle && !actionVisible ? "hidden" : ""}>
-          ${title || subtitle ? `<div class="titles">${title ? `<div class="title">${title}</div>` : ""}${subtitle ? `<h2 class="subtitle">${subtitle}</h2>` : ""}</div>` : ""}
-          ${actionVisible ? `<button class="header-action" aria-label="${escapePanelText(this._config.action_entity)}" title="${escapePanelText(this._config.action_entity)}"><ha-icon icon="${escapePanelText(this._config.action_icon || "mdi:gesture-tap-button")}"></ha-icon><span class="action-state"></span></button>` : ""}
-        </header>
+      <article class="panel" style="--panel-padding:clamp(${minPadding}px,${fluidPadding}vw,${maxPadding}px);--panel-mobile-padding:clamp(${minPadding}px,4.7vw,${maxPadding}px)">
         <div class="children">${this._config.cards.length ? "" : `<div class="empty">Keine Karten konfiguriert.</div>`}</div>
       </article>`;
-    this.shadowRoot.querySelector(".header-action")?.addEventListener("click", () => this._callHeaderAction());
   }
 }
 
 const PANEL_FORM_SCHEMA = [
-  { name: "title", default: "", selector: { text: {} } },
-  { name: "subtitle", default: "", selector: { text: {} } },
-  { name: "title_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
-  { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } }, visible: { field: "show_action_button", value: true } },
-  { name: "show_action_button", default: false, selector: { boolean: {} } },
-  { name: "action_entity", selector: { entity: {} }, visible: { field: "show_action_button", value: true } },
-  { name: "action_icon", selector: { icon: {} }, visible: { field: "show_action_button", value: true } },
-  {
-    name: "action",
-    default: "toggle",
-    selector: { select: { mode: "dropdown", options: [["toggle", "Ein-/Ausschalten"], ["more-info", "Mehr Informationen anzeigen"]] } },
-    visible: { field: "show_action_button", value: true },
-  },
+  { name: "panel_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
 ];
 
 class GlassPanelCardEditor extends HTMLElement {
+  [key: string]: any;
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -198,24 +145,13 @@ class GlassPanelCardEditor extends HTMLElement {
 
   setConfig(config) {
     const previousCards = JSON.stringify(this._config?.cards ?? []);
-    this._config = {
-      title: "",
-      subtitle: "",
-      title_size: 5,
-      button_size: 5,
-      show_action_button: false,
-      action_icon: "mdi:gesture-tap-button",
-      action: "toggle",
-      cards: [],
-      ...config,
-      cards: Array.isArray(config.cards) ? config.cards : [],
-    };
+    this._config = normalizePanelConfig(config);
     const form = this.shadowRoot.querySelector("ha-form");
     if (form) {
       form.schema = PANEL_FORM_SCHEMA;
       form.data = this._config;
       form.hass = this._hass;
-      form.computeLabel = (field) => ({ title: "Titel", subtitle: "Beschriftung", title_size: "Beschriftungsgröße", button_size: "Button-Größe", show_action_button: "Aktionsbutton anzeigen", action_entity: "Aktions-Entität", action_icon: "Aktions-Icon", action: "Aktion" })[field.name] || field.name;
+      form.computeLabel = (field) => ({ panel_size: "Panel-Größe" })[field.name] || field.name;
     }
     if (previousCards !== JSON.stringify(this._config.cards)) {
       this._selectedCard = Math.min(this._selectedCard, this._config.cards.length - 1);
@@ -349,7 +285,7 @@ class GlassPanelCardEditor extends HTMLElement {
     const tabs = this.shadowRoot.querySelector(".card-tabs");
     if (!tabs) return;
     tabs.innerHTML = this._config.cards.map((card, index) => `<button type="button" data-card-index="${index}" aria-pressed="${index === this._selectedCard}">${escapePanelText(card.type || `Karte ${index + 1}`)}</button>`).join("");
-    tabs.querySelectorAll("[data-card-index]").forEach((button) => button.addEventListener("click", () => this._selectCard(Number(button.dataset.cardIndex))));
+    tabs.querySelectorAll<HTMLButtonElement>("[data-card-index]").forEach((button) => button.addEventListener("click", () => this._selectCard(Number(button.dataset.cardIndex))));
     const picker = this.shadowRoot.querySelector("hui-card-picker");
     const editor = this.shadowRoot.querySelector("hui-card-element-editor");
     if (picker) picker.hidden = !this._showPicker;
@@ -379,5 +315,5 @@ if (!customElements.get("glass-panel-card-editor")) customElements.define("glass
 
 window.customCards = window.customCards || [];
 if (!window.customCards.some((card) => card.type === "glass-panel-card")) {
-  window.customCards.push({ type: "glass-panel-card", name: "Glass Panel Card", description: "Kartencontainer mit Titel, Untertitel und optionaler Aktion.", preview: true, version: CARD_VERSION });
+  window.customCards.push({ type: "glass-panel-card", name: "Glass Panel Card", description: "Panel-Hülle für beliebig viele Lovelace-Kindkarten.", preview: true, version: CARD_VERSION });
 }

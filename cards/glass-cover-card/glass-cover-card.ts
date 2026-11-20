@@ -1,7 +1,11 @@
-const CARD_VERSION = "1.23.8";
+const CARD_VERSION = "1.24.0";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
+  [key: string]: any;
+  declare _config: GlassCardConfig | null;
+  declare _hass: GlassHass | null;
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -194,8 +198,8 @@ class GlassCoverCard extends HTMLElement {
     this.shadowRoot.querySelector(".stop")?.addEventListener("click", () => this._call("stop_cover"));
     this.shadowRoot.querySelector(".lower")?.addEventListener("click", () => this._call("close_cover"));
     this.shadowRoot.querySelector(".close-tilt")?.addEventListener("click", () => this._quickAction("close-tilt"));
-    this.shadowRoot.querySelector(".position")?.addEventListener("change", (event) => this._setPosition(event.target.value));
-    this.shadowRoot.querySelector(".tilt")?.addEventListener("input", (event) => this._setTilt(event.target.value));
+    this.shadowRoot.querySelector<HTMLInputElement>(".position")?.addEventListener("change", (event) => this._setPosition((event.currentTarget as HTMLInputElement).value));
+    this.shadowRoot.querySelector<HTMLInputElement>(".tilt")?.addEventListener("input", (event) => this._setTilt((event.currentTarget as HTMLInputElement).value));
   }
 
   _render() {

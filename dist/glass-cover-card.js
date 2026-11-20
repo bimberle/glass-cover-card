@@ -1,233 +1,218 @@
 (() => {
-const CARD_VERSION = "1.23.8";
+const CARD_VERSION = "1.24.0";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
-
 class GlassCoverCard extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = null;
-    this._hass = null;
-    this._menuOpen = false;
-    this._pendingTilt = null;
-    this._pendingTiltTimer = null;
-    this._targetPosition = null;
-    this._hassRenderKey = null;
-  }
-
-  setConfig(config) {
-    if (!config?.entity) {
-      throw new Error("Bitte eine Cover-Entitaet mit 'entity' angeben.");
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this._config = null;
+        this._hass = null;
+        this._menuOpen = false;
+        this._pendingTilt = null;
+        this._pendingTiltTimer = null;
+        this._targetPosition = null;
+        this._hassRenderKey = null;
     }
-    this._config = {
-      show_tilt: true,
-      show_main_controls: true,
-      show_close_tilt: true,
-      show_action_button: true,
-      show_position_slider: true,
-      show_preview: true,
-      invert_position: false,
-      button_size: 5,
-      title_size: 5,
-      preview_size: 5,
-      title: "Beschattung",
-      ...config,
-    };
-    this._render();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    const position = Number(hass.states?.[this._config?.entity]?.attributes?.current_position);
-    if (this._targetPosition !== null && Math.abs(position - this._targetPosition) <= 1) {
-      this._targetPosition = null;
+    setConfig(config) {
+        if (!config?.entity) {
+            throw new Error("Bitte eine Cover-Entitaet mit 'entity' angeben.");
+        }
+        this._config = {
+            show_tilt: true,
+            show_main_controls: true,
+            show_close_tilt: true,
+            show_action_button: true,
+            show_position_slider: true,
+            show_preview: true,
+            invert_position: false,
+            button_size: 5,
+            title_size: 5,
+            preview_size: 5,
+            title: "Beschattung",
+            ...config,
+        };
+        this._render();
     }
-    const tiltEntity = this._config?.tilt_entity || this._config?.entity;
-    const tilt = Number(hass.states?.[tiltEntity]?.attributes?.current_tilt_position);
-    if (this._pendingTilt !== null && tilt === this._pendingTilt) {
-      window.clearTimeout(this._pendingTiltTimer);
-      this._pendingTilt = null;
+    set hass(hass) {
+        this._hass = hass;
+        const position = Number(hass.states?.[this._config?.entity]?.attributes?.current_position);
+        if (this._targetPosition !== null && Math.abs(position - this._targetPosition) <= 1) {
+            this._targetPosition = null;
+        }
+        const tiltEntity = this._config?.tilt_entity || this._config?.entity;
+        const tilt = Number(hass.states?.[tiltEntity]?.attributes?.current_tilt_position);
+        if (this._pendingTilt !== null && tilt === this._pendingTilt) {
+            window.clearTimeout(this._pendingTiltTimer);
+            this._pendingTilt = null;
+        }
+        const coverState = hass.states?.[this._config?.entity];
+        const tiltState = hass.states?.[tiltEntity];
+        const renderKey = JSON.stringify([
+            coverState?.state,
+            coverState?.attributes?.current_position,
+            coverState?.attributes?.friendly_name,
+            tiltState?.attributes?.current_tilt_position,
+        ]);
+        if (renderKey !== this._hassRenderKey) {
+            this._hassRenderKey = renderKey;
+            this._render();
+        }
     }
-    const coverState = hass.states?.[this._config?.entity];
-    const tiltState = hass.states?.[tiltEntity];
-    const renderKey = JSON.stringify([
-      coverState?.state,
-      coverState?.attributes?.current_position,
-      coverState?.attributes?.friendly_name,
-      tiltState?.attributes?.current_tilt_position,
-    ]);
-    if (renderKey !== this._hassRenderKey) {
-      this._hassRenderKey = renderKey;
-      this._render();
+    get hass() {
+        return this._hass;
     }
-  }
-
-  get hass() {
-    return this._hass;
-  }
-
-  getCardSize() {
-    return (this._config?.show_preview !== false ? 4 : 2) + (this._config?.show_tilt !== false ? 1 : 0);
-  }
-
-  static getConfigForm() {
-    const schema = [
-      { name: "entity", required: true, selector: { entity: { filter: { domain: "cover" } } } },
-      { name: "name", selector: { text: {} } },
-      { name: "title", default: "Beschattung", selector: { text: {} } },
-      { name: "tilt_entity", selector: { entity: { filter: { domain: "cover" } } } },
-      { name: "show_tilt", default: true, selector: { boolean: {} } },
-      { name: "show_position_slider", default: true, selector: { boolean: {} } },
-      { name: "show_main_controls", default: true, selector: { boolean: {} } },
-      { name: "show_close_tilt", default: true, selector: { boolean: {} } },
-      { name: "show_action_button", default: true, selector: { boolean: {} } },
-      { name: "show_preview", default: true, selector: { boolean: {} } },
-      { name: "invert_position", default: false, selector: { boolean: {} } },
-      { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
-      { name: "title_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
-      { name: "preview_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
-    ];
-    return {
-      schema,
-      computeLabel: (field) => ({
-        entity: "Jalousie",
-        name: "Beschriftung",
-        title: "Titel",
-        tilt_entity: "Lamellen-Entität",
-        show_tilt: "Lamellenregler anzeigen",
-        show_position_slider: "Positionsregler anzeigen",
-        show_main_controls: "Hoch/Stopp/Runter anzeigen",
-        show_close_tilt: "Schließen-und-Lamellen-Button anzeigen",
-        show_action_button: "Schnellwahl-Button anzeigen",
-        show_preview: "Vorschau und Prozentanzeige anzeigen",
-        invert_position: "Position umkehren",
-        button_size: "Button-Größe",
-        title_size: "Beschriftungsgröße",
-        preview_size: "Bild- und Prozentgröße",
-      })[field.name],
-    };
-  }
-
-  static getStubConfig() {
-    return { entity: "cover.living_room", name: "Wohnzimmer", show_tilt: true, show_position_slider: true, show_preview: true, button_size: 5, title_size: 5, preview_size: 5 };
-  }
-
-  _state() {
-    return this._hass?.states?.[this._config.entity];
-  }
-
-  _position() {
-    const state = this._state();
-    const value = state?.attributes?.current_position;
-    return Number.isFinite(Number(value)) ? clamp(value) : (state?.state === "open" ? 100 : 0);
-  }
-
-  _tilt() {
-    const entity = this._config.tilt_entity || this._config.entity;
-    const value = this._hass?.states?.[entity]?.attributes?.current_tilt_position;
-    return Number.isFinite(Number(value)) ? clamp(value) : 50;
-  }
-
-  _call(service, data = {}, entity = this._config.entity) {
-    if (!this._hass) return;
-    this._hass.callService("cover", service, { entity_id: entity, ...data });
-  }
-
-  _setPosition(value) {
-    const uiPosition = clamp(value);
-    const position = this._config.invert_position ? uiPosition : 100 - uiPosition;
-    this._setTargetPosition(position);
-    this._call("set_cover_position", { position });
-    this._render();
-  }
-
-  _setTargetPosition(position) {
-    this._targetPosition = clamp(position);
-  }
-
-  _setTilt(value) {
-    this._pendingTilt = clamp(value);
-    window.clearTimeout(this._pendingTiltTimer);
-    this._pendingTiltTimer = window.setTimeout(() => {
-      this._pendingTilt = null;
-      this._render();
-    }, 3000);
-    const entity = this._config.tilt_entity || this._config.entity;
-    this._call("set_cover_tilt_position", { tilt_position: this._pendingTilt }, entity);
-    this._render();
-  }
-
-  _quickAction(action) {
-    this._menuOpen = false;
-    if (action === "open") {
-      this._setTargetPosition(100);
-      this._call("open_cover");
-    } else if (action === "close") {
-      this._setTargetPosition(0);
-      this._call("close_cover");
-    } else {
-      this._setTargetPosition(0);
-      this._setPendingTilt(50);
-      this._call("close_cover");
-      window.setTimeout(() => this._setTilt(50), 700);
+    getCardSize() {
+        return (this._config?.show_preview !== false ? 4 : 2) + (this._config?.show_tilt !== false ? 1 : 0);
     }
-    this._render();
-  }
-
-  _setPendingTilt(value) {
-    this._pendingTilt = clamp(value);
-    window.clearTimeout(this._pendingTiltTimer);
-    this._pendingTiltTimer = window.setTimeout(() => {
-      this._pendingTilt = null;
-      this._render();
-    }, 3000);
-  }
-
-  _bindEvents() {
-    this.shadowRoot.querySelector(".menu-toggle")?.addEventListener("click", () => {
-      this._menuOpen = !this._menuOpen;
-      this._render();
-    });
-    this.shadowRoot.querySelector("[data-action='open']")?.addEventListener("click", () => this._quickAction("open"));
-    this.shadowRoot.querySelector("[data-action='close']")?.addEventListener("click", () => this._quickAction("close"));
-    this.shadowRoot.querySelector("[data-action='close-tilt']")?.addEventListener("click", () => this._quickAction("close-tilt"));
-    this.shadowRoot.querySelector(".raise")?.addEventListener("click", () => this._call("open_cover"));
-    this.shadowRoot.querySelector(".stop")?.addEventListener("click", () => this._call("stop_cover"));
-    this.shadowRoot.querySelector(".lower")?.addEventListener("click", () => this._call("close_cover"));
-    this.shadowRoot.querySelector(".close-tilt")?.addEventListener("click", () => this._quickAction("close-tilt"));
-    this.shadowRoot.querySelector(".position")?.addEventListener("change", (event) => this._setPosition(event.target.value));
-    this.shadowRoot.querySelector(".tilt")?.addEventListener("input", (event) => this._setTilt(event.target.value));
-  }
-
-  _render() {
-    if (!this._config) return;
-    const position = this._position();
-    const invertPosition = this._config.invert_position === true;
-    const uiPosition = invertPosition ? position : 100 - position;
-    const displayedPosition = Math.round(uiPosition);
-    const targetUiPosition = this._targetPosition === null ? null : (invertPosition ? this._targetPosition : 100 - this._targetPosition);
-    const tilt = this._pendingTilt ?? this._tilt();
-    const title = this._escape(String(this._config.title ?? "Beschattung").trim());
-    const name = this._escape(String(this._config.name ?? this._state()?.attributes?.friendly_name ?? this._config.entity).trim());
-    const showTilt = this._config.show_tilt !== false;
-    const showPositionSlider = this._config.show_position_slider !== false;
-    const showMainControls = this._config.show_main_controls !== false;
-    const showCloseTilt = this._config.show_close_tilt !== false;
-    const showActionButton = this._config.show_action_button !== false;
-    const showPreview = this._config.show_preview !== false;
-    const buttonLevel = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
-    const titleLevel = Math.min(5, Math.max(1, Number(this._config.title_size) || 5));
-    const previewLevel = Math.min(5, Math.max(1, Number(this._config.preview_size) || 5));
-    const buttonScale = 1 / 3 + ((buttonLevel - 1) / 4) * (2 / 3);
-    const tiltScale = 0.625 + ((buttonLevel - 1) / 4) * 0.375;
-    const menuButtonScale = 0.5 + buttonScale * 0.5;
-    const titleScale = 0.65 + ((titleLevel - 1) / 4) * 0.35;
-    const previewScale = 0.65 + ((previewLevel - 1) / 4) * 0.35;
-    const controlsStyle = `--button-level:${buttonLevel};--control-size:clamp(${72 * buttonScale}px,${15 * buttonScale}vw,${114 * buttonScale}px);--stop-size:clamp(${78 * buttonScale}px,${16 * buttonScale}vw,${120 * buttonScale}px);--menu-size:clamp(${56 * menuButtonScale}px,${11 * menuButtonScale}vw,${88 * menuButtonScale}px);--quick-size:var(--menu-size);--title-font:clamp(${22 * titleScale}px,${4.8 * titleScale}vw,${38 * titleScale}px);--preview-width:${previewScale * 100}%;--preview-value-font:clamp(${48 * previewScale}px,${10 * previewScale}vw,${82 * previewScale}px);--tilt-icon-size:${35 * tiltScale}px;--tilt-gap:${14 * tiltScale}px;--tilt-font:clamp(${14 * tiltScale}px,${2.7 * tiltScale}vw,${21 * tiltScale}px);--tilt-track:${9 * tiltScale}px;--tilt-thumb:${30 * tiltScale}px`;
-    const slats = Array.from({ length: 7 }, (_, index) => `<i style="--i:${index}"></i>`).join("");
-    const targetMarker = targetUiPosition === null || Math.abs(targetUiPosition - uiPosition) <= 1 ? "" : `<span class="target-marker" style="--target:${targetUiPosition}%" aria-label="Zielposition ${Math.round(targetUiPosition)} Prozent"></span>`;
-
-    this.shadowRoot.innerHTML = `
+    static getConfigForm() {
+        const schema = [
+            { name: "entity", required: true, selector: { entity: { filter: { domain: "cover" } } } },
+            { name: "name", selector: { text: {} } },
+            { name: "title", default: "Beschattung", selector: { text: {} } },
+            { name: "tilt_entity", selector: { entity: { filter: { domain: "cover" } } } },
+            { name: "show_tilt", default: true, selector: { boolean: {} } },
+            { name: "show_position_slider", default: true, selector: { boolean: {} } },
+            { name: "show_main_controls", default: true, selector: { boolean: {} } },
+            { name: "show_close_tilt", default: true, selector: { boolean: {} } },
+            { name: "show_action_button", default: true, selector: { boolean: {} } },
+            { name: "show_preview", default: true, selector: { boolean: {} } },
+            { name: "invert_position", default: false, selector: { boolean: {} } },
+            { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+            { name: "title_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+            { name: "preview_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+        ];
+        return {
+            schema,
+            computeLabel: (field) => ({
+                entity: "Jalousie",
+                name: "Beschriftung",
+                title: "Titel",
+                tilt_entity: "Lamellen-Entität",
+                show_tilt: "Lamellenregler anzeigen",
+                show_position_slider: "Positionsregler anzeigen",
+                show_main_controls: "Hoch/Stopp/Runter anzeigen",
+                show_close_tilt: "Schließen-und-Lamellen-Button anzeigen",
+                show_action_button: "Schnellwahl-Button anzeigen",
+                show_preview: "Vorschau und Prozentanzeige anzeigen",
+                invert_position: "Position umkehren",
+                button_size: "Button-Größe",
+                title_size: "Beschriftungsgröße",
+                preview_size: "Bild- und Prozentgröße",
+            })[field.name],
+        };
+    }
+    static getStubConfig() {
+        return { entity: "cover.living_room", name: "Wohnzimmer", show_tilt: true, show_position_slider: true, show_preview: true, button_size: 5, title_size: 5, preview_size: 5 };
+    }
+    _state() {
+        return this._hass?.states?.[this._config.entity];
+    }
+    _position() {
+        const state = this._state();
+        const value = state?.attributes?.current_position;
+        return Number.isFinite(Number(value)) ? clamp(value) : (state?.state === "open" ? 100 : 0);
+    }
+    _tilt() {
+        const entity = this._config.tilt_entity || this._config.entity;
+        const value = this._hass?.states?.[entity]?.attributes?.current_tilt_position;
+        return Number.isFinite(Number(value)) ? clamp(value) : 50;
+    }
+    _call(service, data = {}, entity = this._config.entity) {
+        if (!this._hass)
+            return;
+        this._hass.callService("cover", service, { entity_id: entity, ...data });
+    }
+    _setPosition(value) {
+        const uiPosition = clamp(value);
+        const position = this._config.invert_position ? uiPosition : 100 - uiPosition;
+        this._setTargetPosition(position);
+        this._call("set_cover_position", { position });
+        this._render();
+    }
+    _setTargetPosition(position) {
+        this._targetPosition = clamp(position);
+    }
+    _setTilt(value) {
+        this._pendingTilt = clamp(value);
+        window.clearTimeout(this._pendingTiltTimer);
+        this._pendingTiltTimer = window.setTimeout(() => {
+            this._pendingTilt = null;
+            this._render();
+        }, 3000);
+        const entity = this._config.tilt_entity || this._config.entity;
+        this._call("set_cover_tilt_position", { tilt_position: this._pendingTilt }, entity);
+        this._render();
+    }
+    _quickAction(action) {
+        this._menuOpen = false;
+        if (action === "open") {
+            this._setTargetPosition(100);
+            this._call("open_cover");
+        }
+        else if (action === "close") {
+            this._setTargetPosition(0);
+            this._call("close_cover");
+        }
+        else {
+            this._setTargetPosition(0);
+            this._setPendingTilt(50);
+            this._call("close_cover");
+            window.setTimeout(() => this._setTilt(50), 700);
+        }
+        this._render();
+    }
+    _setPendingTilt(value) {
+        this._pendingTilt = clamp(value);
+        window.clearTimeout(this._pendingTiltTimer);
+        this._pendingTiltTimer = window.setTimeout(() => {
+            this._pendingTilt = null;
+            this._render();
+        }, 3000);
+    }
+    _bindEvents() {
+        this.shadowRoot.querySelector(".menu-toggle")?.addEventListener("click", () => {
+            this._menuOpen = !this._menuOpen;
+            this._render();
+        });
+        this.shadowRoot.querySelector("[data-action='open']")?.addEventListener("click", () => this._quickAction("open"));
+        this.shadowRoot.querySelector("[data-action='close']")?.addEventListener("click", () => this._quickAction("close"));
+        this.shadowRoot.querySelector("[data-action='close-tilt']")?.addEventListener("click", () => this._quickAction("close-tilt"));
+        this.shadowRoot.querySelector(".raise")?.addEventListener("click", () => this._call("open_cover"));
+        this.shadowRoot.querySelector(".stop")?.addEventListener("click", () => this._call("stop_cover"));
+        this.shadowRoot.querySelector(".lower")?.addEventListener("click", () => this._call("close_cover"));
+        this.shadowRoot.querySelector(".close-tilt")?.addEventListener("click", () => this._quickAction("close-tilt"));
+        this.shadowRoot.querySelector(".position")?.addEventListener("change", (event) => this._setPosition(event.currentTarget.value));
+        this.shadowRoot.querySelector(".tilt")?.addEventListener("input", (event) => this._setTilt(event.currentTarget.value));
+    }
+    _render() {
+        if (!this._config)
+            return;
+        const position = this._position();
+        const invertPosition = this._config.invert_position === true;
+        const uiPosition = invertPosition ? position : 100 - position;
+        const displayedPosition = Math.round(uiPosition);
+        const targetUiPosition = this._targetPosition === null ? null : (invertPosition ? this._targetPosition : 100 - this._targetPosition);
+        const tilt = this._pendingTilt ?? this._tilt();
+        const title = this._escape(String(this._config.title ?? "Beschattung").trim());
+        const name = this._escape(String(this._config.name ?? this._state()?.attributes?.friendly_name ?? this._config.entity).trim());
+        const showTilt = this._config.show_tilt !== false;
+        const showPositionSlider = this._config.show_position_slider !== false;
+        const showMainControls = this._config.show_main_controls !== false;
+        const showCloseTilt = this._config.show_close_tilt !== false;
+        const showActionButton = this._config.show_action_button !== false;
+        const showPreview = this._config.show_preview !== false;
+        const buttonLevel = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
+        const titleLevel = Math.min(5, Math.max(1, Number(this._config.title_size) || 5));
+        const previewLevel = Math.min(5, Math.max(1, Number(this._config.preview_size) || 5));
+        const buttonScale = 1 / 3 + ((buttonLevel - 1) / 4) * (2 / 3);
+        const tiltScale = 0.625 + ((buttonLevel - 1) / 4) * 0.375;
+        const menuButtonScale = 0.5 + buttonScale * 0.5;
+        const titleScale = 0.65 + ((titleLevel - 1) / 4) * 0.35;
+        const previewScale = 0.65 + ((previewLevel - 1) / 4) * 0.35;
+        const controlsStyle = `--button-level:${buttonLevel};--control-size:clamp(${72 * buttonScale}px,${15 * buttonScale}vw,${114 * buttonScale}px);--stop-size:clamp(${78 * buttonScale}px,${16 * buttonScale}vw,${120 * buttonScale}px);--menu-size:clamp(${56 * menuButtonScale}px,${11 * menuButtonScale}vw,${88 * menuButtonScale}px);--quick-size:var(--menu-size);--title-font:clamp(${22 * titleScale}px,${4.8 * titleScale}vw,${38 * titleScale}px);--preview-width:${previewScale * 100}%;--preview-value-font:clamp(${48 * previewScale}px,${10 * previewScale}vw,${82 * previewScale}px);--tilt-icon-size:${35 * tiltScale}px;--tilt-gap:${14 * tiltScale}px;--tilt-font:clamp(${14 * tiltScale}px,${2.7 * tiltScale}vw,${21 * tiltScale}px);--tilt-track:${9 * tiltScale}px;--tilt-thumb:${30 * tiltScale}px`;
+        const slats = Array.from({ length: 7 }, (_, index) => `<i style="--i:${index}"></i>`).join("");
+        const targetMarker = targetUiPosition === null || Math.abs(targetUiPosition - uiPosition) <= 1 ? "" : `<span class="target-marker" style="--target:${targetUiPosition}%" aria-label="Zielposition ${Math.round(targetUiPosition)} Prozent"></span>`;
+        this.shadowRoot.innerHTML = `
       <style>
         :host { display:block; width:100%; color:var(--primary-text-color,#f5f5f7); font-family:var(--paper-font-body1_-_font-family, "Arial", sans-serif); }
         * { box-sizing:border-box; }
@@ -314,327 +299,328 @@ class GlassCoverCard extends HTMLElement {
           <input id="tilt-slider" class="tilt" type="range" min="0" max="100" step="1" value="${tilt}" aria-label="Lamellenposition" style="--fill:${tilt}%">
         </div>
       </article>`;
-    this._bindEvents();
-  }
-
-  _escape(value) {
-    return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[char]);
-  }
-
-  _icon(name) {
-    const icons = {
-      blinds: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 4h18M4 7h16M4 11h16M4 15h16M4 19h16M6 7v14m12-14v14"/></svg>',
-      up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 15 7-7 7 7"/></svg>',
-      down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 9 7 7 7-7"/></svg>',
-      stop: '<svg viewBox="0 0 24 24" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>',
-      half: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5h14M5 10h14M5 15h14M5 20h14"/><path d="M12 3v18" stroke-dasharray="2 3"/></svg>',
-    };
-    return icons[name];
-  }
+        this._bindEvents();
+    }
+    _escape(value) {
+        return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[char]);
+    }
+    _icon(name) {
+        const icons = {
+            blinds: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 4h18M4 7h16M4 11h16M4 15h16M4 19h16M6 7v14m12-14v14"/></svg>',
+            up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 15 7-7 7 7"/></svg>',
+            down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 9 7 7 7-7"/></svg>',
+            stop: '<svg viewBox="0 0 24 24" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>',
+            half: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5h14M5 10h14M5 15h14M5 20h14"/><path d="M12 3v18" stroke-dasharray="2 3"/></svg>',
+        };
+        return icons[name];
+    }
 }
-
-if (!customElements.get("glass-cover-card")) customElements.define("glass-cover-card", GlassCoverCard);
-
+if (!customElements.get("glass-cover-card"))
+    customElements.define("glass-cover-card", GlassCoverCard);
 window.customCards = window.customCards || [];
 if (!window.customCards.some((card) => card.type === "glass-cover-card")) {
-  window.customCards.push({ type: "glass-cover-card", name: "Glass Cover Card", description: "Responsive Jalousiensteuerung mit optionaler Lamellensteuerung.", preview: true, version: CARD_VERSION });
+    window.customCards.push({ type: "glass-cover-card", name: "Glass Cover Card", description: "Responsive Jalousiensteuerung mit optionaler Lamellensteuerung.", preview: true, version: CARD_VERSION });
 }
+
 })();
 
 (() => {
-const CARD_VERSION = "1.6.5";
+const CARD_VERSION = "1.7.0";
 const BUTTON_COLORS = {
-  orange: "#ff8b2b",
-  white: "#f2f2f4",
-  gray: "#8f9299",
-  green: "#4bc785",
-  red: "#f05c5c",
+    orange: "#ff8b2b",
+    white: "#f2f2f4",
+    gray: "#8f9299",
+    green: "#4bc785",
+    red: "#f05c5c",
 };
 const BUTTON_COLOR_OPTIONS = [{ value: "orange", label: "Orange" }, { value: "white", label: "Weiß" }, { value: "gray", label: "Grau" }, { value: "green", label: "Grün" }, { value: "red", label: "Rot" }];
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  "\"": "&quot;",
-  "'": "&#39;",
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
 })[char]);
-
 class GlassButtonCard extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = null;
-    this._hass = null;
-    this._dragging = false;
-    this._brightness = 0;
-    this._pendingBrightnessState = null;
-    this._brightnessTimer = null;
-  }
-
-  setConfig(config) {
-    window.clearTimeout(this._brightnessTimer);
-    this._pendingBrightnessState = null;
-    this._dragging = false;
-    this._config = {
-      entity: "",
-      icon: "mdi:gesture-tap-button",
-      action: "toggle",
-      button_size: 5,
-      show_name: true,
-      show_card_frame: true,
-      show_brightness_slider: true,
-      color: "orange",
-      ...config,
-    };
-    this._render();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    if (!this._config || !this.shadowRoot.querySelector(".button")) {
-      this._render();
-      return;
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this._config = null;
+        this._hass = null;
+        this._dragging = false;
+        this._brightness = 0;
+        this._pendingBrightnessState = null;
+        this._brightnessTimer = null;
     }
-    this._syncEntityState();
-  }
-
-  get hass() {
-    return this._hass;
-  }
-
-  getCardSize() {
-    return this._config?.show_name === false ? 2 : 3;
-  }
-
-  static getConfigElement() {
-    return document.createElement("glass-button-card-editor");
-  }
-
-  static getConfigForm() {
-    const schema = [
-      { name: "entity", required: true, selector: { entity: {} } },
-      { name: "icon", selector: { icon: {} } },
-      { name: "icon_active", selector: { icon: {} } },
-      { name: "state_active", selector: { text: {} } },
-      { name: "color_active", selector: { select: { mode: "dropdown", options: BUTTON_COLOR_OPTIONS } } },
-      { name: "icon_inactive", selector: { icon: {} } },
-      { name: "state_inactive", selector: { text: {} } },
-      { name: "color_inactive", default: "gray", selector: { select: { mode: "dropdown", options: BUTTON_COLOR_OPTIONS } } },
-      { name: "binary_sensor_active_state", default: "on", selector: { select: { mode: "dropdown", options: [{ value: "on", label: "Offen" }, { value: "off", label: "Geschlossen" }] } } },
-      { name: "name", selector: { text: {} } },
-      {
-        name: "action",
-        default: "toggle",
-        selector: { select: { mode: "dropdown", options: [{ value: "toggle", label: "Ein-/Ausschalten" }, { value: "more-info", label: "Mehr Informationen anzeigen" }] } },
-      },
-      {
-        name: "color",
-        default: "orange",
-        selector: { select: { mode: "dropdown", options: BUTTON_COLOR_OPTIONS } },
-      },
-      { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
-      { name: "show_name", default: true, selector: { boolean: {} } },
-      { name: "show_card_frame", default: true, selector: { boolean: {} } },
-      { name: "show_brightness_slider", default: true, selector: { boolean: {} } },
-    ];
-      return {
-        schema,
-        computeLabel: (field) => ({
-          entity: "Entität",
-          icon: "Icon",
-          icon_active: "Binary Sensor: Icon für aktiven Zustand",
-          state_active: "Binary Sensor: Name des aktiven Zustands",
-          color_active: "Binary Sensor: Farbe für aktiven Zustand",
-          icon_inactive: "Binary Sensor: Icon für inaktiven Zustand",
-          state_inactive: "Binary Sensor: Name des inaktiven Zustands",
-          color_inactive: "Binary Sensor: Farbe für inaktiven Zustand",
-          binary_sensor_active_state: "Binary Sensor: Zustand mit Akzentfarbe",
-          name: "Beschriftung",
-          action: "Aktion",
-          color: "Farbe",
-          button_size: "Button-Größe",
-          show_name: "Buttontext anzeigen",
-          show_card_frame: "Kartenrahmen anzeigen",
-          show_brightness_slider: "Helligkeitsregler anzeigen",
-        })[field.name],
-      };
-  }
-
-  static getStubConfig() {
-    return {
-      button_size: 5,
-      show_name: true,
-      show_card_frame: true,
-      entity: "light.wohnzimmer",
-      name: "Wohnzimmer",
-      icon: "mdi:sofa-outline",
-      action: "toggle",
-      color: "orange",
-    };
-  }
-
-  _callButton() {
-    const button = this._config;
-    if (!this._hass || !button.entity) return;
-    if (button.entity.startsWith("binary_sensor.") || (button.action || "toggle") === "more-info") {
-      this.dispatchEvent(new CustomEvent("hass-more-info", {
-        bubbles: true,
-        composed: true,
-        detail: { entityId: button.entity },
-      }));
-      return;
+    setConfig(config) {
+        window.clearTimeout(this._brightnessTimer);
+        this._pendingBrightnessState = null;
+        this._dragging = false;
+        this._config = {
+            entity: "",
+            icon: "mdi:gesture-tap-button",
+            action: "toggle",
+            button_size: 5,
+            show_name: true,
+            show_card_frame: true,
+            show_brightness_slider: true,
+            color: "orange",
+            ...config,
+        };
+        this._render();
     }
-    this._hass.callService("homeassistant", "toggle", { entity_id: button.entity });
-  }
-
-  _bindEvents() {
-    this.shadowRoot.querySelector(".button")?.addEventListener("click", () => this._callButton());
-    const slider = this.shadowRoot.querySelector(".dimmer");
-    slider?.addEventListener("pointerdown", (event) => this._startBrightnessDrag(event));
-    slider?.addEventListener("pointermove", (event) => this._moveBrightnessDrag(event));
-    slider?.addEventListener("pointerup", (event) => this._endBrightnessDrag(event));
-    slider?.addEventListener("pointercancel", () => { this._dragging = false; slider.classList.remove("dragging"); this._syncEntityState(); });
-    slider?.addEventListener("keydown", (event) => this._brightnessKey(event));
-  }
-
-  _isDimmable(state) {
-    if (this._config.show_brightness_slider === false || !this._config.entity?.startsWith("light.") || !state) return false;
-    const modes = state.attributes?.supported_color_modes || [];
-    return modes.some((mode) => ["brightness", "color_temp", "hs", "xy", "rgb", "rgbw", "rgbww", "white"].includes(mode)) || Boolean((state.attributes?.supported_features || 0) & 1);
-  }
-
-  _displayBrightness(value) {
-    this._brightness = Math.max(0, Math.min(100, Math.round(value)));
-    const slider = this.shadowRoot.querySelector(".dimmer");
-    if (slider) {
-      slider.style.setProperty("--brightness", this._brightness);
-      slider.setAttribute("aria-valuenow", String(this._brightness));
-      slider.setAttribute("aria-valuetext", `${this._brightness} %`);
+    set hass(hass) {
+        this._hass = hass;
+        if (!this._config || !this.shadowRoot.querySelector(".button")) {
+            this._render();
+            return;
+        }
+        this._syncEntityState();
     }
-    const valueLabel = this.shadowRoot.querySelector(".brightness-value");
-    if (valueLabel) valueLabel.textContent = `${this._brightness} %`;
-  }
-
-  _setBrightnessFromPointer(event) {
-    const bounds = this.shadowRoot.querySelector(".dimmer").getBoundingClientRect();
-    const angle = Math.atan2(event.clientX - (bounds.left + bounds.width / 2), -(event.clientY - (bounds.top + bounds.height / 2)));
-    const pointerValue = ((angle + 2 * Math.PI) % (2 * Math.PI)) / (2 * Math.PI) * 100;
-    if (this._dragging && this._pointerValue != null) {
-      let difference = pointerValue - this._pointerValue;
-      if (difference > 50) difference -= 100;
-      if (difference < -50) difference += 100;
-      this._dragBrightness = Math.max(0, Math.min(100, this._dragBrightness + difference));
-      this._displayBrightness(this._dragBrightness);
-    } else {
-      this._dragBrightness = pointerValue < 1 && this._brightness > 50 ? 100 : pointerValue;
-      this._displayBrightness(this._dragBrightness);
+    get hass() {
+        return this._hass;
     }
-    this._pointerValue = pointerValue;
-  }
-
-  _startBrightnessDrag(event) {
-    const state = this._hass?.states?.[this._config.entity];
-    if (event.button !== 0 || !this._isDimmable(state) || ["unavailable", "unknown"].includes(state.state)) return;
-    event.preventDefault();
-    this._pointerValue = null;
-    this._dragging = true;
-    event.currentTarget.classList.add("dragging");
-    event.currentTarget.setPointerCapture(event.pointerId);
-    this._setBrightnessFromPointer(event);
-  }
-
-  _moveBrightnessDrag(event) {
-    if (this._dragging) this._setBrightnessFromPointer(event);
-  }
-
-  _endBrightnessDrag(event) {
-    if (!this._dragging) return;
-    this._setBrightnessFromPointer(event);
-    this._dragging = false;
-    event.currentTarget.classList.remove("dragging");
-    this._applyBrightness();
-  }
-
-  _applyBrightness() {
-    if (!this._hass || !this._config.entity) return;
-    this._pendingBrightnessState = this._hass.states?.[this._config.entity] || null;
-    window.clearTimeout(this._brightnessTimer);
-    this._brightnessTimer = window.setTimeout(() => {
-      this._pendingBrightnessState = null;
-      this._syncEntityState();
-    }, 2500);
-    if (this._brightness === 0) this._hass.callService("light", "turn_off", { entity_id: this._config.entity });
-    else this._hass.callService("light", "turn_on", { entity_id: this._config.entity, brightness_pct: this._brightness });
-  }
-
-  _brightnessKey(event) {
-    const state = this._hass?.states?.[this._config.entity];
-    if (!this._isDimmable(state) || ["unavailable", "unknown"].includes(state.state)) return;
-    let value = this._brightness;
-    if (event.key === "ArrowUp" || event.key === "ArrowRight") value += 5;
-    else if (event.key === "ArrowDown" || event.key === "ArrowLeft") value -= 5;
-    else if (event.key === "Home") value = 0;
-    else if (event.key === "End") value = 100;
-    else return;
-    event.preventDefault();
-    this._displayBrightness(value);
-    this._applyBrightness();
-  }
-
-  _syncEntityState() {
-    const button = this.shadowRoot.querySelector(".button");
-    if (!button) return;
-    const state = this._hass?.states?.[this._config.entity];
-    const binarySensor = this._config.entity?.startsWith("binary_sensor.");
-    const binaryKnown = binarySensor && ["on", "off"].includes(state?.state);
-    const isActive = binarySensor ? binaryKnown && state.state === (this._config.binary_sensor_active_state === "off" ? "off" : "on") : state && !["off", "closed", "idle", "standby", "unavailable", "unknown", "not_home"].includes(state.state);
-    button.classList.toggle("binary-sensor", Boolean(binarySensor));
-    button.classList.toggle("active", Boolean(isActive));
-    button.classList.toggle("inactive", Boolean(binarySensor ? binaryKnown && !isActive : state && ["off", "closed", "idle", "standby", "not_home"].includes(state.state)));
-    const icon = this.shadowRoot.querySelector(".button ha-icon");
-    if (icon) icon.setAttribute("icon", (binaryKnown ? ((isActive ? this._config.icon_active : this._config.icon_inactive) || (state.state === "on" ? this._config.icon_open : this._config.icon_closed)) : null) || this._config.icon || "mdi:gesture-tap-button");
-    const dimmable = this._isDimmable(state);
-    const available = !["unavailable", "unknown"].includes(state?.state);
-    button.classList.toggle("dimmable", dimmable);
-    const slider = this.shadowRoot.querySelector(".dimmer");
-    if (slider) {
-      slider.classList.toggle("visible", dimmable);
-      slider.classList.toggle("inactive", Boolean(state && state.state === "off"));
-      slider.classList.toggle("disabled", !available);
-      slider.setAttribute("tabindex", dimmable && available ? "0" : "-1");
-      slider.setAttribute("aria-hidden", String(!dimmable));
-      slider.setAttribute("aria-disabled", String(!available));
+    getCardSize() {
+        return this._config?.show_name === false ? 2 : 3;
     }
-    if (this._pendingBrightnessState && this._pendingBrightnessState !== state) {
-      this._pendingBrightnessState = null;
-      window.clearTimeout(this._brightnessTimer);
+    static getConfigElement() {
+        return document.createElement("glass-button-card-editor");
     }
-    if (!this._dragging && !this._pendingBrightnessState) this._displayBrightness(isActive && Number.isFinite(state?.attributes?.brightness) ? state.attributes.brightness / 255 * 100 : 0);
-    const stateLabel = this.shadowRoot.querySelector(".state-value");
-    if (stateLabel) stateLabel.textContent = !dimmable && ["on", "off"].includes(state?.state) ? (binarySensor ? ((isActive ? this._config.state_active : this._config.state_inactive) || (state.state === "on" ? "Offen" : "Geschlossen")) : (state.state === "on" ? "An" : "Aus")) : "";
-    const name = String(this._config.name ?? state?.attributes?.friendly_name ?? this._config.entity ?? "Button").trim();
-    const accessibleName = name || state?.attributes?.friendly_name || this._config.entity || "Button";
-    button.setAttribute("aria-label", accessibleName);
-    button.setAttribute("title", accessibleName);
-    const label = this.shadowRoot.querySelector(".name");
-    if (label && this._config.name == null) label.textContent = name;
-  }
-
-  _render() {
-    if (!this._config) return;
-    const level = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
-    const scale = 1 / 3 + ((level - 1) / 4) * (2 / 3);
-    const showName = this._config.show_name !== false;
-    const showCardFrame = this._config.show_card_frame !== false;
-    const color = BUTTON_COLORS[this._config.color] ? this._config.color : "orange";
-    const activeColor = BUTTON_COLORS[this._config.color_active] || BUTTON_COLORS[color];
-    const inactiveColor = BUTTON_COLORS[this._config.color_inactive] || BUTTON_COLORS.gray;
-    const state = this._hass?.states?.[this._config.entity];
-    const isActive = state && !["off", "closed", "idle", "standby", "unavailable", "unknown", "not_home"].includes(state.state);
-    const name = String(this._config.name ?? state?.attributes?.friendly_name ?? this._config.entity ?? "Button").trim();
-    const icon = this._config.icon || "mdi:gesture-tap-button";
-
-    this.shadowRoot.innerHTML = `
+    static getConfigForm() {
+        const schema = [
+            { name: "entity", required: true, selector: { entity: {} } },
+            { name: "icon", selector: { icon: {} } },
+            { name: "icon_active", selector: { icon: {} } },
+            { name: "state_active", selector: { text: {} } },
+            { name: "color_active", selector: { select: { mode: "dropdown", options: BUTTON_COLOR_OPTIONS } } },
+            { name: "icon_inactive", selector: { icon: {} } },
+            { name: "state_inactive", selector: { text: {} } },
+            { name: "color_inactive", default: "gray", selector: { select: { mode: "dropdown", options: BUTTON_COLOR_OPTIONS } } },
+            { name: "binary_sensor_active_state", default: "on", selector: { select: { mode: "dropdown", options: [{ value: "on", label: "Offen" }, { value: "off", label: "Geschlossen" }] } } },
+            { name: "name", selector: { text: {} } },
+            {
+                name: "action",
+                default: "toggle",
+                selector: { select: { mode: "dropdown", options: [{ value: "toggle", label: "Ein-/Ausschalten" }, { value: "more-info", label: "Mehr Informationen anzeigen" }] } },
+            },
+            {
+                name: "color",
+                default: "orange",
+                selector: { select: { mode: "dropdown", options: BUTTON_COLOR_OPTIONS } },
+            },
+            { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+            { name: "show_name", default: true, selector: { boolean: {} } },
+            { name: "show_card_frame", default: true, selector: { boolean: {} } },
+            { name: "show_brightness_slider", default: true, selector: { boolean: {} } },
+        ];
+        return {
+            schema,
+            computeLabel: (field) => ({
+                entity: "Entität",
+                icon: "Icon",
+                icon_active: "Binary Sensor: Icon für aktiven Zustand",
+                state_active: "Binary Sensor: Name des aktiven Zustands",
+                color_active: "Binary Sensor: Farbe für aktiven Zustand",
+                icon_inactive: "Binary Sensor: Icon für inaktiven Zustand",
+                state_inactive: "Binary Sensor: Name des inaktiven Zustands",
+                color_inactive: "Binary Sensor: Farbe für inaktiven Zustand",
+                binary_sensor_active_state: "Binary Sensor: Zustand mit Akzentfarbe",
+                name: "Beschriftung",
+                action: "Aktion",
+                color: "Farbe",
+                button_size: "Button-Größe",
+                show_name: "Buttontext anzeigen",
+                show_card_frame: "Kartenrahmen anzeigen",
+                show_brightness_slider: "Helligkeitsregler anzeigen",
+            })[field.name],
+        };
+    }
+    static getStubConfig() {
+        return {
+            button_size: 5,
+            show_name: true,
+            show_card_frame: true,
+            entity: "light.wohnzimmer",
+            name: "Wohnzimmer",
+            icon: "mdi:sofa-outline",
+            action: "toggle",
+            color: "orange",
+        };
+    }
+    _callButton() {
+        const button = this._config;
+        if (!this._hass || !button.entity)
+            return;
+        if (button.entity.startsWith("binary_sensor.") || (button.action || "toggle") === "more-info") {
+            this.dispatchEvent(new CustomEvent("hass-more-info", {
+                bubbles: true,
+                composed: true,
+                detail: { entityId: button.entity },
+            }));
+            return;
+        }
+        this._hass.callService("homeassistant", "toggle", { entity_id: button.entity });
+    }
+    _bindEvents() {
+        this.shadowRoot.querySelector(".button")?.addEventListener("click", () => this._callButton());
+        const slider = this.shadowRoot.querySelector(".dimmer");
+        slider?.addEventListener("pointerdown", (event) => this._startBrightnessDrag(event));
+        slider?.addEventListener("pointermove", (event) => this._moveBrightnessDrag(event));
+        slider?.addEventListener("pointerup", (event) => this._endBrightnessDrag(event));
+        slider?.addEventListener("pointercancel", () => { this._dragging = false; slider.classList.remove("dragging"); this._syncEntityState(); });
+        slider?.addEventListener("keydown", (event) => this._brightnessKey(event));
+    }
+    _isDimmable(state) {
+        if (this._config.show_brightness_slider === false || !this._config.entity?.startsWith("light.") || !state)
+            return false;
+        const modes = state.attributes?.supported_color_modes || [];
+        return modes.some((mode) => ["brightness", "color_temp", "hs", "xy", "rgb", "rgbw", "rgbww", "white"].includes(mode)) || Boolean((state.attributes?.supported_features || 0) & 1);
+    }
+    _displayBrightness(value) {
+        this._brightness = Math.max(0, Math.min(100, Math.round(value)));
+        const slider = this.shadowRoot.querySelector(".dimmer");
+        if (slider) {
+            slider.style.setProperty("--brightness", this._brightness);
+            slider.setAttribute("aria-valuenow", String(this._brightness));
+            slider.setAttribute("aria-valuetext", `${this._brightness} %`);
+        }
+        const valueLabel = this.shadowRoot.querySelector(".brightness-value");
+        if (valueLabel)
+            valueLabel.textContent = `${this._brightness} %`;
+    }
+    _setBrightnessFromPointer(event) {
+        const bounds = this.shadowRoot.querySelector(".dimmer").getBoundingClientRect();
+        const angle = Math.atan2(event.clientX - (bounds.left + bounds.width / 2), -(event.clientY - (bounds.top + bounds.height / 2)));
+        const pointerValue = ((angle + 2 * Math.PI) % (2 * Math.PI)) / (2 * Math.PI) * 100;
+        if (this._dragging && this._pointerValue != null) {
+            let difference = pointerValue - this._pointerValue;
+            if (difference > 50)
+                difference -= 100;
+            if (difference < -50)
+                difference += 100;
+            this._dragBrightness = Math.max(0, Math.min(100, this._dragBrightness + difference));
+            this._displayBrightness(this._dragBrightness);
+        }
+        else {
+            this._dragBrightness = pointerValue < 1 && this._brightness > 50 ? 100 : pointerValue;
+            this._displayBrightness(this._dragBrightness);
+        }
+        this._pointerValue = pointerValue;
+    }
+    _startBrightnessDrag(event) {
+        const state = this._hass?.states?.[this._config.entity];
+        if (event.button !== 0 || !this._isDimmable(state) || ["unavailable", "unknown"].includes(state.state))
+            return;
+        event.preventDefault();
+        this._pointerValue = null;
+        this._dragging = true;
+        event.currentTarget.classList.add("dragging");
+        event.currentTarget.setPointerCapture(event.pointerId);
+        this._setBrightnessFromPointer(event);
+    }
+    _moveBrightnessDrag(event) {
+        if (this._dragging)
+            this._setBrightnessFromPointer(event);
+    }
+    _endBrightnessDrag(event) {
+        if (!this._dragging)
+            return;
+        this._setBrightnessFromPointer(event);
+        this._dragging = false;
+        event.currentTarget.classList.remove("dragging");
+        this._applyBrightness();
+    }
+    _applyBrightness() {
+        if (!this._hass || !this._config.entity)
+            return;
+        this._pendingBrightnessState = this._hass.states?.[this._config.entity] || null;
+        window.clearTimeout(this._brightnessTimer);
+        this._brightnessTimer = window.setTimeout(() => {
+            this._pendingBrightnessState = null;
+            this._syncEntityState();
+        }, 2500);
+        if (this._brightness === 0)
+            this._hass.callService("light", "turn_off", { entity_id: this._config.entity });
+        else
+            this._hass.callService("light", "turn_on", { entity_id: this._config.entity, brightness_pct: this._brightness });
+    }
+    _brightnessKey(event) {
+        const state = this._hass?.states?.[this._config.entity];
+        if (!this._isDimmable(state) || ["unavailable", "unknown"].includes(state.state))
+            return;
+        let value = this._brightness;
+        if (event.key === "ArrowUp" || event.key === "ArrowRight")
+            value += 5;
+        else if (event.key === "ArrowDown" || event.key === "ArrowLeft")
+            value -= 5;
+        else if (event.key === "Home")
+            value = 0;
+        else if (event.key === "End")
+            value = 100;
+        else
+            return;
+        event.preventDefault();
+        this._displayBrightness(value);
+        this._applyBrightness();
+    }
+    _syncEntityState() {
+        const button = this.shadowRoot.querySelector(".button");
+        if (!button)
+            return;
+        const state = this._hass?.states?.[this._config.entity];
+        const binarySensor = this._config.entity?.startsWith("binary_sensor.");
+        const binaryKnown = binarySensor && ["on", "off"].includes(state?.state);
+        const isActive = binarySensor ? binaryKnown && state.state === (this._config.binary_sensor_active_state === "off" ? "off" : "on") : state && !["off", "closed", "idle", "standby", "unavailable", "unknown", "not_home"].includes(state.state);
+        button.classList.toggle("binary-sensor", Boolean(binarySensor));
+        button.classList.toggle("active", Boolean(isActive));
+        button.classList.toggle("inactive", Boolean(binarySensor ? binaryKnown && !isActive : state && ["off", "closed", "idle", "standby", "not_home"].includes(state.state)));
+        const icon = this.shadowRoot.querySelector(".button ha-icon");
+        if (icon)
+            icon.setAttribute("icon", (binaryKnown ? ((isActive ? this._config.icon_active : this._config.icon_inactive) || (state.state === "on" ? this._config.icon_open : this._config.icon_closed)) : null) || this._config.icon || "mdi:gesture-tap-button");
+        const dimmable = this._isDimmable(state);
+        const available = !["unavailable", "unknown"].includes(state?.state);
+        button.classList.toggle("dimmable", dimmable);
+        const slider = this.shadowRoot.querySelector(".dimmer");
+        if (slider) {
+            slider.classList.toggle("visible", dimmable);
+            slider.classList.toggle("inactive", Boolean(state && state.state === "off"));
+            slider.classList.toggle("disabled", !available);
+            slider.setAttribute("tabindex", dimmable && available ? "0" : "-1");
+            slider.setAttribute("aria-hidden", String(!dimmable));
+            slider.setAttribute("aria-disabled", String(!available));
+        }
+        if (this._pendingBrightnessState && this._pendingBrightnessState !== state) {
+            this._pendingBrightnessState = null;
+            window.clearTimeout(this._brightnessTimer);
+        }
+        if (!this._dragging && !this._pendingBrightnessState)
+            this._displayBrightness(isActive && Number.isFinite(state?.attributes?.brightness) ? state.attributes.brightness / 255 * 100 : 0);
+        const stateLabel = this.shadowRoot.querySelector(".state-value");
+        if (stateLabel)
+            stateLabel.textContent = !dimmable && ["on", "off"].includes(state?.state) ? (binarySensor ? ((isActive ? this._config.state_active : this._config.state_inactive) || (state.state === "on" ? "Offen" : "Geschlossen")) : (state.state === "on" ? "An" : "Aus")) : "";
+        const name = String(this._config.name ?? state?.attributes?.friendly_name ?? this._config.entity ?? "Button").trim();
+        const accessibleName = name || state?.attributes?.friendly_name || this._config.entity || "Button";
+        button.setAttribute("aria-label", accessibleName);
+        button.setAttribute("title", accessibleName);
+        const label = this.shadowRoot.querySelector(".name");
+        if (label && this._config.name == null)
+            label.textContent = name;
+    }
+    _render() {
+        if (!this._config)
+            return;
+        const level = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
+        const scale = 1 / 3 + ((level - 1) / 4) * (2 / 3);
+        const showName = this._config.show_name !== false;
+        const showCardFrame = this._config.show_card_frame !== false;
+        const color = BUTTON_COLORS[this._config.color] ? this._config.color : "orange";
+        const activeColor = BUTTON_COLORS[this._config.color_active] || BUTTON_COLORS[color];
+        const inactiveColor = BUTTON_COLORS[this._config.color_inactive] || BUTTON_COLORS.gray;
+        const state = this._hass?.states?.[this._config.entity];
+        const isActive = state && !["off", "closed", "idle", "standby", "unavailable", "unknown", "not_home"].includes(state.state);
+        const name = String(this._config.name ?? state?.attributes?.friendly_name ?? this._config.entity ?? "Button").trim();
+        const icon = this._config.icon || "mdi:gesture-tap-button";
+        this.shadowRoot.innerHTML = `
       <style>
         :host { display:block; width:100%; color:var(--primary-text-color,#f3f3f5); font-family:var(--paper-font-body1_-_font-family,"Arial",sans-serif); }
         * { box-sizing:border-box; }
@@ -685,313 +671,245 @@ class GlassButtonCard extends HTMLElement {
           ${showName && name ? `<span class="name">${escapeHtml(name)}</span>` : ""}
         </div>
       </article>`;
-    this._bindEvents();
-    this._syncEntityState();
-  }
-}
-
-class GlassButtonCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this.shadowRoot.innerHTML = "<ha-form></ha-form>";
-    this._config = {};
-    this._domain = null;
-    this.shadowRoot.querySelector("ha-form").addEventListener("value-changed", (event) => {
-      event.stopPropagation();
-      this._config = { ...this._config, ...event.detail.value };
-      this._syncForm();
-      this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
-    });
-  }
-
-  setConfig(config) {
-    this._config = { ...config };
-    this._syncForm();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    this.shadowRoot.querySelector("ha-form").hass = hass;
-  }
-
-  _syncForm() {
-    const form = this.shadowRoot.querySelector("ha-form");
-    const domain = this._config.entity?.split(".")[0] || "";
-    if (domain !== this._domain) {
-      this._domain = domain;
-      const binaryFields = ["icon_active", "icon_inactive", "state_active", "state_inactive", "color_active", "color_inactive", "binary_sensor_active_state"];
-      const nonBinaryFields = ["icon", "color", "action"];
-      const definition = GlassButtonCard.getConfigForm();
-      form.schema = definition.schema.filter((field) => {
-        if (binaryFields.includes(field.name)) return domain === "binary_sensor";
-        if (nonBinaryFields.includes(field.name)) return domain !== "binary_sensor";
-        if (field.name === "show_brightness_slider") return domain === "light";
-        return true;
-      });
-      form.computeLabel = definition.computeLabel;
+        this._bindEvents();
+        this._syncEntityState();
     }
-    form.data = this._config;
-    form.hass = this._hass;
-  }
 }
-
-if (!customElements.get("glass-button-card")) customElements.define("glass-button-card", GlassButtonCard);
-if (!customElements.get("glass-button-card-editor")) customElements.define("glass-button-card-editor", GlassButtonCardEditor);
-
+class GlassButtonCardEditor extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.innerHTML = "<ha-form></ha-form>";
+        this._config = {};
+        this._domain = null;
+        this.shadowRoot.querySelector("ha-form").addEventListener("value-changed", (event) => {
+            event.stopPropagation();
+            this._config = { ...this._config, ...event.detail.value };
+            this._syncForm();
+            this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
+        });
+    }
+    setConfig(config) {
+        this._config = { ...config };
+        this._syncForm();
+    }
+    set hass(hass) {
+        this._hass = hass;
+        this.shadowRoot.querySelector("ha-form").hass = hass;
+    }
+    _syncForm() {
+        const form = this.shadowRoot.querySelector("ha-form");
+        const domain = this._config.entity?.split(".")[0] || "";
+        if (domain !== this._domain) {
+            this._domain = domain;
+            const binaryFields = ["icon_active", "icon_inactive", "state_active", "state_inactive", "color_active", "color_inactive", "binary_sensor_active_state"];
+            const nonBinaryFields = ["icon", "color", "action"];
+            const definition = GlassButtonCard.getConfigForm();
+            form.schema = definition.schema.filter((field) => {
+                if (binaryFields.includes(field.name))
+                    return domain === "binary_sensor";
+                if (nonBinaryFields.includes(field.name))
+                    return domain !== "binary_sensor";
+                if (field.name === "show_brightness_slider")
+                    return domain === "light";
+                return true;
+            });
+            form.computeLabel = definition.computeLabel;
+        }
+        form.data = this._config;
+        form.hass = this._hass;
+    }
+}
+if (!customElements.get("glass-button-card"))
+    customElements.define("glass-button-card", GlassButtonCard);
+class GlassButtonsCard extends GlassButtonCard {
+}
+if (!customElements.get("glass-buttons-card"))
+    customElements.define("glass-buttons-card", GlassButtonsCard);
+if (!customElements.get("glass-button-card-editor"))
+    customElements.define("glass-button-card-editor", GlassButtonCardEditor);
 window.customCards = window.customCards || [];
 if (!window.customCards.some((card) => card.type === "glass-button-card")) {
-  window.customCards.push({ type: "glass-button-card", name: "Glass Button Card", description: "Einzelner runder Home Assistant Button mit Icon- und Farbauswahl.", preview: true, version: CARD_VERSION });
+    window.customCards.push({ type: "glass-button-card", name: "Glass Button Card", description: "Einzelner runder Home Assistant Button mit Icon- und Farbauswahl.", preview: true, version: CARD_VERSION });
 }
+if (!window.customCards.some((card) => card.type === "glass-buttons-card")) {
+    window.customCards.push({ type: "glass-buttons-card", name: "Glass Buttons", description: "Runder Aktionsbutton für Vertical- und Horizontal-Stacks.", preview: true, version: CARD_VERSION });
+}
+
 })();
 
 (() => {
-const CARD_VERSION = "1.5.3";
+const CARD_VERSION = "2.0.0";
 const escapePanelText = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  "\"": "&quot;",
-  "'": "&#39;",
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
 })[char]);
-
+const normalizePanelConfig = (config = {}) => {
+    const cards = Array.isArray(config.cards) ? [...config.cards] : [];
+    const hasLegacyHeader = Boolean(String(config.title ?? "").trim() || String(config.subtitle ?? "").trim() || (config.show_action_button && config.action_entity));
+    const hasTextCard = cards.some((card) => ["custom:glass-text-card", "glass-text-card"].includes(card?.type));
+    if (hasLegacyHeader && !hasTextCard) {
+        cards.unshift({
+            type: "custom:glass-text-card",
+            title: config.title ?? "",
+            subtitle: config.subtitle ?? "",
+            title_size: config.title_size ?? 5,
+            button_size: config.button_size ?? 5,
+            show_action_button: config.show_action_button ?? false,
+            action_entity: config.action_entity,
+            action_icon: config.action_icon ?? "mdi:gesture-tap-button",
+            action: config.action ?? "toggle",
+        });
+    }
+    const { title, subtitle, title_size, button_size, show_action_button, action_entity, action_icon, action, ...panelConfig } = config;
+    return { panel_size: 5, ...panelConfig, cards };
+};
 class GlassPanelCard extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = null;
-    this._hass = null;
-    this._children = [];
-    this._helpersPromise = null;
-    this._childrenGeneration = 0;
-  }
-
-  setConfig(config) {
-    this._config = {
-      title: "",
-      subtitle: "",
-      title_size: 5,
-      button_size: 5,
-      show_action_button: false,
-      action_icon: "mdi:gesture-tap-button",
-      action: "toggle",
-      cards: [],
-      ...config,
-      cards: Array.isArray(config.cards) ? config.cards : [],
-    };
-    this._childrenGeneration += 1;
-    this._children = [];
-    this._renderShell();
-    return this._loadChildren();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    for (const child of this._children) child.hass = hass;
-    this._updateActionState();
-  }
-
-  get hass() {
-    return this._hass;
-  }
-
-  getCardSize() {
-    return Math.max(3, (this._config?.cards?.length ?? 0) * 2 + 2);
-  }
-
-  static getStubConfig() {
-    return {
-      title: "Aktionen",
-      subtitle: "Wohnzimmer",
-      title_size: 5,
-      button_size: 5,
-      show_action_button: true,
-      action_entity: "light.wohnzimmer",
-      action_icon: "mdi:sofa-outline",
-      action: "toggle",
-      cards: [],
-    };
-  }
-
-  static async getConfigElement() {
-    const helpers = await window.loadCardHelpers();
-    helpers.createCardElement({ type: "vertical-stack", cards: [] });
-    await customElements.whenDefined("hui-vertical-stack-card");
-    const stackCard = customElements.get("hui-vertical-stack-card");
-    await stackCard.getConfigElement();
-    await customElements.whenDefined("hui-card-picker");
-    await customElements.whenDefined("hui-card-element-editor");
-    return document.createElement("glass-panel-card-editor");
-  }
-
-  async _loadChildren() {
-    const cardsConfig = this._config.cards;
-    const generation = this._childrenGeneration;
-    try {
-      this._helpersPromise ??= window.loadCardHelpers();
-      const helpers = await this._helpersPromise;
-      if (!this._config || generation !== this._childrenGeneration) return;
-      const container = this.shadowRoot.querySelector(".children");
-      if (!container) return;
-      container.replaceChildren();
-      this._children = [];
-      if (cardsConfig.length === 0) {
-        container.innerHTML = `<div class="empty">Keine Karten konfiguriert.</div>`;
-      } else {
-        const stack = helpers.createCardElement({ type: "vertical-stack", cards: cardsConfig });
-        stack.hass = this._hass;
-        this._children = [stack];
-        container.append(stack);
-      }
-      this._updateActionState();
-    } catch (error) {
-      const container = this.shadowRoot.querySelector(".children");
-      if (container) container.textContent = `Karten konnten nicht geladen werden: ${error.message}`;
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this._config = null;
+        this._hass = null;
+        this._children = [];
+        this._helpersPromise = null;
+        this._childrenGeneration = 0;
     }
-  }
-
-  _callHeaderAction() {
-    const entity = this._config.action_entity;
-    if (!this._hass || !entity) return;
-    if (this._config.action === "more-info") {
-      this.dispatchEvent(new CustomEvent("hass-more-info", {
-        bubbles: true,
-        composed: true,
-        detail: { entityId: entity },
-      }));
-      return;
+    setConfig(config) {
+        this._config = normalizePanelConfig(config);
+        this._childrenGeneration += 1;
+        this._children = [];
+        this._renderShell();
+        return this._loadChildren();
     }
-    this._hass.callService("homeassistant", "toggle", { entity_id: entity });
-  }
-
-  _updateActionState() {
-    const button = this.shadowRoot.querySelector(".header-action");
-    if (!button) return;
-    const state = this._hass?.states?.[this._config.action_entity];
-    button.classList.toggle("active", Boolean(state && !["off", "closed", "idle", "standby", "unavailable", "unknown", "not_home"].includes(state.state)));
-    button.classList.toggle("inactive", Boolean(state && ["off", "closed", "idle", "standby", "not_home"].includes(state.state)));
-    const label = this.shadowRoot.querySelector(".action-state");
-    if (label) label.textContent = ["on", "off"].includes(state?.state) ? (state.state === "on" ? "An" : "Aus") : "";
-  }
-
-  _renderShell() {
-    const title = escapePanelText(String(this._config.title ?? "").trim());
-    const subtitle = escapePanelText(String(this._config.subtitle ?? "").trim());
-    const titleLevel = Math.min(5, Math.max(1, Number(this._config.title_size) || 5));
-    const titleScale = 0.65 + ((titleLevel - 1) / 4) * 0.35;
-    const buttonLevel = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
-    const buttonScale = 1 / 3 + ((buttonLevel - 1) / 4) * (2 / 3);
-    const menuButtonScale = 0.5 + buttonScale * 0.5;
-    const actionVisible = this._config.show_action_button && this._config.action_entity;
-    this.shadowRoot.innerHTML = `
+    set hass(hass) {
+        this._hass = hass;
+        for (const child of this._children)
+            child.hass = hass;
+    }
+    get hass() {
+        return this._hass;
+    }
+    getCardSize() {
+        return Math.max(1, (this._config?.cards?.length ?? 0) * 2 + 1);
+    }
+    static getStubConfig() {
+        return { panel_size: 5, cards: [] };
+    }
+    static async getConfigElement() {
+        const helpers = await window.loadCardHelpers();
+        helpers.createCardElement({ type: "vertical-stack", cards: [] });
+        await customElements.whenDefined("hui-vertical-stack-card");
+        const stackCard = customElements.get("hui-vertical-stack-card");
+        await stackCard.getConfigElement();
+        await customElements.whenDefined("hui-card-picker");
+        await customElements.whenDefined("hui-card-element-editor");
+        return document.createElement("glass-panel-card-editor");
+    }
+    async _loadChildren() {
+        const cardsConfig = this._config.cards;
+        const generation = this._childrenGeneration;
+        try {
+            this._helpersPromise ??= window.loadCardHelpers();
+            const helpers = await this._helpersPromise;
+            if (!this._config || generation !== this._childrenGeneration)
+                return;
+            const container = this.shadowRoot.querySelector(".children");
+            if (!container)
+                return;
+            container.replaceChildren();
+            this._children = [];
+            if (cardsConfig.length === 0) {
+                container.innerHTML = `<div class="empty">Keine Karten konfiguriert.</div>`;
+            }
+            else {
+                const stack = helpers.createCardElement({ type: "vertical-stack", cards: cardsConfig });
+                stack.hass = this._hass;
+                this._children = [stack];
+                container.append(stack);
+            }
+        }
+        catch (error) {
+            const container = this.shadowRoot.querySelector(".children");
+            if (container)
+                container.textContent = `Karten konnten nicht geladen werden: ${error.message}`;
+        }
+    }
+    _renderShell() {
+        const level = Math.min(5, Math.max(1, Number(this._config.panel_size) || 5));
+        const minPadding = 10 + level * 2;
+        const maxPadding = 18 + level * 4;
+        const fluidPadding = 2.5 + level * 0.44;
+        this.shadowRoot.innerHTML = `
       <style>
         :host { display:block; width:100%; color:var(--primary-text-color,#f3f3f5); font-family:var(--paper-font-body1_-_font-family,"Arial",sans-serif); }
         * { box-sizing:border-box; }
-        .panel { width:100%; padding:clamp(20px,4.7vw,38px); border:1px solid rgba(255,255,255,.1); border-radius:28px; background:radial-gradient(ellipse at 48% 0,#22252a 0,#15171a 62%,#101214 100%); box-shadow:inset 0 1px 1px rgba(255,255,255,.06),0 12px 30px rgba(0,0,0,.2); }
-        .header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:clamp(20px,3vw,30px); }
-        .header[hidden] { display:none; }
-        .header:has(> .header-action:only-child) { justify-content:flex-end; }
-        .titles { min-width:0; }
-        .title { color:#9295a0; font-size:clamp(11px,2.1vw,15px); font-weight:700; letter-spacing:.12em; line-height:normal; text-transform:uppercase; }
-        .subtitle { margin:7px 0 0; color:var(--primary-text-color,#f3f3f5); font-size:var(--subtitle-font); font-weight:700; line-height:1.08; overflow-wrap:anywhere; }
-        .subtitle:first-child { margin-top:0; }
-        .header-action { position:relative; display:grid; flex:none; width:var(--header-action-size); aspect-ratio:1; place-items:center; border:2px solid #303239; border-radius:50%; background:linear-gradient(145deg,#272a30,#17191d); color:#ff8b2b; font:inherit; box-shadow:0 6px 15px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05); cursor:pointer; -webkit-tap-highlight-color:transparent; }
-        .header-action.active { border-color:#ff8b2b; color:#ff9b4a; box-shadow:inset 0 0 20px rgba(255,139,43,.12),0 0 0 1px rgba(255,139,43,.2),0 6px 15px rgba(0,0,0,.25); }
-        .header-action.inactive { color:#85878b; border-color:#45474b; }
-        .header-action ha-icon { display:block; width:var(--header-icon-size); height:var(--header-icon-size); --mdc-icon-size:var(--header-icon-size); }
-        .action-state { position:absolute; bottom:11%; font-size:clamp(5px,calc(var(--header-action-size) * .15),13px); line-height:1; color:inherit; }
+        .panel { width:100%; padding:var(--panel-padding); border:1px solid rgba(255,255,255,.1); border-radius:28px; background:radial-gradient(ellipse at 48% 0,#22252a 0,#15171a 62%,#101214 100%); box-shadow:inset 0 1px 1px rgba(255,255,255,.06),0 12px 30px rgba(0,0,0,.2); }
         .children { display:block; min-width:0; }
         .children > * { min-width:0; }
         .empty { color:var(--secondary-text-color,#a0a2ad); }
-        @media (max-width:380px) { .panel { padding:18px; } }
+        @media (max-width:380px) { .panel { padding:var(--panel-mobile-padding); } }
       </style>
-      <article class="panel" style="--subtitle-font:clamp(${22 * titleScale}px,${4.8 * titleScale}vw,${38 * titleScale}px);--header-action-size:clamp(${56 * menuButtonScale}px,${11 * menuButtonScale}vw,${88 * menuButtonScale}px);--header-icon-size:calc((var(--header-action-size) - 16px) * .46)">
-        <header class="header" ${!title && !subtitle && !actionVisible ? "hidden" : ""}>
-          ${title || subtitle ? `<div class="titles">${title ? `<div class="title">${title}</div>` : ""}${subtitle ? `<h2 class="subtitle">${subtitle}</h2>` : ""}</div>` : ""}
-          ${actionVisible ? `<button class="header-action" aria-label="${escapePanelText(this._config.action_entity)}" title="${escapePanelText(this._config.action_entity)}"><ha-icon icon="${escapePanelText(this._config.action_icon || "mdi:gesture-tap-button")}"></ha-icon><span class="action-state"></span></button>` : ""}
-        </header>
+      <article class="panel" style="--panel-padding:clamp(${minPadding}px,${fluidPadding}vw,${maxPadding}px);--panel-mobile-padding:clamp(${minPadding}px,4.7vw,${maxPadding}px)">
         <div class="children">${this._config.cards.length ? "" : `<div class="empty">Keine Karten konfiguriert.</div>`}</div>
       </article>`;
-    this.shadowRoot.querySelector(".header-action")?.addEventListener("click", () => this._callHeaderAction());
-  }
+    }
 }
-
 const PANEL_FORM_SCHEMA = [
-  { name: "title", default: "", selector: { text: {} } },
-  { name: "subtitle", default: "", selector: { text: {} } },
-  { name: "title_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
-  { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } }, visible: { field: "show_action_button", value: true } },
-  { name: "show_action_button", default: false, selector: { boolean: {} } },
-  { name: "action_entity", selector: { entity: {} }, visible: { field: "show_action_button", value: true } },
-  { name: "action_icon", selector: { icon: {} }, visible: { field: "show_action_button", value: true } },
-  {
-    name: "action",
-    default: "toggle",
-    selector: { select: { mode: "dropdown", options: [["toggle", "Ein-/Ausschalten"], ["more-info", "Mehr Informationen anzeigen"]] } },
-    visible: { field: "show_action_button", value: true },
-  },
+    { name: "panel_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
 ];
-
 class GlassPanelCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = null;
-    this._hass = null;
-    this._lovelace = undefined;
-    this._selectedCard = -1;
-    this._showPicker = false;
-    this._renderShell();
-  }
-
-  setConfig(config) {
-    const previousCards = JSON.stringify(this._config?.cards ?? []);
-    this._config = {
-      title: "",
-      subtitle: "",
-      title_size: 5,
-      button_size: 5,
-      show_action_button: false,
-      action_icon: "mdi:gesture-tap-button",
-      action: "toggle",
-      cards: [],
-      ...config,
-      cards: Array.isArray(config.cards) ? config.cards : [],
-    };
-    const form = this.shadowRoot.querySelector("ha-form");
-    if (form) {
-      form.schema = PANEL_FORM_SCHEMA;
-      form.data = this._config;
-      form.hass = this._hass;
-      form.computeLabel = (field) => ({ title: "Titel", subtitle: "Beschriftung", title_size: "Beschriftungsgröße", button_size: "Button-Größe", show_action_button: "Aktionsbutton anzeigen", action_entity: "Aktions-Entität", action_icon: "Aktions-Icon", action: "Aktion" })[field.name] || field.name;
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this._config = null;
+        this._hass = null;
+        this._lovelace = undefined;
+        this._selectedCard = -1;
+        this._showPicker = false;
+        this._renderShell();
     }
-    if (previousCards !== JSON.stringify(this._config.cards)) {
-      this._selectedCard = Math.min(this._selectedCard, this._config.cards.length - 1);
-      this._renderCardList();
+    setConfig(config) {
+        const previousCards = JSON.stringify(this._config?.cards ?? []);
+        this._config = normalizePanelConfig(config);
+        const form = this.shadowRoot.querySelector("ha-form");
+        if (form) {
+            form.schema = PANEL_FORM_SCHEMA;
+            form.data = this._config;
+            form.hass = this._hass;
+            form.computeLabel = (field) => ({ panel_size: "Panel-Größe" })[field.name] || field.name;
+        }
+        if (previousCards !== JSON.stringify(this._config.cards)) {
+            this._selectedCard = Math.min(this._selectedCard, this._config.cards.length - 1);
+            this._renderCardList();
+        }
+        this._syncCardEditor();
     }
-    this._syncCardEditor();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    const form = this.shadowRoot.querySelector("ha-form");
-    const picker = this.shadowRoot.querySelector("hui-card-picker");
-    const cardEditor = this.shadowRoot.querySelector("hui-card-element-editor");
-    if (form) form.hass = hass;
-    if (picker) picker.hass = hass;
-    if (cardEditor) cardEditor.hass = hass;
-  }
-
-  set lovelace(lovelace) {
-    this._lovelace = lovelace;
-    const picker = this.shadowRoot.querySelector("hui-card-picker");
-    const cardEditor = this.shadowRoot.querySelector("hui-card-element-editor");
-    if (picker) picker.lovelace = lovelace;
-    if (cardEditor) cardEditor.lovelace = lovelace;
-  }
-
-  _renderShell() {
-    this.shadowRoot.innerHTML = `
+    set hass(hass) {
+        this._hass = hass;
+        const form = this.shadowRoot.querySelector("ha-form");
+        const picker = this.shadowRoot.querySelector("hui-card-picker");
+        const cardEditor = this.shadowRoot.querySelector("hui-card-element-editor");
+        if (form)
+            form.hass = hass;
+        if (picker)
+            picker.hass = hass;
+        if (cardEditor)
+            cardEditor.hass = hass;
+    }
+    set lovelace(lovelace) {
+        this._lovelace = lovelace;
+        const picker = this.shadowRoot.querySelector("hui-card-picker");
+        const cardEditor = this.shadowRoot.querySelector("hui-card-element-editor");
+        if (picker)
+            picker.lovelace = lovelace;
+        if (cardEditor)
+            cardEditor.lovelace = lovelace;
+    }
+    _renderShell() {
+        this.shadowRoot.innerHTML = `
       <style>
         .editor { display:grid; gap:20px; }
         .cards-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
@@ -1018,325 +936,329 @@ class GlassPanelCardEditor extends HTMLElement {
           <hui-card-picker class="card-picker" hide-clipboard hidden></hui-card-picker>
         </section>
       </div>`;
-
-    this.shadowRoot.querySelector("ha-form")?.addEventListener("value-changed", (event) => this._handleFormChanged(event));
-    this.shadowRoot.querySelector("hui-card-picker")?.addEventListener("config-changed", (event) => this._handleCardPicked(event));
-    this.shadowRoot.querySelector("hui-card-element-editor")?.addEventListener("config-changed", (event) => this._handleChildChanged(event));
-    this.shadowRoot.querySelector(".add-card")?.addEventListener("click", () => this._togglePicker());
-    this.shadowRoot.querySelector(".remove-card")?.addEventListener("click", () => this._removeSelectedCard());
-    this.shadowRoot.querySelector(".move-before")?.addEventListener("click", () => this._moveSelectedCard(-1));
-    this.shadowRoot.querySelector(".move-after")?.addEventListener("click", () => this._moveSelectedCard(1));
-  }
-
-  _handleFormChanged(event) {
-    this._config = { ...this._config, ...event.detail.value };
-    this._notifyConfig();
-  }
-
-  _handleCardPicked(event) {
-    event.stopPropagation();
-    this._config = { ...this._config, cards: [...this._config.cards, event.detail.config] };
-    this._selectedCard = this._config.cards.length - 1;
-    this._showPicker = false;
-    this._renderCardList();
-    this._syncCardEditor();
-    this._notifyConfig();
-  }
-
-  _handleChildChanged(event) {
-    event.stopPropagation();
-    if (this._selectedCard < 0) return;
-    const cards = [...this._config.cards];
-    cards[this._selectedCard] = event.detail.config ?? event.detail.value;
-    this._config = { ...this._config, cards };
-    this._notifyConfig();
-  }
-
-  _togglePicker() {
-    this._showPicker = !this._showPicker;
-    const picker = this.shadowRoot.querySelector("hui-card-picker");
-    const editor = this.shadowRoot.querySelector("hui-card-element-editor");
-    if (picker) {
-      picker.hidden = !this._showPicker;
-      picker.hass = this._hass;
-      picker.lovelace = this._lovelace;
+        this.shadowRoot.querySelector("ha-form")?.addEventListener("value-changed", (event) => this._handleFormChanged(event));
+        this.shadowRoot.querySelector("hui-card-picker")?.addEventListener("config-changed", (event) => this._handleCardPicked(event));
+        this.shadowRoot.querySelector("hui-card-element-editor")?.addEventListener("config-changed", (event) => this._handleChildChanged(event));
+        this.shadowRoot.querySelector(".add-card")?.addEventListener("click", () => this._togglePicker());
+        this.shadowRoot.querySelector(".remove-card")?.addEventListener("click", () => this._removeSelectedCard());
+        this.shadowRoot.querySelector(".move-before")?.addEventListener("click", () => this._moveSelectedCard(-1));
+        this.shadowRoot.querySelector(".move-after")?.addEventListener("click", () => this._moveSelectedCard(1));
     }
-    if (editor) editor.hidden = this._showPicker || this._selectedCard < 0;
-  }
-
-  _removeSelectedCard() {
-    if (this._selectedCard < 0) return;
-    const cards = this._config.cards.filter((_, index) => index !== this._selectedCard);
-    this._config = { ...this._config, cards };
-    this._selectedCard = Math.min(this._selectedCard, cards.length - 1);
-    this._renderCardList();
-    this._syncCardEditor();
-    this._notifyConfig();
-  }
-
-  _moveSelectedCard(offset) {
-    const target = this._selectedCard + offset;
-    if (target < 0 || target >= this._config.cards.length) return;
-    const cards = [...this._config.cards];
-    [cards[this._selectedCard], cards[target]] = [cards[target], cards[this._selectedCard]];
-    this._config = { ...this._config, cards };
-    this._selectedCard = target;
-    this._renderCardList();
-    this._syncCardEditor();
-    this._notifyConfig();
-  }
-
-  _selectCard(index) {
-    this._selectedCard = index;
-    this._showPicker = false;
-    this._renderCardList();
-    this._syncCardEditor();
-  }
-
-  _renderCardList() {
-    const tabs = this.shadowRoot.querySelector(".card-tabs");
-    if (!tabs) return;
-    tabs.innerHTML = this._config.cards.map((card, index) => `<button type="button" data-card-index="${index}" aria-pressed="${index === this._selectedCard}">${escapePanelText(card.type || `Karte ${index + 1}`)}</button>`).join("");
-    tabs.querySelectorAll("[data-card-index]").forEach((button) => button.addEventListener("click", () => this._selectCard(Number(button.dataset.cardIndex))));
-    const picker = this.shadowRoot.querySelector("hui-card-picker");
-    const editor = this.shadowRoot.querySelector("hui-card-element-editor");
-    if (picker) picker.hidden = !this._showPicker;
-    if (editor) editor.hidden = this._showPicker || this._selectedCard < 0;
-  }
-
-  _syncCardEditor() {
-    const editor = this.shadowRoot.querySelector("hui-card-element-editor");
-    if (!editor || this._selectedCard < 0) return;
-    editor.hass = this._hass;
-    editor.lovelace = this._lovelace;
-    editor.value = this._config.cards[this._selectedCard];
-    editor.hidden = this._showPicker;
-  }
-
-  _notifyConfig() {
-    this.dispatchEvent(new CustomEvent("config-changed", {
-      bubbles: true,
-      composed: true,
-      detail: { config: this._config },
-    }));
-  }
+    _handleFormChanged(event) {
+        this._config = { ...this._config, ...event.detail.value };
+        this._notifyConfig();
+    }
+    _handleCardPicked(event) {
+        event.stopPropagation();
+        this._config = { ...this._config, cards: [...this._config.cards, event.detail.config] };
+        this._selectedCard = this._config.cards.length - 1;
+        this._showPicker = false;
+        this._renderCardList();
+        this._syncCardEditor();
+        this._notifyConfig();
+    }
+    _handleChildChanged(event) {
+        event.stopPropagation();
+        if (this._selectedCard < 0)
+            return;
+        const cards = [...this._config.cards];
+        cards[this._selectedCard] = event.detail.config ?? event.detail.value;
+        this._config = { ...this._config, cards };
+        this._notifyConfig();
+    }
+    _togglePicker() {
+        this._showPicker = !this._showPicker;
+        const picker = this.shadowRoot.querySelector("hui-card-picker");
+        const editor = this.shadowRoot.querySelector("hui-card-element-editor");
+        if (picker) {
+            picker.hidden = !this._showPicker;
+            picker.hass = this._hass;
+            picker.lovelace = this._lovelace;
+        }
+        if (editor)
+            editor.hidden = this._showPicker || this._selectedCard < 0;
+    }
+    _removeSelectedCard() {
+        if (this._selectedCard < 0)
+            return;
+        const cards = this._config.cards.filter((_, index) => index !== this._selectedCard);
+        this._config = { ...this._config, cards };
+        this._selectedCard = Math.min(this._selectedCard, cards.length - 1);
+        this._renderCardList();
+        this._syncCardEditor();
+        this._notifyConfig();
+    }
+    _moveSelectedCard(offset) {
+        const target = this._selectedCard + offset;
+        if (target < 0 || target >= this._config.cards.length)
+            return;
+        const cards = [...this._config.cards];
+        [cards[this._selectedCard], cards[target]] = [cards[target], cards[this._selectedCard]];
+        this._config = { ...this._config, cards };
+        this._selectedCard = target;
+        this._renderCardList();
+        this._syncCardEditor();
+        this._notifyConfig();
+    }
+    _selectCard(index) {
+        this._selectedCard = index;
+        this._showPicker = false;
+        this._renderCardList();
+        this._syncCardEditor();
+    }
+    _renderCardList() {
+        const tabs = this.shadowRoot.querySelector(".card-tabs");
+        if (!tabs)
+            return;
+        tabs.innerHTML = this._config.cards.map((card, index) => `<button type="button" data-card-index="${index}" aria-pressed="${index === this._selectedCard}">${escapePanelText(card.type || `Karte ${index + 1}`)}</button>`).join("");
+        tabs.querySelectorAll("[data-card-index]").forEach((button) => button.addEventListener("click", () => this._selectCard(Number(button.dataset.cardIndex))));
+        const picker = this.shadowRoot.querySelector("hui-card-picker");
+        const editor = this.shadowRoot.querySelector("hui-card-element-editor");
+        if (picker)
+            picker.hidden = !this._showPicker;
+        if (editor)
+            editor.hidden = this._showPicker || this._selectedCard < 0;
+    }
+    _syncCardEditor() {
+        const editor = this.shadowRoot.querySelector("hui-card-element-editor");
+        if (!editor || this._selectedCard < 0)
+            return;
+        editor.hass = this._hass;
+        editor.lovelace = this._lovelace;
+        editor.value = this._config.cards[this._selectedCard];
+        editor.hidden = this._showPicker;
+    }
+    _notifyConfig() {
+        this.dispatchEvent(new CustomEvent("config-changed", {
+            bubbles: true,
+            composed: true,
+            detail: { config: this._config },
+        }));
+    }
 }
-
-if (!customElements.get("glass-panel-card")) customElements.define("glass-panel-card", GlassPanelCard);
-if (!customElements.get("glass-panel-card-editor")) customElements.define("glass-panel-card-editor", GlassPanelCardEditor);
-
+if (!customElements.get("glass-panel-card"))
+    customElements.define("glass-panel-card", GlassPanelCard);
+if (!customElements.get("glass-panel-card-editor"))
+    customElements.define("glass-panel-card-editor", GlassPanelCardEditor);
 window.customCards = window.customCards || [];
 if (!window.customCards.some((card) => card.type === "glass-panel-card")) {
-  window.customCards.push({ type: "glass-panel-card", name: "Glass Panel Card", description: "Kartencontainer mit Titel, Untertitel und optionaler Aktion.", preview: true, version: CARD_VERSION });
+    window.customCards.push({ type: "glass-panel-card", name: "Glass Panel Card", description: "Panel-Hülle für beliebig viele Lovelace-Kindkarten.", preview: true, version: CARD_VERSION });
 }
+
 })();
 
 (() => {
 const RGB_CARD_VERSION = "1.2.2";
 const RGB_PRESET_COUNT = 6;
 const rgbToHs = (rgb) => {
-  const [red, green, blue] = rgb.map((value) => value / 255);
-  const maximum = Math.max(red, green, blue);
-  const minimum = Math.min(red, green, blue);
-  const difference = maximum - minimum;
-  let hue = 0;
-  if (difference) {
-    if (maximum === red) hue = (green - blue) / difference;
-    else if (maximum === green) hue = (blue - red) / difference + 2;
-    else hue = (red - green) / difference + 4;
-    hue = (hue * 60 + 360) % 360;
-  }
-  return [Math.round(hue), maximum ? Math.round(difference / maximum * 100) : 0];
+    const [red, green, blue] = rgb.map((value) => value / 255);
+    const maximum = Math.max(red, green, blue);
+    const minimum = Math.min(red, green, blue);
+    const difference = maximum - minimum;
+    let hue = 0;
+    if (difference) {
+        if (maximum === red)
+            hue = (green - blue) / difference;
+        else if (maximum === green)
+            hue = (blue - red) / difference + 2;
+        else
+            hue = (red - green) / difference + 4;
+        hue = (hue * 60 + 360) % 360;
+    }
+    return [Math.round(hue), maximum ? Math.round(difference / maximum * 100) : 0];
 };
 const escapeRgb = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
-
 class GlassRgbCard extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = null;
-    this._hass = null;
-    this._stateKey = null;
-    this._presets = [];
-    this._selected = -1;
-    this._hue = 0;
-    this._saturation = 100;
-    this._brightness = 0;
-    this._temperatureValue = null;
-    this._dragging = false;
-    this._pending = false;
-    this._pendingTimer = null;
-  }
-
-  static getStubConfig() { return { entity: "light.wohnzimmer", title: "RGB", turn_on_text: "RGB", title_size: 5, button_size: 5, show_action_button: true, show_presets: false }; }
-  static getConfigForm() {
-    return {
-      schema: [
-        { name: "entity", required: true, selector: { entity: { filter: { domain: "light" } } } },
-        { name: "title", default: "RGB", selector: { text: {} } },
-        { name: "name", selector: { text: {} } },
-        { name: "icon", selector: { icon: {} } },
-        { name: "turn_on_text", default: "RGB", selector: { text: {} } },
-        { name: "show_action_button", default: true, selector: { boolean: {} } },
-        { name: "title_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
-        { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
-        { name: "show_presets", default: false, selector: { boolean: {} } },
-        ...Array.from({ length: RGB_PRESET_COUNT }, (_, index) => ({ name: `preset_${index + 1}`, selector: { color_rgb: {} } })),
-      ],
-      computeLabel: (field) => ({ entity: "Licht", title: "Titel", name: "Beschriftung", icon: "Icon", turn_on_text: "Text unter dem Einschalt-Icon", show_action_button: "Kopfbutton anzeigen", title_size: "Beschriftungsgröße", button_size: "Button-Größe", show_presets: "Farb-Presets anzeigen" })[field.name] || (field.name.startsWith("preset_") ? `Farb-Preset ${field.name.slice(7)}` : field.name),
-    };
-  }
-
-  setConfig(config) {
-    if (!config.entity) throw new Error("Bitte eine Licht-Entität auswählen.");
-    for (let index = 1; index <= RGB_PRESET_COUNT; index++) {
-      const color = config[`preset_${index}`];
-      if (color != null && (!Array.isArray(color) || color.length !== 3 || color.some((channel) => !Number.isInteger(channel) || channel < 0 || channel > 255))) throw new Error(`Preset ${index} muss eine RGB-Farbe mit drei Werten von 0 bis 255 sein.`);
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this._config = null;
+        this._hass = null;
+        this._stateKey = null;
+        this._presets = [];
+        this._selected = -1;
+        this._hue = 0;
+        this._saturation = 100;
+        this._brightness = 0;
+        this._temperatureValue = null;
+        this._dragging = false;
+        this._pending = false;
+        this._pendingTimer = null;
     }
-    const changed = this._config?.entity !== config.entity;
-    this._config = { title: "RGB", turn_on_text: "RGB", title_size: 5, button_size: 5, show_action_button: true, show_presets: false, ...config };
-    if (changed) this._selected = -1;
-    this._loadPresets();
-    this._selected = -1;
-    this._render();
-    this._sync();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    const state = hass?.states?.[this._config?.entity];
-    const attributes = state?.attributes;
-    const stateKey = JSON.stringify([state?.state, attributes?.friendly_name, attributes?.supported_color_modes, attributes?.brightness, attributes?.hs_color, attributes?.color_temp_kelvin, attributes?.min_color_temp_kelvin, attributes?.max_color_temp_kelvin, attributes?.min_mireds, attributes?.max_mireds]);
-    if (stateKey !== this._stateKey) {
-      this._stateKey = stateKey;
-      this._sync();
+    static getStubConfig() { return { entity: "light.wohnzimmer", title: "RGB", turn_on_text: "RGB", title_size: 5, button_size: 5, show_action_button: true, show_presets: false }; }
+    static getConfigForm() {
+        return {
+            schema: [
+                { name: "entity", required: true, selector: { entity: { filter: { domain: "light" } } } },
+                { name: "title", default: "RGB", selector: { text: {} } },
+                { name: "name", selector: { text: {} } },
+                { name: "icon", selector: { icon: {} } },
+                { name: "turn_on_text", default: "RGB", selector: { text: {} } },
+                { name: "show_action_button", default: true, selector: { boolean: {} } },
+                { name: "title_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+                { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+                { name: "show_presets", default: false, selector: { boolean: {} } },
+                ...Array.from({ length: RGB_PRESET_COUNT }, (_, index) => ({ name: `preset_${index + 1}`, selector: { color_rgb: {} } })),
+            ],
+            computeLabel: (field) => ({ entity: "Licht", title: "Titel", name: "Beschriftung", icon: "Icon", turn_on_text: "Text unter dem Einschalt-Icon", show_action_button: "Kopfbutton anzeigen", title_size: "Beschriftungsgröße", button_size: "Button-Größe", show_presets: "Farb-Presets anzeigen" })[field.name] || (field.name.startsWith("preset_") ? `Farb-Preset ${field.name.slice(7)}` : field.name),
+        };
     }
-  }
-  get hass() { return this._hass; }
-  getCardSize() { return 5; }
-
-  _loadPresets() {
-    this._presets = Array.from({ length: RGB_PRESET_COUNT }, (_, index) => ({ slot: index + 1, rgb: this._config[`preset_${index + 1}`] })).filter((preset) => Array.isArray(preset.rgb)).map((preset) => {
-      const [hue, saturation] = rgbToHs(preset.rgb);
-      return { ...preset, hue, saturation };
-    });
-  }
-
-  _markPending() {
-    this._pending = true;
-    clearTimeout(this._pendingTimer);
-    this._pendingTimer = setTimeout(() => { this._pending = false; this._sync(); }, 1800);
-  }
-
-  _sendColor() {
-    if (!this._hass) return;
-    this._markPending();
-    this._hass.callService("light", "turn_on", { entity_id: this._config.entity, hs_color: [this._hue, this._saturation], brightness_pct: Math.max(1, this._brightness) });
-  }
-
-  _sendBrightness() {
-    if (!this._hass) return;
-    this._markPending();
-    if (this._brightness === 0) this._hass.callService("light", "turn_off", { entity_id: this._config.entity });
-    else this._hass.callService("light", "turn_on", { entity_id: this._config.entity, brightness_pct: this._brightness });
-  }
-
-  _selectPreset(index) {
-    this._selected = index;
-    const preset = this._presets[index];
-    if (!preset || !this._hass) return;
-    this._hue = preset.hue; this._saturation = preset.saturation;
-    this._temperatureValue = null;
-    this._updateView();
-    this._markPending();
-    this._hass.callService("light", "turn_on", { entity_id: this._config.entity, rgb_color: preset.rgb });
-  }
-
-  _toggleLight() {
-    const state = this._hass?.states?.[this._config.entity]?.state;
-    if (state === "off") {
-      if (this._presets.length) this._selectPreset(0);
-      else this._hass.callService("light", "turn_on", { entity_id: this._config.entity });
+    setConfig(config) {
+        if (!config.entity)
+            throw new Error("Bitte eine Licht-Entität auswählen.");
+        for (let index = 1; index <= RGB_PRESET_COUNT; index++) {
+            const color = config[`preset_${index}`];
+            if (color != null && (!Array.isArray(color) || color.length !== 3 || color.some((channel) => !Number.isInteger(channel) || channel < 0 || channel > 255)))
+                throw new Error(`Preset ${index} muss eine RGB-Farbe mit drei Werten von 0 bis 255 sein.`);
+        }
+        const changed = this._config?.entity !== config.entity;
+        this._config = { title: "RGB", turn_on_text: "RGB", title_size: 5, button_size: 5, show_action_button: true, show_presets: false, ...config };
+        if (changed)
+            this._selected = -1;
+        this._loadPresets();
+        this._selected = -1;
+        this._render();
+        this._sync();
     }
-    else if (state === "on") this._hass.callService("homeassistant", "toggle", { entity_id: this._config.entity });
-  }
-
-  _setHue(event) {
-    const bounds = this.shadowRoot.querySelector(".wheel").getBoundingClientRect();
-    const angle = Math.atan2(event.clientX - bounds.left - bounds.width / 2, -(event.clientY - bounds.top - bounds.height / 2));
-    this._hue = Math.round(((angle * 180 / Math.PI) + 360) % 360);
-    this._saturation = 100;
-    this._temperatureValue = null;
-    this._selected = -1;
-    this._updateView();
-  }
-
-  _sync() {
-    if (!this._config || !this.shadowRoot.querySelector(".card")) return;
-    const state = this._hass?.states?.[this._config.entity];
-    const modes = state?.attributes?.supported_color_modes || [];
-    const supportsColor = modes.some((mode) => ["hs", "xy", "rgb", "rgbw", "rgbww"].includes(mode));
-    const supportsTemperature = modes.includes("color_temp") && modes.some((mode) => ["rgbw", "rgbww"].includes(mode));
-    if (!this._dragging && !this._pending && state) {
-      if (Array.isArray(state.attributes?.hs_color)) [this._hue, this._saturation] = state.attributes.hs_color;
-      this._brightness = state.state === "on" && Number.isFinite(state.attributes?.brightness) ? Math.round(state.attributes.brightness / 255 * 100) : 0;
+    set hass(hass) {
+        this._hass = hass;
+        const state = hass?.states?.[this._config?.entity];
+        const attributes = state?.attributes;
+        const stateKey = JSON.stringify([state?.state, attributes?.friendly_name, attributes?.supported_color_modes, attributes?.brightness, attributes?.hs_color, attributes?.color_temp_kelvin, attributes?.min_color_temp_kelvin, attributes?.max_color_temp_kelvin, attributes?.min_mireds, attributes?.max_mireds]);
+        if (stateKey !== this._stateKey) {
+            this._stateKey = stateKey;
+            this._sync();
+        }
     }
-    const header = this.shadowRoot.querySelector(".header-action");
-    header.hidden = this._config.show_action_button === false;
-    header.classList.toggle("active", state?.state === "on");
-    header.classList.toggle("inactive", state?.state === "off");
-    this.shadowRoot.querySelector(".action-state").textContent = state?.state === "on" ? "An" : state?.state === "off" ? "Aus" : "";
-    const name = String(this._config.name ?? "").trim();
-    const subtitle = this.shadowRoot.querySelector(".subtitle");
-    subtitle.textContent = name;
-    subtitle.hidden = !name;
-    const titles = this.shadowRoot.querySelector(".titles");
-    titles.hidden = !String(this._config.title ?? "").trim() && !name;
-    this.shadowRoot.querySelector(".header").hidden = titles.hidden && header.hidden;
-    const available = !!state && !["unavailable", "unknown"].includes(state.state);
-    const controls = this.shadowRoot.querySelector(".controls");
-    controls.hidden = !supportsColor || !available;
-    controls.classList.toggle("is-off", state?.state === "off");
-    this.shadowRoot.querySelector(".turn-on").hidden = state?.state !== "off";
-    this.shadowRoot.querySelector(".turn-off").hidden = state?.state !== "on";
-    this.shadowRoot.querySelector(".wheel").setAttribute("tabindex", state?.state === "off" ? "-1" : "0");
-    this.shadowRoot.querySelector(".brightness").disabled = state?.state === "off";
-    this.shadowRoot.querySelector(".unavailable").hidden = supportsColor && available;
-    this.shadowRoot.querySelector(".unavailable").textContent = !state ? "Licht nicht gefunden." : !available ? "Licht nicht verfügbar." : "Dieses Licht unterstützt keine RGB-Farben.";
-    const temp = this.shadowRoot.querySelector(".temperature");
-    temp.hidden = !supportsTemperature;
-    const temperatureInput = this.shadowRoot.querySelector(".temperature input");
-    const min = state?.attributes?.min_color_temp_kelvin || (state?.attributes?.max_mireds ? Math.round(1000000 / state.attributes.max_mireds) : 2000);
-    const max = state?.attributes?.max_color_temp_kelvin || (state?.attributes?.min_mireds ? Math.round(1000000 / state.attributes.min_mireds) : 6500);
-    temperatureInput.min = min; temperatureInput.max = max;
-    if (!this._pending && !this._dragging) temperatureInput.value = state?.attributes?.color_temp_kelvin || min;
-    this._updateView();
-  }
-
-  _updateView() {
-    const wheel = this.shadowRoot.querySelector(".wheel");
-    if (!wheel) return;
-    const colorControl = this.shadowRoot.querySelector(".color-control");
-    colorControl.style.setProperty("--hue", this._hue);
-    colorControl.style.setProperty("--saturation", `${this._saturation}%`);
-    colorControl.style.setProperty("--light-level", `${Math.max(0, Math.min(100, this._brightness))}%`);
-    wheel.setAttribute("aria-valuenow", String(Math.round(this._hue)));
-    this.shadowRoot.querySelector(".brightness-number").textContent = `${Math.round(this._brightness)} %`;
-    const brightness = this.shadowRoot.querySelector(".brightness");
-    brightness.value = this._brightness;
-    brightness.style.setProperty("--brightness", `${this._brightness}%`);
-    this.shadowRoot.querySelectorAll(".preset").forEach((button, index) => {
-      const preset = this._presets[index];
-      button.style.setProperty("--swatch", `rgb(${preset.rgb.join(",")})`);
-      button.setAttribute("aria-pressed", String(index === this._selected));
-    });
-  }
-
-  _render() {
-    const titleScale = 0.65 + ((Math.min(5, Math.max(1, Number(this._config.title_size) || 5)) - 1) / 4) * .35;
-    const level = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
-    const menuScale = .5 + (1 / 3 + ((level - 1) / 4) * (2 / 3)) * .5;
-    this.shadowRoot.innerHTML = `
+    get hass() { return this._hass; }
+    getCardSize() { return 5; }
+    _loadPresets() {
+        this._presets = Array.from({ length: RGB_PRESET_COUNT }, (_, index) => ({ slot: index + 1, rgb: this._config[`preset_${index + 1}`] })).filter((preset) => Array.isArray(preset.rgb)).map((preset) => {
+            const [hue, saturation] = rgbToHs(preset.rgb);
+            return { ...preset, hue, saturation };
+        });
+    }
+    _markPending() {
+        this._pending = true;
+        clearTimeout(this._pendingTimer);
+        this._pendingTimer = setTimeout(() => { this._pending = false; this._sync(); }, 1800);
+    }
+    _sendColor() {
+        if (!this._hass)
+            return;
+        this._markPending();
+        this._hass.callService("light", "turn_on", { entity_id: this._config.entity, hs_color: [this._hue, this._saturation], brightness_pct: Math.max(1, this._brightness) });
+    }
+    _sendBrightness() {
+        if (!this._hass)
+            return;
+        this._markPending();
+        if (this._brightness === 0)
+            this._hass.callService("light", "turn_off", { entity_id: this._config.entity });
+        else
+            this._hass.callService("light", "turn_on", { entity_id: this._config.entity, brightness_pct: this._brightness });
+    }
+    _selectPreset(index) {
+        this._selected = index;
+        const preset = this._presets[index];
+        if (!preset || !this._hass)
+            return;
+        this._hue = preset.hue;
+        this._saturation = preset.saturation;
+        this._temperatureValue = null;
+        this._updateView();
+        this._markPending();
+        this._hass.callService("light", "turn_on", { entity_id: this._config.entity, rgb_color: preset.rgb });
+    }
+    _toggleLight() {
+        const state = this._hass?.states?.[this._config.entity]?.state;
+        if (state === "off") {
+            if (this._presets.length)
+                this._selectPreset(0);
+            else
+                this._hass.callService("light", "turn_on", { entity_id: this._config.entity });
+        }
+        else if (state === "on")
+            this._hass.callService("homeassistant", "toggle", { entity_id: this._config.entity });
+    }
+    _setHue(event) {
+        const bounds = this.shadowRoot.querySelector(".wheel").getBoundingClientRect();
+        const angle = Math.atan2(event.clientX - bounds.left - bounds.width / 2, -(event.clientY - bounds.top - bounds.height / 2));
+        this._hue = Math.round(((angle * 180 / Math.PI) + 360) % 360);
+        this._saturation = 100;
+        this._temperatureValue = null;
+        this._selected = -1;
+        this._updateView();
+    }
+    _sync() {
+        if (!this._config || !this.shadowRoot.querySelector(".card"))
+            return;
+        const state = this._hass?.states?.[this._config.entity];
+        const modes = state?.attributes?.supported_color_modes || [];
+        const supportsColor = modes.some((mode) => ["hs", "xy", "rgb", "rgbw", "rgbww"].includes(mode));
+        const supportsTemperature = modes.includes("color_temp") && modes.some((mode) => ["rgbw", "rgbww"].includes(mode));
+        if (!this._dragging && !this._pending && state) {
+            if (Array.isArray(state.attributes?.hs_color))
+                [this._hue, this._saturation] = state.attributes.hs_color;
+            this._brightness = state.state === "on" && Number.isFinite(state.attributes?.brightness) ? Math.round(state.attributes.brightness / 255 * 100) : 0;
+        }
+        const header = this.shadowRoot.querySelector(".header-action");
+        header.hidden = this._config.show_action_button === false;
+        header.classList.toggle("active", state?.state === "on");
+        header.classList.toggle("inactive", state?.state === "off");
+        this.shadowRoot.querySelector(".action-state").textContent = state?.state === "on" ? "An" : state?.state === "off" ? "Aus" : "";
+        const name = String(this._config.name ?? "").trim();
+        const subtitle = this.shadowRoot.querySelector(".subtitle");
+        subtitle.textContent = name;
+        subtitle.hidden = !name;
+        const titles = this.shadowRoot.querySelector(".titles");
+        titles.hidden = !String(this._config.title ?? "").trim() && !name;
+        this.shadowRoot.querySelector(".header").hidden = titles.hidden && header.hidden;
+        const available = !!state && !["unavailable", "unknown"].includes(state.state);
+        const controls = this.shadowRoot.querySelector(".controls");
+        controls.hidden = !supportsColor || !available;
+        controls.classList.toggle("is-off", state?.state === "off");
+        this.shadowRoot.querySelector(".turn-on").hidden = state?.state !== "off";
+        this.shadowRoot.querySelector(".turn-off").hidden = state?.state !== "on";
+        this.shadowRoot.querySelector(".wheel").setAttribute("tabindex", state?.state === "off" ? "-1" : "0");
+        this.shadowRoot.querySelector(".brightness").disabled = state?.state === "off";
+        this.shadowRoot.querySelector(".unavailable").hidden = supportsColor && available;
+        this.shadowRoot.querySelector(".unavailable").textContent = !state ? "Licht nicht gefunden." : !available ? "Licht nicht verfügbar." : "Dieses Licht unterstützt keine RGB-Farben.";
+        const temp = this.shadowRoot.querySelector(".temperature");
+        temp.hidden = !supportsTemperature;
+        const temperatureInput = this.shadowRoot.querySelector(".temperature input");
+        const min = state?.attributes?.min_color_temp_kelvin || (state?.attributes?.max_mireds ? Math.round(1000000 / state.attributes.max_mireds) : 2000);
+        const max = state?.attributes?.max_color_temp_kelvin || (state?.attributes?.min_mireds ? Math.round(1000000 / state.attributes.min_mireds) : 6500);
+        temperatureInput.min = min;
+        temperatureInput.max = max;
+        if (!this._pending && !this._dragging)
+            temperatureInput.value = state?.attributes?.color_temp_kelvin || min;
+        this._updateView();
+    }
+    _updateView() {
+        const wheel = this.shadowRoot.querySelector(".wheel");
+        if (!wheel)
+            return;
+        const colorControl = this.shadowRoot.querySelector(".color-control");
+        colorControl.style.setProperty("--hue", this._hue);
+        colorControl.style.setProperty("--saturation", `${this._saturation}%`);
+        colorControl.style.setProperty("--light-level", `${Math.max(0, Math.min(100, this._brightness))}%`);
+        wheel.setAttribute("aria-valuenow", String(Math.round(this._hue)));
+        this.shadowRoot.querySelector(".brightness-number").textContent = `${Math.round(this._brightness)} %`;
+        const brightness = this.shadowRoot.querySelector(".brightness");
+        brightness.value = this._brightness;
+        brightness.style.setProperty("--brightness", `${this._brightness}%`);
+        this.shadowRoot.querySelectorAll(".preset").forEach((button, index) => {
+            const preset = this._presets[index];
+            button.style.setProperty("--swatch", `rgb(${preset.rgb.join(",")})`);
+            button.setAttribute("aria-pressed", String(index === this._selected));
+        });
+    }
+    _render() {
+        const titleScale = 0.65 + ((Math.min(5, Math.max(1, Number(this._config.title_size) || 5)) - 1) / 4) * .35;
+        const level = Math.min(5, Math.max(1, Number(this._config.button_size) || 5));
+        const menuScale = .5 + (1 / 3 + ((level - 1) / 4) * (2 / 3)) * .5;
+        this.shadowRoot.innerHTML = `
       <style>
         :host { display:block; width:100%; color:var(--primary-text-color,#f3f3f5); font-family:var(--paper-font-body1_-_font-family,"Arial",sans-serif); }
         * { box-sizing:border-box; }
@@ -1387,116 +1309,121 @@ class GlassRgbCard extends HTMLElement {
         ${this._config.show_presets && this._presets.length ? `<div class="presets">${this._presets.map((preset) => `<button class="preset" type="button" title="Farb-Preset ${preset.slot}" aria-label="Farb-Preset ${preset.slot}" aria-pressed="false"></button>`).join("")}</div>` : ""}
         <div class="temperature" hidden><span>Warm</span><input type="range" aria-label="Farbtemperatur" step="50"><span>Kalt</span></div></div>
       </article>`;
-    this.shadowRoot.querySelector(".header-action").addEventListener("click", () => this._toggleLight());
-    this.shadowRoot.querySelector(".turn-on").addEventListener("click", () => this._toggleLight());
-    this.shadowRoot.querySelector(".turn-off").addEventListener("click", () => this._toggleLight());
-    const wheel = this.shadowRoot.querySelector(".wheel");
-    wheel.addEventListener("pointerdown", (event) => { if (event.button !== 0 || event.target !== wheel) return; event.preventDefault(); this._dragging = true; wheel.setPointerCapture(event.pointerId); this._setHue(event); });
-    wheel.addEventListener("pointermove", (event) => { if (this._dragging) this._setHue(event); });
-    wheel.addEventListener("pointerup", (event) => { if (!this._dragging) return; this._setHue(event); this._dragging = false; this._sendColor(); });
-    wheel.addEventListener("pointercancel", () => { this._dragging = false; this._sync(); });
-    wheel.addEventListener("keydown", (event) => { if (!["ArrowLeft", "ArrowDown", "ArrowRight", "ArrowUp"].includes(event.key)) return; event.preventDefault(); this._hue = (Math.round(this._hue) + (event.key === "ArrowLeft" || event.key === "ArrowDown" ? 355 : 5)) % 360; this._saturation = 100; this._temperatureValue = null; this._selected = -1; this._updateView(); this._sendColor(); });
-    const brightness = this.shadowRoot.querySelector(".brightness");
-    brightness.addEventListener("input", () => { this._dragging = true; this._brightness = Number(brightness.value); this._updateView(); });
-    brightness.addEventListener("change", () => { this._dragging = false; this._brightness = Number(brightness.value); this._sendBrightness(); });
-    this.shadowRoot.querySelectorAll(".preset").forEach((button, index) => button.addEventListener("click", () => this._selectPreset(index)));
-    const temperature = this.shadowRoot.querySelector(".temperature input");
-    temperature.addEventListener("input", () => { this._dragging = true; });
-    temperature.addEventListener("change", () => { this._dragging = false; this._temperatureValue = Number(temperature.value); this._selected = -1; this._updateView(); this._markPending(); this._hass?.callService("light", "turn_on", { entity_id: this._config.entity, color_temp_kelvin: this._temperatureValue }); });
-  }
+        this.shadowRoot.querySelector(".header-action").addEventListener("click", () => this._toggleLight());
+        this.shadowRoot.querySelector(".turn-on").addEventListener("click", () => this._toggleLight());
+        this.shadowRoot.querySelector(".turn-off").addEventListener("click", () => this._toggleLight());
+        const wheel = this.shadowRoot.querySelector(".wheel");
+        wheel.addEventListener("pointerdown", (event) => { if (event.button !== 0 || event.target !== wheel)
+            return; event.preventDefault(); this._dragging = true; wheel.setPointerCapture(event.pointerId); this._setHue(event); });
+        wheel.addEventListener("pointermove", (event) => { if (this._dragging)
+            this._setHue(event); });
+        wheel.addEventListener("pointerup", (event) => { if (!this._dragging)
+            return; this._setHue(event); this._dragging = false; this._sendColor(); });
+        wheel.addEventListener("pointercancel", () => { this._dragging = false; this._sync(); });
+        wheel.addEventListener("keydown", (event) => { if (!["ArrowLeft", "ArrowDown", "ArrowRight", "ArrowUp"].includes(event.key))
+            return; event.preventDefault(); this._hue = (Math.round(this._hue) + (event.key === "ArrowLeft" || event.key === "ArrowDown" ? 355 : 5)) % 360; this._saturation = 100; this._temperatureValue = null; this._selected = -1; this._updateView(); this._sendColor(); });
+        const brightness = this.shadowRoot.querySelector(".brightness");
+        brightness.addEventListener("input", () => { this._dragging = true; this._brightness = Number(brightness.value); this._updateView(); });
+        brightness.addEventListener("change", () => { this._dragging = false; this._brightness = Number(brightness.value); this._sendBrightness(); });
+        this.shadowRoot.querySelectorAll(".preset").forEach((button, index) => button.addEventListener("click", () => this._selectPreset(index)));
+        const temperature = this.shadowRoot.querySelector(".temperature input");
+        temperature.addEventListener("input", () => { this._dragging = true; });
+        temperature.addEventListener("change", () => { this._dragging = false; this._temperatureValue = Number(temperature.value); this._selected = -1; this._updateView(); this._markPending(); this._hass?.callService("light", "turn_on", { entity_id: this._config.entity, color_temp_kelvin: this._temperatureValue }); });
+    }
 }
-
-if (!customElements.get("glass-rgb-card")) customElements.define("glass-rgb-card", GlassRgbCard);
+if (!customElements.get("glass-rgb-card"))
+    customElements.define("glass-rgb-card", GlassRgbCard);
 window.customCards = window.customCards || [];
-if (!window.customCards.some((card) => card.type === "glass-rgb-card")) window.customCards.push({ type: "glass-rgb-card", name: "Glass RGB Card", description: "RGB-Lichtsteuerung mit optionalen Farb-Presets.", preview: true, version: RGB_CARD_VERSION });
+if (!window.customCards.some((card) => card.type === "glass-rgb-card"))
+    window.customCards.push({ type: "glass-rgb-card", name: "Glass RGB Card", description: "RGB-Lichtsteuerung mit optionalen Farb-Presets.", preview: true, version: RGB_CARD_VERSION });
+
 })();
 
 (() => {
 const ROOM_CARD_VERSION = "1.0.3";
 const ROOM_TEXT_COLORS = { black: "#151515", white: "#ffffff", gray: "#a0a2a6" };
 const escapeRoom = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
-
 class GlassRoomCard extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = null;
-    this._hass = null;
-  }
-
-  static getStubConfig() {
-    return { name: "Wohnzimmer", image: "/local/glass_design/rooms/Wohnzimmer.png", height: 430, image_position: 60 };
-  }
-
-  static getConfigElement() {
-    return document.createElement("glass-room-card-editor");
-  }
-
-  static getConfigForm() {
-    return {
-      schema: [
-        { name: "name", default: "Wohnzimmer", selector: { text: {} } },
-        { name: "image", selector: { text: {} } },
-        { name: "entity", selector: { entity: { filter: { domain: "sensor" } } } },
-        { name: "text_color", default: "white", selector: { select: { mode: "dropdown", options: [{ value: "black", label: "Schwarz" }, { value: "white", label: "Weiß" }, { value: "gray", label: "Grau" }] } } },
-        { name: "sensor_color", default: "white", selector: { select: { mode: "dropdown", options: [{ value: "black", label: "Schwarz" }, { value: "white", label: "Weiß" }, { value: "gray", label: "Grau" }] } } },
-        { name: "name_size", default: 19, selector: { number: { min: 12, max: 48, step: 1, mode: "slider", unit_of_measurement: "px" } } },
-        { name: "sensor_size", default: 29, selector: { number: { min: 12, max: 64, step: 1, mode: "slider", unit_of_measurement: "px" } } },
-        { name: "height", default: 430, selector: { number: { min: 180, max: 800, step: 10, mode: "slider", unit_of_measurement: "px" } } },
-        { name: "image_position", default: 60, selector: { number: { min: 0, max: 100, step: 1, mode: "slider", unit_of_measurement: "%" } } },
-      ],
-      computeLabel: (field) => ({ name: "Beschriftung", image: "Bildpfad oder Bild-URL", entity: "Sensor (optional)", text_color: "Schriftfarbe Beschriftung", sensor_color: "Schriftfarbe Sensorwert", name_size: "Beschriftungsgröße", sensor_size: "Schriftgröße Sensorwert", height: "Kartenhöhe", image_position: "Vertikaler Bildausschnitt" })[field.name],
-    };
-  }
-
-  setConfig(config) {
-    if (config.entity && !config.entity.startsWith("sensor.")) throw new Error("Bitte eine Sensor-Entität auswählen.");
-    const image = String(config.image || "").trim();
-    if (image && !/^(?:https?:\/\/|\/[^/]|\.\.?\/)/i.test(image)) throw new Error("Bitte einen lokalen Bildpfad oder eine HTTP(S)-Bild-URL angeben.");
-    const nextConfig = { name: "Wohnzimmer", height: 430, image_position: 60, ...config, image };
-    if (JSON.stringify(this._config) === JSON.stringify(nextConfig)) {
-      this._syncSensor();
-      return;
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this._config = null;
+        this._hass = null;
     }
-    this._config = nextConfig;
-    this._render();
-    this._syncSensor();
-  }
-
-  set hass(hass) { this._hass = hass; this._syncSensor(); }
-  get hass() { return this._hass; }
-  getCardSize() { return Math.ceil(this._height() / 50); }
-
-  _height() { return Math.min(800, Math.max(180, Number(this._config?.height) || 430)); }
-
-  _syncSensor() {
-    if (!this._config) return;
-    const output = this.shadowRoot.querySelector(".sensor-value");
-    if (!output) return;
-    const state = this._hass?.states?.[this._config.entity];
-    let value = "";
-    if (this._config.entity) {
-      if (!state || state.state === "unavailable") value = "Sensor nicht verfügbar";
-      else if (state.state === "unknown") value = "Unbekannt";
-      else value = `${state.state}${state.attributes?.unit_of_measurement ? ` ${state.attributes.unit_of_measurement}` : ""}`;
+    static getStubConfig() {
+        return { name: "Wohnzimmer", image: "/local/glass_design/rooms/Wohnzimmer.png", height: 430, image_position: 60 };
     }
-    if (output.textContent !== value) output.textContent = value;
-  }
-
-  _openSensor() {
-    if (!this._config?.entity) return;
-    this.dispatchEvent(new CustomEvent("hass-more-info", { bubbles: true, composed: true, detail: { entityId: this._config.entity } }));
-  }
-
-  _render() {
-    const position = Math.min(100, Math.max(0, Number(this._config.image_position) || 0));
-    const textColor = ROOM_TEXT_COLORS[this._config.text_color] || ROOM_TEXT_COLORS.white;
-    const sensorColor = ROOM_TEXT_COLORS[this._config.sensor_color] || ROOM_TEXT_COLORS.white;
-    const nameSize = Math.min(48, Math.max(12, Number(this._config.name_size) || 19));
-    const sensorSize = Math.min(64, Math.max(12, Number(this._config.sensor_size) || 29));
-    const textShadow = this._config.text_color === "black" ? "0 1px 5px rgba(255,255,255,.55)" : "0 2px 8px rgba(0,0,0,.6)";
-    const sensorShadow = this._config.sensor_color === "black" ? "0 1px 5px rgba(255,255,255,.55)" : "0 2px 8px rgba(0,0,0,.6)";
-    this.shadowRoot.innerHTML = `
+    static getConfigElement() {
+        return document.createElement("glass-room-card-editor");
+    }
+    static getConfigForm() {
+        return {
+            schema: [
+                { name: "name", default: "Wohnzimmer", selector: { text: {} } },
+                { name: "image", selector: { text: {} } },
+                { name: "entity", selector: { entity: { filter: { domain: "sensor" } } } },
+                { name: "text_color", default: "white", selector: { select: { mode: "dropdown", options: [{ value: "black", label: "Schwarz" }, { value: "white", label: "Weiß" }, { value: "gray", label: "Grau" }] } } },
+                { name: "sensor_color", default: "white", selector: { select: { mode: "dropdown", options: [{ value: "black", label: "Schwarz" }, { value: "white", label: "Weiß" }, { value: "gray", label: "Grau" }] } } },
+                { name: "name_size", default: 19, selector: { number: { min: 12, max: 48, step: 1, mode: "slider", unit_of_measurement: "px" } } },
+                { name: "sensor_size", default: 29, selector: { number: { min: 12, max: 64, step: 1, mode: "slider", unit_of_measurement: "px" } } },
+                { name: "height", default: 430, selector: { number: { min: 180, max: 800, step: 10, mode: "slider", unit_of_measurement: "px" } } },
+                { name: "image_position", default: 60, selector: { number: { min: 0, max: 100, step: 1, mode: "slider", unit_of_measurement: "%" } } },
+            ],
+            computeLabel: (field) => ({ name: "Beschriftung", image: "Bildpfad oder Bild-URL", entity: "Sensor (optional)", text_color: "Schriftfarbe Beschriftung", sensor_color: "Schriftfarbe Sensorwert", name_size: "Beschriftungsgröße", sensor_size: "Schriftgröße Sensorwert", height: "Kartenhöhe", image_position: "Vertikaler Bildausschnitt" })[field.name],
+        };
+    }
+    setConfig(config) {
+        if (config.entity && !config.entity.startsWith("sensor."))
+            throw new Error("Bitte eine Sensor-Entität auswählen.");
+        const image = String(config.image || "").trim();
+        if (image && !/^(?:https?:\/\/|\/[^/]|\.\.?\/)/i.test(image))
+            throw new Error("Bitte einen lokalen Bildpfad oder eine HTTP(S)-Bild-URL angeben.");
+        const nextConfig = { name: "Wohnzimmer", height: 430, image_position: 60, ...config, image };
+        if (JSON.stringify(this._config) === JSON.stringify(nextConfig)) {
+            this._syncSensor();
+            return;
+        }
+        this._config = nextConfig;
+        this._render();
+        this._syncSensor();
+    }
+    set hass(hass) { this._hass = hass; this._syncSensor(); }
+    get hass() { return this._hass; }
+    getCardSize() { return Math.ceil(this._height() / 50); }
+    _height() { return Math.min(800, Math.max(180, Number(this._config?.height) || 430)); }
+    _syncSensor() {
+        if (!this._config)
+            return;
+        const output = this.shadowRoot.querySelector(".sensor-value");
+        if (!output)
+            return;
+        const state = this._hass?.states?.[this._config.entity];
+        let value = "";
+        if (this._config.entity) {
+            if (!state || state.state === "unavailable")
+                value = "Sensor nicht verfügbar";
+            else if (state.state === "unknown")
+                value = "Unbekannt";
+            else
+                value = `${state.state}${state.attributes?.unit_of_measurement ? ` ${state.attributes.unit_of_measurement}` : ""}`;
+        }
+        if (output.textContent !== value)
+            output.textContent = value;
+    }
+    _openSensor() {
+        if (!this._config?.entity)
+            return;
+        this.dispatchEvent(new CustomEvent("hass-more-info", { bubbles: true, composed: true, detail: { entityId: this._config.entity } }));
+    }
+    _render() {
+        const position = Math.min(100, Math.max(0, Number(this._config.image_position) || 0));
+        const textColor = ROOM_TEXT_COLORS[this._config.text_color] || ROOM_TEXT_COLORS.white;
+        const sensorColor = ROOM_TEXT_COLORS[this._config.sensor_color] || ROOM_TEXT_COLORS.white;
+        const nameSize = Math.min(48, Math.max(12, Number(this._config.name_size) || 19));
+        const sensorSize = Math.min(64, Math.max(12, Number(this._config.sensor_size) || 29));
+        const textShadow = this._config.text_color === "black" ? "0 1px 5px rgba(255,255,255,.55)" : "0 2px 8px rgba(0,0,0,.6)";
+        const sensorShadow = this._config.sensor_color === "black" ? "0 1px 5px rgba(255,255,255,.55)" : "0 2px 8px rgba(0,0,0,.6)";
+        this.shadowRoot.innerHTML = `
       <style>
         :host { display:block; width:100%; min-width:0; color:var(--primary-text-color,#f2f3ef); font-family:var(--paper-font-body1_-_font-family,"Arial",sans-serif); }
         * { box-sizing:border-box; }
@@ -1517,328 +1444,332 @@ class GlassRoomCard extends HTMLElement {
         ${String(this._config.name ?? "").trim() ? `<h2 class="name">${escapeRoom(String(this._config.name).trim())}</h2>` : ""}
         <div class="sensor-value"></div>
       </article>`;
-    this.shadowRoot.querySelector(".sensor-action")?.addEventListener("click", () => this._openSensor());
-    this.shadowRoot.querySelector(".image")?.addEventListener("error", (event) => { event.currentTarget.hidden = true; });
-  }
+        this.shadowRoot.querySelector(".sensor-action")?.addEventListener("click", () => this._openSensor());
+        this.shadowRoot.querySelector(".image")?.addEventListener("error", (event) => { event.currentTarget.hidden = true; });
+    }
 }
-
 class GlassRoomCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this.shadowRoot.innerHTML = "<ha-form></ha-form>";
-    const form = this.shadowRoot.querySelector("ha-form");
-    const definition = GlassRoomCard.getConfigForm();
-    form.schema = definition.schema;
-    form.computeLabel = definition.computeLabel;
-    form.addEventListener("value-changed", (event) => {
-      event.stopPropagation();
-      this._config = { ...this._config, ...event.detail.value };
-      this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
-    });
-  }
-
-  setConfig(config) {
-    this._config = { ...config };
-    this.shadowRoot.querySelector("ha-form").data = this._config;
-  }
-
-  set hass(hass) {
-    this.shadowRoot.querySelector("ha-form").hass = hass;
-  }
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.innerHTML = "<ha-form></ha-form>";
+        const form = this.shadowRoot.querySelector("ha-form");
+        const definition = GlassRoomCard.getConfigForm();
+        form.schema = definition.schema;
+        form.computeLabel = definition.computeLabel;
+        form.addEventListener("value-changed", (event) => {
+            event.stopPropagation();
+            this._config = { ...this._config, ...event.detail.value };
+            this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
+        });
+    }
+    setConfig(config) {
+        this._config = { ...config };
+        this.shadowRoot.querySelector("ha-form").data = this._config;
+    }
+    set hass(hass) {
+        this.shadowRoot.querySelector("ha-form").hass = hass;
+    }
 }
-
-if (!customElements.get("glass-room-card")) customElements.define("glass-room-card", GlassRoomCard);
-if (!customElements.get("glass-room-card-editor")) customElements.define("glass-room-card-editor", GlassRoomCardEditor);
+if (!customElements.get("glass-room-card"))
+    customElements.define("glass-room-card", GlassRoomCard);
+if (!customElements.get("glass-room-card-editor"))
+    customElements.define("glass-room-card-editor", GlassRoomCardEditor);
 window.customCards = window.customCards || [];
-if (!window.customCards.some((card) => card.type === "glass-room-card")) window.customCards.push({ type: "glass-room-card", name: "Glass Room Card", description: "Raumfoto mit optionalem Sensorwert.", preview: true, version: ROOM_CARD_VERSION });
+if (!window.customCards.some((card) => card.type === "glass-room-card"))
+    window.customCards.push({ type: "glass-room-card", name: "Glass Room Card", description: "Raumfoto mit optionalem Sensorwert.", preview: true, version: ROOM_CARD_VERSION });
+
 })();
 
 (() => {
 const NAV_CARD_VERSION = "1.0.6";
 const NAV_COLORS = {
-  orange: "#ff8b2b",
-  white: "#f2f2f4",
-  gray: "#a0a2a6",
-  green: "#4bc785",
-  red: "#f05c5c",
+    orange: "#ff8b2b",
+    white: "#f2f2f4",
+    gray: "#a0a2a6",
+    green: "#4bc785",
+    red: "#f05c5c",
 };
 const NAV_COLOR_OPTIONS = Object.entries(NAV_COLORS).map(([value]) => ({
-  value,
-  label: value[0].toUpperCase() + value.slice(1),
+    value,
+    label: value[0].toUpperCase() + value.slice(1),
 }));
 const NAV_POSITION_OPTIONS = [
-  { value: "top", label: "Oben (horizontal)" },
-  { value: "bottom", label: "Unten (horizontal)" },
-  { value: "left", label: "Links (vertikal)" },
-  { value: "right", label: "Rechts (vertikal)" },
+    { value: "top", label: "Oben (horizontal)" },
+    { value: "bottom", label: "Unten (horizontal)" },
+    { value: "left", label: "Links (vertikal)" },
+    { value: "right", label: "Rechts (vertikal)" },
 ];
 const escapeNav = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;",
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
 })[character]);
-
 class GlassNavigationCard extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = null;
-    this._menuRootIndex = null;
-    this._menuPath = [];
-    this._handleDocumentPointer = (event) => {
-      if (this._menuRootIndex === null || event.composedPath?.().includes(this)) return;
-      this._closeMenu();
-    };
-    this._handleDocumentKey = (event) => {
-      if (event.key === "Escape" && this._menuRootIndex !== null) {
-        this._closeMenu();
-      }
-    };
-  }
-
-  connectedCallback() {
-    document.addEventListener("pointerdown", this._handleDocumentPointer, true);
-    document.addEventListener("keydown", this._handleDocumentKey);
-  }
-
-  disconnectedCallback() {
-    document.removeEventListener("pointerdown", this._handleDocumentPointer, true);
-    document.removeEventListener("keydown", this._handleDocumentKey);
-  }
-
-  _closeMenu() {
-    this._menuRootIndex = null;
-    this._menuPath = [];
-    this._render();
-  }
-
-  static getStubConfig() {
-    return {
-      position: "bottom",
-      scale: 100,
-      color: "orange",
-      items: [
-        { name: "Home", icon: "mdi:home-outline", url: "/lovelace/home" },
-        {
-          name: "Räume",
-          icon: "mdi:view-grid",
-          menu_title: "Raum wählen",
-          children: [
-            {
-              name: "EG",
-              icon: "mdi:home-floor-0",
-              default: true,
-              children: [
-                { name: "Küche", icon: "mdi:pot-steam", url: "/lovelace/kueche" },
-                { name: "Wohnen", icon: "mdi:sofa-outline", url: "/lovelace/wohnen" },
-              ],
-            },
-          ],
-        },
-        { name: "Mehr", icon: "mdi:dots-horizontal", url: "/lovelace/mehr" },
-      ],
-    };
-  }
-
-  static getConfigForm() {
-    const schema = [
-      { name: "items", required: true, selector: { object: { multiple: true } } },
-      { name: "color", default: "orange", selector: { select: { mode: "dropdown", options: NAV_COLOR_OPTIONS } } },
-      { name: "position", default: "bottom", selector: { select: { mode: "dropdown", options: NAV_POSITION_OPTIONS } } },
-      { name: "scale", default: 100, selector: { number: { min: 70, max: 140, step: 5, mode: "slider", unit_of_measurement: "%" } } },
-      { name: "active", selector: { text: {} } },
-    ];
-    return {
-      schema,
-      computeLabel: (field) => ({
-        items: "Menüpunkte (verschachtelte Liste)",
-        color: "Farbe für Icons und Texte",
-        position: "Position der Navigationsleiste",
-        scale: "Gesamte Navigation skalieren",
-        active: "Aktiver Hauptpunkt (Name)",
-      })[field.name],
-    };
-  }
-
-  static getConfigElement() {
-    return document.createElement("glass-navigation-card-editor");
-  }
-
-  setConfig(config) {
-    const nextConfig = {
-      color: "orange",
-      position: "bottom",
-      scale: 100,
-      active: "",
-      items: [],
-      ...config,
-    };
-    if (!Array.isArray(nextConfig.items) || nextConfig.items.length === 0) {
-      throw new Error("Bitte mindestens einen Navigationspunkt in 'items' konfigurieren.");
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this._config = null;
+        this._menuRootIndex = null;
+        this._menuPath = [];
+        this._handleDocumentPointer = (event) => {
+            if (this._menuRootIndex === null || event.composedPath?.().includes(this))
+                return;
+            this._closeMenu();
+        };
+        this._handleDocumentKey = (event) => {
+            if (event.key === "Escape" && this._menuRootIndex !== null) {
+                this._closeMenu();
+            }
+        };
     }
-    if (!NAV_COLORS[nextConfig.color]) throw new Error("Nicht unterstützte Navigationsfarbe.");
-    if (!NAV_POSITION_OPTIONS.some(({ value }) => value === nextConfig.position)) throw new Error("Ungültige Position der Navigationsleiste.");
-    const requestedScale = Number(nextConfig.scale);
-    nextConfig.scale = Number.isFinite(requestedScale) ? Math.min(140, Math.max(70, requestedScale)) : 100;
-    this._validateItems(nextConfig.items);
-    this._config = nextConfig;
-    this._menuRootIndex = null;
-    this._menuPath = [];
-    this._render();
-  }
-
-  getCardSize() { return 1; }
-
-  _validateItems(items, depth = 0) {
-    if (depth > 8) throw new Error("Navigationsmenüs dürfen höchstens acht Ebenen tief sein.");
-    let defaultCount = 0;
-    for (const item of items) {
-      if (!item || typeof item !== "object" || Array.isArray(item)) throw new Error("Jeder Navigationspunkt muss ein Objekt sein.");
-      if (item.type === "separator") {
-        if (depth !== 0) throw new Error("Trenner sind nur in der Hauptnavigation erlaubt.");
-        continue;
-      }
-      if (item.default === true) defaultCount += 1;
-      if (typeof item.name !== "string" || !item.name.trim()) throw new Error("Jeder Navigationspunkt benötigt einen Namen.");
-      if (item.label != null && typeof item.label !== "string") throw new Error(`'label' für '${item.name}' muss Text sein.`);
-      if (typeof item.icon !== "string" || !item.icon.trim()) throw new Error(`Bitte ein Icon für '${item.name}' angeben.`);
-      if (item.menu_title != null && typeof item.menu_title !== "string") throw new Error(`'menu_title' für '${item.name}' muss Text sein.`);
-      const hasChildren = Array.isArray(item.children) && item.children.length > 0;
-      if (hasChildren && item.url) throw new Error(`'${item.name}' darf entweder eine URL oder Unterpunkte haben, nicht beides.`);
-      if (hasChildren) {
-        this._validateItems(item.children, depth + 1);
-        continue;
-      }
-      if (typeof item.url !== "string" || !item.url.trim() || !/^(?:\/(?!\/)|https?:\/\/)/i.test(item.url.trim())) {
-        throw new Error(`'${item.name}' benötigt eine interne URL oder eine HTTP(S)-URL.`);
-      }
+    connectedCallback() {
+        document.addEventListener("pointerdown", this._handleDocumentPointer, true);
+        document.addEventListener("keydown", this._handleDocumentKey);
     }
-    if (defaultCount > 1) throw new Error("Pro Menüebene darf nur ein Punkt als Standard ausgewählt sein.");
-  }
-
-  _visibleItems() {
-    return this._menuModel().items;
-  }
-
-  _menuModel() {
-    let items = this._config.items[this._menuRootIndex]?.children || [];
-    let level = 0;
-    const segments = [];
-    const isGroup = (item) => Array.isArray(item?.children) && item.children.length > 0;
-    while (items.length) {
-      if (items.every(isGroup)) {
-        const defaultIndex = Math.max(0, items.findIndex((item) => item.default === true));
-        const selectedIndex = Math.min(this._menuPath[level] ?? defaultIndex, items.length - 1);
-        segments.push({ items, selectedIndex, level });
-        items = items[selectedIndex].children;
-        level += 1;
-      } else if (level < this._menuPath.length && isGroup(items[this._menuPath[level]])) {
-        items = items[this._menuPath[level]].children;
-        level += 1;
-      } else break;
+    disconnectedCallback() {
+        document.removeEventListener("pointerdown", this._handleDocumentPointer, true);
+        document.removeEventListener("keydown", this._handleDocumentKey);
     }
-    return { items, segments, level };
-  }
-
-  _menuTitle() {
-    const item = this._config.items[this._menuRootIndex];
-    return item?.menu_title?.trim() || `${item?.name || "Menü"} wählen`;
-  }
-
-  _itemLabel(item) {
-    return item.label == null ? item.name : item.label.trim();
-  }
-
-  _maxMenuRows(items) {
-    if (!items?.length) return 1;
-    const leafCount = items.filter((item) => !Array.isArray(item.children) || item.children.length === 0).length;
-    const childRows = items
-      .filter((item) => Array.isArray(item.children) && item.children.length > 0)
-      .map((item) => this._maxMenuRows(item.children));
-    return Math.max(1, Math.ceil(leafCount / 3), ...childRows);
-  }
-
-  _itemMarkup(item, index, root = false) {
-    if (item.type === "separator" && root) {
-      const orientation = this._config.position === "left" || this._config.position === "right" ? "horizontal" : "vertical";
-      return `<span class="nav-separator" role="separator" aria-orientation="${orientation}"></span>`;
-    }
-    const hasChildren = Array.isArray(item.children) && item.children.length > 0;
-    const url = item.url ? item.url.trim() : "";
-    const siblings = root ? this._config.items : this._visibleItems();
-    const hasLocationMatch = siblings.some((candidate) => candidate.url?.startsWith("/") && window.location?.pathname === candidate.url.split(/[?#]/)[0]);
-    const defaultIndex = siblings.findIndex((candidate) => candidate.default === true);
-    const active = (root && (this._menuRootIndex === index || this._config.active === item.name))
-      || (url.startsWith("/") && window.location?.pathname === url.split(/[?#]/)[0])
-      || (!hasLocationMatch && defaultIndex === index);
-    const dataAttribute = root ? `data-root-index="${index}"` : `data-child-index="${index}"`;
-    const label = this._itemLabel(item);
-    const chevronIcon = root
-      ? ({ top: "mdi:chevron-down", bottom: "mdi:chevron-up", left: "mdi:chevron-right", right: "mdi:chevron-left" }[this._config.position])
-      : "mdi:chevron-right";
-    return `<button type="button" class="nav-item ${active ? "active" : ""} ${hasChildren ? "has-children" : ""}" ${dataAttribute} ${hasChildren ? `aria-haspopup="menu" aria-expanded="${root ? this._menuRootIndex === index : false}"` : `aria-current="${active ? "page" : "false"}"`} ${!hasChildren ? `data-url="${escapeNav(url)}"` : ""} aria-label="${escapeNav(item.name)}" title="${escapeNav(item.name)}"><ha-icon icon="${escapeNav(item.icon)}"></ha-icon>${label ? `<span>${escapeNav(label)}</span>` : ""}${hasChildren ? `<span class="chevron" aria-hidden="true"><ha-icon icon="${chevronIcon}"></ha-icon></span>` : ""}</button>`;
-  }
-
-  _navigate(url) {
-    if (/^https?:\/\//i.test(url)) {
-      window.location.assign(url);
-      return;
-    }
-    window.history.pushState(null, "", url);
-    window.dispatchEvent(new Event("location-changed"));
-    this._menuRootIndex = null;
-    this._menuPath = [];
-    this._render();
-  }
-
-  _bindEvents() {
-    this.shadowRoot.querySelectorAll("[data-root-index]").forEach((button) => button.addEventListener("click", () => {
-      const index = Number(button.dataset.rootIndex);
-      const item = this._config.items[index];
-      if (item.children?.length) {
-        this._menuRootIndex = this._menuRootIndex === index ? null : index;
+    _closeMenu() {
+        this._menuRootIndex = null;
         this._menuPath = [];
         this._render();
-      } else this._navigate(item.url.trim());
-    }));
-    this.shadowRoot.querySelectorAll("[data-child-index]").forEach((button) => button.addEventListener("click", () => {
-      const index = Number(button.dataset.childIndex);
-      const item = this._visibleItems()[index];
-      if (item.children?.length) {
-        const model = this._menuModel();
-        this._menuPath = [...this._menuPath.slice(0, model.level), index];
+    }
+    static getStubConfig() {
+        return {
+            position: "bottom",
+            scale: 100,
+            color: "orange",
+            items: [
+                { name: "Home", icon: "mdi:home-outline", url: "/lovelace/home" },
+                {
+                    name: "Räume",
+                    icon: "mdi:view-grid",
+                    menu_title: "Raum wählen",
+                    children: [
+                        {
+                            name: "EG",
+                            icon: "mdi:home-floor-0",
+                            default: true,
+                            children: [
+                                { name: "Küche", icon: "mdi:pot-steam", url: "/lovelace/kueche" },
+                                { name: "Wohnen", icon: "mdi:sofa-outline", url: "/lovelace/wohnen" },
+                            ],
+                        },
+                    ],
+                },
+                { name: "Mehr", icon: "mdi:dots-horizontal", url: "/lovelace/mehr" },
+            ],
+        };
+    }
+    static getConfigForm() {
+        const schema = [
+            { name: "items", required: true, selector: { object: { multiple: true } } },
+            { name: "color", default: "orange", selector: { select: { mode: "dropdown", options: NAV_COLOR_OPTIONS } } },
+            { name: "position", default: "bottom", selector: { select: { mode: "dropdown", options: NAV_POSITION_OPTIONS } } },
+            { name: "scale", default: 100, selector: { number: { min: 70, max: 140, step: 5, mode: "slider", unit_of_measurement: "%" } } },
+            { name: "active", selector: { text: {} } },
+        ];
+        return {
+            schema,
+            computeLabel: (field) => ({
+                items: "Menüpunkte (verschachtelte Liste)",
+                color: "Farbe für Icons und Texte",
+                position: "Position der Navigationsleiste",
+                scale: "Gesamte Navigation skalieren",
+                active: "Aktiver Hauptpunkt (Name)",
+            })[field.name],
+        };
+    }
+    static getConfigElement() {
+        return document.createElement("glass-navigation-card-editor");
+    }
+    setConfig(config) {
+        const nextConfig = {
+            color: "orange",
+            position: "bottom",
+            scale: 100,
+            active: "",
+            items: [],
+            ...config,
+        };
+        if (!Array.isArray(nextConfig.items) || nextConfig.items.length === 0) {
+            throw new Error("Bitte mindestens einen Navigationspunkt in 'items' konfigurieren.");
+        }
+        if (!NAV_COLORS[nextConfig.color])
+            throw new Error("Nicht unterstützte Navigationsfarbe.");
+        if (!NAV_POSITION_OPTIONS.some(({ value }) => value === nextConfig.position))
+            throw new Error("Ungültige Position der Navigationsleiste.");
+        const requestedScale = Number(nextConfig.scale);
+        nextConfig.scale = Number.isFinite(requestedScale) ? Math.min(140, Math.max(70, requestedScale)) : 100;
+        this._validateItems(nextConfig.items);
+        this._config = nextConfig;
+        this._menuRootIndex = null;
+        this._menuPath = [];
         this._render();
-      } else this._navigate(item.url.trim());
-    }));
-    this.shadowRoot.querySelectorAll("[data-segment-level]").forEach((button) => button.addEventListener("click", () => {
-      const level = Number(button.dataset.segmentLevel);
-      this._menuPath = [...this._menuPath.slice(0, level), Number(button.dataset.segmentIndex)];
-      this._render();
-    }));
-    this.shadowRoot.querySelector("[data-menu-back]")?.addEventListener("click", () => {
-      if (this._menuPath.length) this._menuPath.pop();
-      else this._menuRootIndex = null;
-      this._render();
-    });
-  }
-
-  _render() {
-    if (!this._config) return;
-    const color = NAV_COLORS[this._config.color];
-    const position = this._config.position;
-    const scale = this._config.scale / 100;
-    const vertical = position === "left" || position === "right";
-    const rootItems = this._config.items.map((item, index) => this._itemMarkup(item, index, true)).join("");
-    const menuModel = this._menuRootIndex === null ? { items: [], segments: [] } : this._menuModel();
-    const menuItems = menuModel.items.map((item, index) => this._itemMarkup(item, index)).join("");
-    const menuSegments = menuModel.segments.map(({ items, selectedIndex, level }) => `<div class="menu-segments" role="tablist" aria-label="Ebene ${level + 1}">${items.map((item, index) => `<button type="button" class="segment ${index === selectedIndex ? "selected" : ""}" role="tab" aria-selected="${index === selectedIndex}" data-segment-level="${level}" data-segment-index="${index}">${escapeNav(this._itemLabel(item))}</button>`).join("")}</div>`).join("");
-    const menuRows = this._menuRootIndex === null ? 1 : this._maxMenuRows(this._config.items[this._menuRootIndex]?.children);
-    const menu = this._menuRootIndex === null ? "" : `<section class="submenu" role="menu" aria-label="${escapeNav(this._menuTitle())}" style="--submenu-rows:${menuRows}"><header class="submenu-header"><h2>${escapeNav(this._menuTitle())}</h2></header>${menuSegments}<div class="submenu-items ${vertical ? "vertical" : ""}">${menuItems}</div></section><span class="pointer" aria-hidden="true"></span>`;
-
-    this.shadowRoot.innerHTML = `
+    }
+    getCardSize() { return 1; }
+    _validateItems(items, depth = 0) {
+        if (depth > 8)
+            throw new Error("Navigationsmenüs dürfen höchstens acht Ebenen tief sein.");
+        let defaultCount = 0;
+        for (const item of items) {
+            if (!item || typeof item !== "object" || Array.isArray(item))
+                throw new Error("Jeder Navigationspunkt muss ein Objekt sein.");
+            if (item.type === "separator") {
+                if (depth !== 0)
+                    throw new Error("Trenner sind nur in der Hauptnavigation erlaubt.");
+                continue;
+            }
+            if (item.default === true)
+                defaultCount += 1;
+            if (typeof item.name !== "string" || !item.name.trim())
+                throw new Error("Jeder Navigationspunkt benötigt einen Namen.");
+            if (item.label != null && typeof item.label !== "string")
+                throw new Error(`'label' für '${item.name}' muss Text sein.`);
+            if (typeof item.icon !== "string" || !item.icon.trim())
+                throw new Error(`Bitte ein Icon für '${item.name}' angeben.`);
+            if (item.menu_title != null && typeof item.menu_title !== "string")
+                throw new Error(`'menu_title' für '${item.name}' muss Text sein.`);
+            const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+            if (hasChildren && item.url)
+                throw new Error(`'${item.name}' darf entweder eine URL oder Unterpunkte haben, nicht beides.`);
+            if (hasChildren) {
+                this._validateItems(item.children, depth + 1);
+                continue;
+            }
+            if (typeof item.url !== "string" || !item.url.trim() || !/^(?:\/(?!\/)|https?:\/\/)/i.test(item.url.trim())) {
+                throw new Error(`'${item.name}' benötigt eine interne URL oder eine HTTP(S)-URL.`);
+            }
+        }
+        if (defaultCount > 1)
+            throw new Error("Pro Menüebene darf nur ein Punkt als Standard ausgewählt sein.");
+    }
+    _visibleItems() {
+        return this._menuModel().items;
+    }
+    _menuModel() {
+        let items = this._config.items[this._menuRootIndex]?.children || [];
+        let level = 0;
+        const segments = [];
+        const isGroup = (item) => Array.isArray(item?.children) && item.children.length > 0;
+        while (items.length) {
+            if (items.every(isGroup)) {
+                const defaultIndex = Math.max(0, items.findIndex((item) => item.default === true));
+                const selectedIndex = Math.min(this._menuPath[level] ?? defaultIndex, items.length - 1);
+                segments.push({ items, selectedIndex, level });
+                items = items[selectedIndex].children;
+                level += 1;
+            }
+            else if (level < this._menuPath.length && isGroup(items[this._menuPath[level]])) {
+                items = items[this._menuPath[level]].children;
+                level += 1;
+            }
+            else
+                break;
+        }
+        return { items, segments, level };
+    }
+    _menuTitle() {
+        const item = this._config.items[this._menuRootIndex];
+        return item?.menu_title?.trim() || `${item?.name || "Menü"} wählen`;
+    }
+    _itemLabel(item) {
+        return item.label == null ? item.name : item.label.trim();
+    }
+    _maxMenuRows(items) {
+        if (!items?.length)
+            return 1;
+        const leafCount = items.filter((item) => !Array.isArray(item.children) || item.children.length === 0).length;
+        const childRows = items
+            .filter((item) => Array.isArray(item.children) && item.children.length > 0)
+            .map((item) => this._maxMenuRows(item.children));
+        return Math.max(1, Math.ceil(leafCount / 3), ...childRows);
+    }
+    _itemMarkup(item, index, root = false) {
+        if (item.type === "separator" && root) {
+            const orientation = this._config.position === "left" || this._config.position === "right" ? "horizontal" : "vertical";
+            return `<span class="nav-separator" role="separator" aria-orientation="${orientation}"></span>`;
+        }
+        const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+        const url = item.url ? item.url.trim() : "";
+        const siblings = root ? this._config.items : this._visibleItems();
+        const hasLocationMatch = siblings.some((candidate) => candidate.url?.startsWith("/") && window.location?.pathname === candidate.url.split(/[?#]/)[0]);
+        const defaultIndex = siblings.findIndex((candidate) => candidate.default === true);
+        const active = (root && (this._menuRootIndex === index || this._config.active === item.name))
+            || (url.startsWith("/") && window.location?.pathname === url.split(/[?#]/)[0])
+            || (!hasLocationMatch && defaultIndex === index);
+        const dataAttribute = root ? `data-root-index="${index}"` : `data-child-index="${index}"`;
+        const label = this._itemLabel(item);
+        const chevronIcon = root
+            ? ({ top: "mdi:chevron-down", bottom: "mdi:chevron-up", left: "mdi:chevron-right", right: "mdi:chevron-left" }[this._config.position])
+            : "mdi:chevron-right";
+        return `<button type="button" class="nav-item ${active ? "active" : ""} ${hasChildren ? "has-children" : ""}" ${dataAttribute} ${hasChildren ? `aria-haspopup="menu" aria-expanded="${root ? this._menuRootIndex === index : false}"` : `aria-current="${active ? "page" : "false"}"`} ${!hasChildren ? `data-url="${escapeNav(url)}"` : ""} aria-label="${escapeNav(item.name)}" title="${escapeNav(item.name)}"><ha-icon icon="${escapeNav(item.icon)}"></ha-icon>${label ? `<span>${escapeNav(label)}</span>` : ""}${hasChildren ? `<span class="chevron" aria-hidden="true"><ha-icon icon="${chevronIcon}"></ha-icon></span>` : ""}</button>`;
+    }
+    _navigate(url) {
+        if (/^https?:\/\//i.test(url)) {
+            window.location.assign(url);
+            return;
+        }
+        window.history.pushState(null, "", url);
+        window.dispatchEvent(new Event("location-changed"));
+        this._menuRootIndex = null;
+        this._menuPath = [];
+        this._render();
+    }
+    _bindEvents() {
+        this.shadowRoot.querySelectorAll("[data-root-index]").forEach((button) => button.addEventListener("click", () => {
+            const index = Number(button.dataset.rootIndex);
+            const item = this._config.items[index];
+            if (item.children?.length) {
+                this._menuRootIndex = this._menuRootIndex === index ? null : index;
+                this._menuPath = [];
+                this._render();
+            }
+            else
+                this._navigate(item.url.trim());
+        }));
+        this.shadowRoot.querySelectorAll("[data-child-index]").forEach((button) => button.addEventListener("click", () => {
+            const index = Number(button.dataset.childIndex);
+            const item = this._visibleItems()[index];
+            if (item.children?.length) {
+                const model = this._menuModel();
+                this._menuPath = [...this._menuPath.slice(0, model.level), index];
+                this._render();
+            }
+            else
+                this._navigate(item.url.trim());
+        }));
+        this.shadowRoot.querySelectorAll("[data-segment-level]").forEach((button) => button.addEventListener("click", () => {
+            const level = Number(button.dataset.segmentLevel);
+            this._menuPath = [...this._menuPath.slice(0, level), Number(button.dataset.segmentIndex)];
+            this._render();
+        }));
+        this.shadowRoot.querySelector("[data-menu-back]")?.addEventListener("click", () => {
+            if (this._menuPath.length)
+                this._menuPath.pop();
+            else
+                this._menuRootIndex = null;
+            this._render();
+        });
+    }
+    _render() {
+        if (!this._config)
+            return;
+        const color = NAV_COLORS[this._config.color];
+        const position = this._config.position;
+        const scale = this._config.scale / 100;
+        const vertical = position === "left" || position === "right";
+        const rootItems = this._config.items.map((item, index) => this._itemMarkup(item, index, true)).join("");
+        const menuModel = this._menuRootIndex === null ? { items: [], segments: [] } : this._menuModel();
+        const menuItems = menuModel.items.map((item, index) => this._itemMarkup(item, index)).join("");
+        const menuSegments = menuModel.segments.map(({ items, selectedIndex, level }) => `<div class="menu-segments" role="tablist" aria-label="Ebene ${level + 1}">${items.map((item, index) => `<button type="button" class="segment ${index === selectedIndex ? "selected" : ""}" role="tab" aria-selected="${index === selectedIndex}" data-segment-level="${level}" data-segment-index="${index}">${escapeNav(this._itemLabel(item))}</button>`).join("")}</div>`).join("");
+        const menuRows = this._menuRootIndex === null ? 1 : this._maxMenuRows(this._config.items[this._menuRootIndex]?.children);
+        const menu = this._menuRootIndex === null ? "" : `<section class="submenu" role="menu" aria-label="${escapeNav(this._menuTitle())}" style="--submenu-rows:${menuRows}"><header class="submenu-header"><h2>${escapeNav(this._menuTitle())}</h2></header>${menuSegments}<div class="submenu-items ${vertical ? "vertical" : ""}">${menuItems}</div></section><span class="pointer" aria-hidden="true"></span>`;
+        this.shadowRoot.innerHTML = `
       <style>
         :host { --nav-color:${color}; display:block; font-family:var(--paper-font-body1_-_font-family,"Arial",sans-serif); }
         * { box-sizing:border-box; }
@@ -1895,39 +1826,36 @@ class GlassNavigationCard extends HTMLElement {
         ${menu}
         <nav class="bar" aria-label="Hauptnavigation">${rootItems}</nav>
       </div>`;
-    this._bindEvents();
-  }
+        this._bindEvents();
+    }
 }
-
 class GlassNavigationCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = {};
-    this._editing = false;
-    this._hass = null;
-    this._onClick = (event) => this._handleClick(event);
-    this._onInput = (event) => this._handleInput(event);
-    this._onChange = (event) => this._handleInput(event);
-    this.shadowRoot.addEventListener("click", this._onClick);
-    this.shadowRoot.addEventListener("input", this._onInput);
-    this.shadowRoot.addEventListener("change", this._onChange);
-    this._render();
-  }
-
-  _emitConfig() {
-    this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
-  }
-
-  _itemList(items, path = [], root = false) {
-    const rows = items.map((item, index) => {
-      const itemPath = [...path, index];
-      const pathValue = itemPath.join(".");
-      if (item.type === "separator") {
-        return `<div class="tree-separator"><span>Trenner</span><button type="button" class="remove" data-action="remove" data-path="${pathValue}" aria-label="Trenner entfernen">Entfernen</button></div>`;
-      }
-      const group = Array.isArray(item.children) && item.children.length > 0;
-      return `<section class="tree-item ${group ? "is-group" : ""}">
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this._config = {};
+        this._editing = false;
+        this._hass = null;
+        this._onClick = (event) => this._handleClick(event);
+        this._onInput = (event) => this._handleInput(event);
+        this._onChange = (event) => this._handleInput(event);
+        this.shadowRoot.addEventListener("click", this._onClick);
+        this.shadowRoot.addEventListener("input", this._onInput);
+        this.shadowRoot.addEventListener("change", this._onChange);
+        this._render();
+    }
+    _emitConfig() {
+        this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
+    }
+    _itemList(items, path = [], root = false) {
+        const rows = items.map((item, index) => {
+            const itemPath = [...path, index];
+            const pathValue = itemPath.join(".");
+            if (item.type === "separator") {
+                return `<div class="tree-separator"><span>Trenner</span><button type="button" class="remove" data-action="remove" data-path="${pathValue}" aria-label="Trenner entfernen">Entfernen</button></div>`;
+            }
+            const group = Array.isArray(item.children) && item.children.length > 0;
+            return `<section class="tree-item ${group ? "is-group" : ""}">
         <div class="item-heading"><span class="item-kind">${group ? "Gruppe" : "Link"}</span><button type="button" class="remove" data-action="remove" data-path="${pathValue}" aria-label="${escapeNav(item.name)} entfernen">Entfernen</button></div>
         <div class="fields">
           <label>Name<input type="text" data-path="${pathValue}" data-field="name" value="${escapeNav(item.name)}"></label>
@@ -1938,28 +1866,26 @@ class GlassNavigationCardEditor extends HTMLElement {
         </div>
         ${group ? `<div class="children"><h4>Unterpunkte</h4>${this._itemList(item.children, itemPath)}${this._addButtons(itemPath, false)}</div>` : ""}
       </section>`;
-    }).join("");
-    return `${rows}${root ? this._addButtons(path, true) : ""}`;
-  }
-
-  _addButtons(path, root) {
-    const parentPath = path.join(".");
-    return `<div class="add-actions"><button type="button" data-action="add-link" data-parent="${parentPath}">+ Link</button><button type="button" data-action="add-group" data-parent="${parentPath}">+ Gruppe</button>${root ? `<button type="button" data-action="add-separator" data-parent="${parentPath}">+ Trenner</button>` : ""}</div>`;
-  }
-
-  _previewMarkup() {
-    return (this._config.items || []).map((item, index) => {
-      if (item.type === "separator") return `<span class="preview-separator" role="separator"></span>`;
-      const label = item.label == null ? item.name : item.label.trim();
-      const active = this._config.active === item.name;
-      return `<div class="preview-item ${active ? "active" : ""}"><ha-icon icon="${escapeNav(item.icon || "mdi:gesture-tap-button")}"></ha-icon>${label ? `<span>${escapeNav(label)}</span>` : ""}${item.children?.length ? `<i>${index === this._config.items.findIndex((entry) => entry.name === this._config.active) ? "⌃" : ""}</i>` : ""}</div>`;
-    }).join("");
-  }
-
-  _render() {
-    const definition = GlassNavigationCard.getConfigForm();
-    const formSchema = definition.schema.filter((field) => field.name !== "items");
-    this.shadowRoot.innerHTML = `
+        }).join("");
+        return `${rows}${root ? this._addButtons(path, true) : ""}`;
+    }
+    _addButtons(path, root) {
+        const parentPath = path.join(".");
+        return `<div class="add-actions"><button type="button" data-action="add-link" data-parent="${parentPath}">+ Link</button><button type="button" data-action="add-group" data-parent="${parentPath}">+ Gruppe</button>${root ? `<button type="button" data-action="add-separator" data-parent="${parentPath}">+ Trenner</button>` : ""}</div>`;
+    }
+    _previewMarkup() {
+        return (this._config.items || []).map((item, index) => {
+            if (item.type === "separator")
+                return `<span class="preview-separator" role="separator"></span>`;
+            const label = item.label == null ? item.name : item.label.trim();
+            const active = this._config.active === item.name;
+            return `<div class="preview-item ${active ? "active" : ""}"><ha-icon icon="${escapeNav(item.icon || "mdi:gesture-tap-button")}"></ha-icon>${label ? `<span>${escapeNav(label)}</span>` : ""}${item.children?.length ? `<i>${index === this._config.items.findIndex((entry) => entry.name === this._config.active) ? "⌃" : ""}</i>` : ""}</div>`;
+        }).join("");
+    }
+    _render() {
+        const definition = GlassNavigationCard.getConfigForm();
+        const formSchema = definition.schema.filter((field) => field.name !== "items");
+        this.shadowRoot.innerHTML = `
       <style>
         :host { display:block; color:var(--primary-text-color); font-family:var(--paper-font-body1_-_font-family,Arial,sans-serif); }
         * { box-sizing:border-box; }
@@ -1998,351 +1924,353 @@ class GlassNavigationCardEditor extends HTMLElement {
         <ha-form ${this._editing ? "" : "hidden"}></ha-form>
         <div class="tree" ${this._editing ? "" : "hidden"}><h3>Menüstruktur</h3>${this._itemList(this._config.items || [], [], true)}</div>
       </section>`;
-    const form = this.shadowRoot.querySelector("ha-form");
-    form.schema = formSchema;
-    form.data = this._config;
-    form.hass = this._hass;
-    form.computeLabel = definition.computeLabel;
-    form.addEventListener("value-changed", (event) => {
-      event.stopPropagation();
-      this._config = { ...this._config, ...event.detail.value };
-      this._updatePreview();
-      this._emitConfig();
-    });
-  }
-
-  _pathParts(path) { return path === "" ? [] : path.split(".").map(Number); }
-
-  _getItem(path) {
-    const parts = this._pathParts(path);
-    let items = this._config.items;
-    let item;
-    for (const index of parts) {
-      item = items[index];
-      items = item?.children || [];
+        const form = this.shadowRoot.querySelector("ha-form");
+        form.schema = formSchema;
+        form.data = this._config;
+        form.hass = this._hass;
+        form.computeLabel = definition.computeLabel;
+        form.addEventListener("value-changed", (event) => {
+            event.stopPropagation();
+            this._config = { ...this._config, ...event.detail.value };
+            this._updatePreview();
+            this._emitConfig();
+        });
     }
-    return item;
-  }
-
-  _getList(path) {
-    const parts = this._pathParts(path);
-    let items = this._config.items;
-    for (const index of parts) items = items[index]?.children || [];
-    return items;
-  }
-
-  _handleClick(event) {
-    const button = event.composedPath?.().find((node) => node?.dataset?.action);
-    if (!button) return;
-    const action = button.dataset.action;
-    if (action === "toggle-edit") {
-      this._editing = !this._editing;
-      this._render();
-      return;
+    _pathParts(path) { return path === "" ? [] : path.split(".").map(Number); }
+    _getItem(path) {
+        const parts = this._pathParts(path);
+        let items = this._config.items;
+        let item;
+        for (const index of parts) {
+            item = items[index];
+            items = item?.children || [];
+        }
+        return item;
     }
-    const path = button.dataset.parent || button.dataset.path || "";
-    const list = this._getList(path);
-    if (action === "remove") {
-      const parts = this._pathParts(button.dataset.path);
-      const index = parts.pop();
-      const parent = parts.reduce((items, part) => items[part]?.children || [], this._config.items);
-      parent.splice(index, 1);
-    } else if (action === "add-link") {
-      list.push({ name: "Neuer Link", icon: "mdi:link", url: "/lovelace/seite" });
-    } else if (action === "add-group") {
-      list.push({ name: "Neue Gruppe", icon: "mdi:folder-outline", children: [{ name: "Neuer Link", icon: "mdi:link", url: "/lovelace/seite" }] });
-    } else if (action === "add-separator") {
-      list.push({ type: "separator" });
+    _getList(path) {
+        const parts = this._pathParts(path);
+        let items = this._config.items;
+        for (const index of parts)
+            items = items[index]?.children || [];
+        return items;
     }
-    this._render();
-    this._emitConfig();
-  }
-
-  _handleInput(event) {
-    const input = event.composedPath?.().find((node) => node?.dataset?.field);
-    if (!input) return;
-    if (event.type === "input" && input.type === "checkbox") return;
-    if (event.type === "change" && input.type !== "checkbox") return;
-    const item = this._getItem(input.dataset.path);
-    if (!item) return;
-    const field = input.dataset.field;
-    if (field === "default") {
-      const siblings = this._getList(this._pathParts(input.dataset.path).slice(0, -1).join("."));
-      if (input.checked) siblings.forEach((sibling) => { sibling.default = false; });
-      item.default = input.checked;
-    } else item[field] = input.value;
-    this._updatePreview();
-    this._emitConfig();
-  }
-
-  _updatePreview() {
-    const preview = this.shadowRoot.querySelector(".preview-bar");
-    if (preview) preview.innerHTML = this._previewMarkup();
-    const previewShell = this.shadowRoot.querySelector(".preview");
-    if (previewShell) previewShell.style.setProperty("--nav-color", NAV_COLORS[this._config.color] || NAV_COLORS.orange);
-  }
-
-  _emitConfig() {
-    this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
-  }
-
-  setConfig(config) {
-    this._config = { ...GlassNavigationCard.getStubConfig(), ...config };
-    if (!Array.isArray(config.items)) this._config.items = GlassNavigationCard.getStubConfig().items;
-    this._render();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    this.shadowRoot.querySelector("ha-form").hass = hass;
-  }
+    _handleClick(event) {
+        const button = event.composedPath?.().find((node) => node?.dataset?.action);
+        if (!button)
+            return;
+        const action = button.dataset.action;
+        if (action === "toggle-edit") {
+            this._editing = !this._editing;
+            this._render();
+            return;
+        }
+        const path = button.dataset.parent || button.dataset.path || "";
+        const list = this._getList(path);
+        if (action === "remove") {
+            const parts = this._pathParts(button.dataset.path);
+            const index = parts.pop();
+            const parent = parts.reduce((items, part) => items[part]?.children || [], this._config.items);
+            parent.splice(index, 1);
+        }
+        else if (action === "add-link") {
+            list.push({ name: "Neuer Link", icon: "mdi:link", url: "/lovelace/seite" });
+        }
+        else if (action === "add-group") {
+            list.push({ name: "Neue Gruppe", icon: "mdi:folder-outline", children: [{ name: "Neuer Link", icon: "mdi:link", url: "/lovelace/seite" }] });
+        }
+        else if (action === "add-separator") {
+            list.push({ type: "separator" });
+        }
+        this._render();
+        this._emitConfig();
+    }
+    _handleInput(event) {
+        const input = event.composedPath?.().find((node) => node?.dataset?.field);
+        if (!input)
+            return;
+        if (event.type === "input" && input.type === "checkbox")
+            return;
+        if (event.type === "change" && input.type !== "checkbox")
+            return;
+        const item = this._getItem(input.dataset.path);
+        if (!item)
+            return;
+        const field = input.dataset.field;
+        if (field === "default") {
+            const siblings = this._getList(this._pathParts(input.dataset.path).slice(0, -1).join("."));
+            if (input.checked)
+                siblings.forEach((sibling) => { sibling.default = false; });
+            item.default = input.checked;
+        }
+        else
+            item[field] = input.value;
+        this._updatePreview();
+        this._emitConfig();
+    }
+    _updatePreview() {
+        const preview = this.shadowRoot.querySelector(".preview-bar");
+        if (preview)
+            preview.innerHTML = this._previewMarkup();
+        const previewShell = this.shadowRoot.querySelector(".preview");
+        if (previewShell)
+            previewShell.style.setProperty("--nav-color", NAV_COLORS[this._config.color] || NAV_COLORS.orange);
+    }
+    setConfig(config) {
+        this._config = { ...GlassNavigationCard.getStubConfig(), ...config };
+        if (!Array.isArray(config.items))
+            this._config.items = GlassNavigationCard.getStubConfig().items;
+        this._render();
+    }
+    set hass(hass) {
+        this._hass = hass;
+        this.shadowRoot.querySelector("ha-form").hass = hass;
+    }
 }
-
-if (!customElements.get("glass-navigation-card")) customElements.define("glass-navigation-card", GlassNavigationCard);
-if (!customElements.get("glass-navigation-card-editor")) customElements.define("glass-navigation-card-editor", GlassNavigationCardEditor);
+if (!customElements.get("glass-navigation-card"))
+    customElements.define("glass-navigation-card", GlassNavigationCard);
+if (!customElements.get("glass-navigation-card-editor"))
+    customElements.define("glass-navigation-card-editor", GlassNavigationCardEditor);
 window.customCards = window.customCards || [];
-if (!window.customCards.some((card) => card.type === "glass-navigation-card")) window.customCards.push({ type: "glass-navigation-card", name: "Glass Navigation Card", description: "Verschachtelte Navigation mit konfigurierbarer Position und Farbe.", preview: true, version: NAV_CARD_VERSION });
+if (!window.customCards.some((card) => card.type === "glass-navigation-card"))
+    window.customCards.push({ type: "glass-navigation-card", name: "Glass Navigation Card", description: "Verschachtelte Navigation mit konfigurierbarer Position und Farbe.", preview: true, version: NAV_CARD_VERSION });
+
 })();
 
 (() => {
 const VENTILATION_CARD_VERSION = "1.0.0";
 const clampVentilation = (value, min, max) => Math.min(max, Math.max(min, Number(value) || 0));
 const escapeVentilation = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;",
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
 })[character]);
-
 const parseDuration = (value) => {
-  if (typeof value !== "string") return 0;
-  const iso = value.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/i);
-  if (iso) return Number(iso[1] || 0) * 3600 + Number(iso[2] || 0) * 60 + Number(iso[3] || 0);
-  const parts = value.split(":").map(Number);
-  if (parts.some((part) => !Number.isFinite(part))) return 0;
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  if (parts.length === 2) return parts[0] * 60 + parts[1];
-  return parts.length === 1 ? parts[0] : 0;
+    if (typeof value !== "string")
+        return 0;
+    const iso = value.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/i);
+    if (iso)
+        return Number(iso[1] || 0) * 3600 + Number(iso[2] || 0) * 60 + Number(iso[3] || 0);
+    const parts = value.split(":").map(Number);
+    if (parts.some((part) => !Number.isFinite(part)))
+        return 0;
+    if (parts.length === 3)
+        return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2)
+        return parts[0] * 60 + parts[1];
+    return parts.length === 1 ? parts[0] : 0;
 };
-
 class GlassVentilationCard extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = null;
-    this._hass = null;
-    this._timerInterval = null;
-  }
-
-  static getStubConfig() {
-    return {
-      entity: "fan.lueftung",
-      title: "Raumklima",
-      name: "Lüftung",
-      timer_duration: "00:30:00",
-      speed_levels: 3,
-      button_size: 5,
-      title_size: 5,
-      preview_size: 5,
-    };
-  }
-
-  static getConfigForm() {
-    const schema = [
-      { name: "entity", required: true, selector: { entity: { filter: { domain: "fan" } } } },
-      { name: "title", default: "Raumklima", selector: { text: {} } },
-      { name: "name", selector: { text: {} } },
-      { name: "timer_entity", selector: { entity: { filter: { domain: "timer" } } } },
-      { name: "timer_duration", default: "00:30:00", selector: { text: {} } },
-      { name: "speed_levels", default: 3, selector: { number: { min: 1, max: 6, step: 1, mode: "slider" } } },
-      { name: "show_button_labels", default: true, selector: { boolean: {} } },
-      { name: "show_preview", default: true, selector: { boolean: {} } },
-      { name: "show_action_button", default: true, selector: { boolean: {} } },
-      { name: "action_entity", selector: { entity: {} } },
-      { name: "action_icon", selector: { icon: {} } },
-      { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
-      { name: "title_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
-      { name: "preview_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
-      { name: "timer_text_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
-    ];
-    return {
-      schema,
-      computeLabel: (field) => ({
-        entity: "Lüfter",
-        title: "Titel",
-        name: "Beschriftung",
-        timer_entity: "Timer-Entität (optional)",
-        timer_duration: "Timer-Dauer (HH:MM:SS)",
-        speed_levels: "Lüftungsstufen",
-        show_button_labels: "Stufenbeschriftungen anzeigen",
-        show_preview: "Lüfterbild und Prozentanzeige anzeigen",
-        show_action_button: "Aktionsbutton anzeigen",
-        action_entity: "Aktionsentität",
-        action_icon: "Aktionsicon",
-        button_size: "Stufenknopf-Größe",
-        title_size: "Beschriftungsgröße",
-        preview_size: "Lüfter- und Prozentgröße",
-        timer_text_size: "Timer-Textgröße",
-      })[field.name],
-    };
-  }
-
-  static getConfigElement() { return document.createElement("glass-ventilation-card-editor"); }
-
-  setConfig(config) {
-    if (!config?.entity) throw new Error("Bitte eine Fan-Entität angeben.");
-    if (!config.entity.startsWith("fan.")) throw new Error("Die Entität muss eine Fan-Entität sein.");
-    if (config.timer_entity && !config.timer_entity.startsWith("timer.")) throw new Error("Die Timer-Entität muss mit timer. beginnen.");
-    const timerDuration = config.timer_duration ?? "00:30:00";
-    if (parseDuration(timerDuration) <= 0) throw new Error("Die Timer-Dauer muss größer als 00:00:00 sein.");
-    this._config = {
-      title: "Raumklima",
-      timer_duration: "00:30:00",
-      speed_levels: 3,
-      show_button_labels: true,
-      show_preview: true,
-      show_action_button: true,
-      button_size: 5,
-      title_size: 5,
-      preview_size: 5,
-      timer_text_size: 5,
-      ...config,
-    };
-    this._config.speed_levels = clampVentilation(this._config.speed_levels, 1, 6);
-    this._render();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    this._render();
-  }
-
-  get hass() { return this._hass; }
-  getCardSize() { return this._config?.timer_entity ? 5 : 4; }
-
-  disconnectedCallback() {
-    clearInterval(this._timerInterval);
-    this._timerInterval = null;
-  }
-
-  _call(domain, service, entity, data = {}) {
-    if (!this._hass || !entity) return;
-    this._hass.callService(domain, service, { entity_id: entity, ...data });
-  }
-
-  _fanState() { return this._hass?.states?.[this._config.entity]; }
-  _timerState() { return this._config.timer_entity ? this._hass?.states?.[this._config.timer_entity] : null; }
-
-  _fanPercentage() {
-    const state = this._fanState();
-    if (state?.state !== "on") return 0;
-    const percentage = Number(state.attributes?.percentage);
-    return Number.isFinite(percentage) ? clampVentilation(percentage, 0, 100) : 100;
-  }
-
-  _timerRemaining() {
-    const state = this._timerState();
-    if (state?.state === "active" && state.attributes?.finishes_at) {
-      const finish = Date.parse(state.attributes.finishes_at);
-      if (Number.isFinite(finish)) return Math.max(0, Math.ceil((finish - Date.now()) / 1000));
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this._config = null;
+        this._hass = null;
+        this._timerInterval = null;
     }
-    return parseDuration(state?.attributes?.remaining || "");
-  }
-
-  _formatTime(seconds) {
-    const value = Math.max(0, Math.floor(seconds));
-    const hours = Math.floor(value / 3600);
-    const minutes = Math.floor((value % 3600) / 60);
-    const remaining = value % 60;
-    return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}` : `${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}`;
-  }
-
-  _timerProgress() {
-    const total = parseDuration(this._config.timer_duration);
-    if (!total) return 0;
-    return clampVentilation((total - this._timerRemaining()) / total * 100, 0, 100);
-  }
-
-  _setFanLevel(level) {
-    if (level === 0) {
-      this._call("fan", "turn_off", this._config.entity);
-      return;
+    static getStubConfig() {
+        return {
+            entity: "fan.lueftung",
+            title: "Raumklima",
+            name: "Lüftung",
+            timer_duration: "00:30:00",
+            speed_levels: 3,
+            button_size: 5,
+            title_size: 5,
+            preview_size: 5,
+        };
     }
-    const percentage = Math.round(level / this._config.speed_levels * 100);
-    this._call("fan", "set_percentage", this._config.entity, { percentage });
-  }
-
-  _timerAction(action) {
-    if (!this._config.timer_entity) return;
-    if (action === "start") this._call("timer", "start", this._config.timer_entity, this._timerState()?.state === "paused" ? {} : { duration: this._config.timer_duration });
-    else if (action === "pause") this._call("timer", "pause", this._config.timer_entity);
-    else if (action === "cancel") this._call("timer", "cancel", this._config.timer_entity);
-  }
-
-  _timerMarkup(timerState) {
-    if (!this._config.timer_entity) return "";
-    const active = timerState?.state === "active";
-    const paused = timerState?.state === "paused";
-    const remaining = this._timerRemaining();
-    const timerStatus = active || paused ? `${paused ? "Pausiert · " : ""}<span class="timer-countdown">${this._formatTime(remaining)}</span>` : "Bereit";
-    const controls = active
-      ? `<button class="timer-control pause" data-timer-action="pause" aria-label="Timer pausieren" title="Pausieren">${this._icon("pause")}</button><button class="timer-control cancel" data-timer-action="cancel" aria-label="Timer stoppen" title="Stoppen">${this._icon("stop")}</button>`
-      : paused
-        ? `<button class="timer-control start" data-timer-action="start" aria-label="Timer fortsetzen" title="Fortsetzen">${this._icon("play")}</button><button class="timer-control cancel" data-timer-action="cancel" aria-label="Timer stoppen" title="Stoppen">${this._icon("stop")}</button>`
-        : `<button class="timer-control start" data-timer-action="start" aria-label="Timer starten" title="Starten">${this._icon("play")}</button>`;
-    return `<section class="timer-panel ${active ? "is-active" : ""} ${paused ? "is-paused" : ""}" aria-label="Stoßlüftung"><div class="timer-row"><span class="timer-icon">${this._icon("timer")}</span><div class="timer-status"><strong>Stoßlüftung</strong><span>${active ? `<i></i>` : ""}${timerStatus}</span></div><div class="timer-actions">${controls}</div></div>${active ? `<div class="timer-progress"><span style="width:${this._timerProgress()}%"></span></div>` : ""}</section>`;
-  }
-
-  _bindEvents() {
-    this.shadowRoot.querySelector(".header-action")?.addEventListener("click", () => this._toggleAction());
-    this.shadowRoot.querySelectorAll("[data-level]").forEach((button) => button.addEventListener("click", () => this._setFanLevel(Number(button.dataset.level))));
-    this.shadowRoot.querySelectorAll("[data-timer-action]").forEach((button) => button.addEventListener("click", () => this._timerAction(button.dataset.timerAction)));
-  }
-
-  _toggleAction() { this._call("homeassistant", "toggle", this._config.action_entity || this._config.entity); }
-
-  _levelIconMarkup(isOff) {
-    return `<ha-icon icon="${isOff ? "mdi:fan-off" : "mdi:fan"}" aria-hidden="true"></ha-icon>`;
-  }
-
-  _render() {
-    if (!this._config) return;
-    const fan = this._fanState();
-    const timer = this._timerState();
-    const name = String(this._config.name ?? fan?.attributes?.friendly_name ?? this._config.entity).trim();
-    const title = String(this._config.title ?? "").trim();
-    const percentage = Math.round(this._fanPercentage());
-    const isOn = fan?.state === "on";
-    const speedLevels = Math.round(this._config.speed_levels);
-    const activeLevel = isOn ? Math.max(1, Math.round(percentage / 100 * speedLevels)) : 0;
-    const spinDuration = isOn ? 2.4 - ((activeLevel - 1) / Math.max(speedLevels - 1, 1)) * 1.95 : 0;
-    const buttonLevel = clampVentilation(this._config.button_size, 1, 5);
-    const titleLevel = clampVentilation(this._config.title_size, 1, 5);
-    const previewLevel = clampVentilation(this._config.preview_size, 1, 5);
-    const buttonScale = 0.62 + ((buttonLevel - 1) / 4) * 0.38;
-    const textScale = 0.72 + ((titleLevel - 1) / 4) * 0.28;
-    const previewScale = 0.5 + ((previewLevel - 1) / 4) * 0.5;
-    const titleFont = 32 * textScale;
-    const readoutFont = 76 * previewScale;
-    const titleContent = title || name
-      ? `<div class="heading">${title ? `<div class="eyebrow">${escapeVentilation(title)}</div>` : ""}${name ? `<h2 style="--heading-font:${titleFont}px">${escapeVentilation(name)}</h2>` : ""}</div>`
-      : "";
-    const levels = Array.from({ length: speedLevels + 1 }, (_, level) => {
-      const label = level === 0 ? "Aus" : `Stufe ${level}`;
-      const active = level === activeLevel;
-      return `<div class="level-item"><button type="button" class="level-button ${active ? "active" : ""}" data-level="${level}" aria-label="${label}" aria-pressed="${active}"><span class="level-icon">${this._levelIconMarkup(level === 0)}</span>${level > 0 ? `<sup>${level}</sup>` : ""}</button>${this._config.show_button_labels !== false ? `<span class="level-label">${label}</span>` : ""}</div>`;
-    }).join("");
-    const attributes = fan?.attributes || {};
-    const preset = attributes.preset_mode;
-    const stateText = isOn ? (preset ? `${preset} aktiv` : "Aktiv") : "Aus";
-    const timerState = timer?.state || "idle";
-    const timerScale = 0.6 + (clampVentilation(this._config.timer_text_size, 1, 5) - 1) * 0.1;
-    const actionEntity = this._config.action_entity || this._config.entity;
-    const actionOn = this._hass?.states?.[actionEntity]?.state === "on";
-    const style = `--button-size:${100 * buttonScale}px;--level-icon-size:${65 * buttonScale}px;--title-font:${titleFont}px;--readout-font:${readoutFont}px;--preview-scale:${previewScale};--fan-spin-duration:${spinDuration.toFixed(2)}s;--timer-title:${24 * timerScale}px;--timer-status:${18 * timerScale}px;--timer-countdown:${30 * timerScale}px`;
-
-    this.shadowRoot.innerHTML = `
+    static getConfigForm() {
+        const schema = [
+            { name: "entity", required: true, selector: { entity: { filter: { domain: "fan" } } } },
+            { name: "title", default: "Raumklima", selector: { text: {} } },
+            { name: "name", selector: { text: {} } },
+            { name: "timer_entity", selector: { entity: { filter: { domain: "timer" } } } },
+            { name: "timer_duration", default: "00:30:00", selector: { text: {} } },
+            { name: "speed_levels", default: 3, selector: { number: { min: 1, max: 6, step: 1, mode: "slider" } } },
+            { name: "show_button_labels", default: true, selector: { boolean: {} } },
+            { name: "show_preview", default: true, selector: { boolean: {} } },
+            { name: "show_action_button", default: true, selector: { boolean: {} } },
+            { name: "action_entity", selector: { entity: {} } },
+            { name: "action_icon", selector: { icon: {} } },
+            { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+            { name: "title_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+            { name: "preview_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+            { name: "timer_text_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+        ];
+        return {
+            schema,
+            computeLabel: (field) => ({
+                entity: "Lüfter",
+                title: "Titel",
+                name: "Beschriftung",
+                timer_entity: "Timer-Entität (optional)",
+                timer_duration: "Timer-Dauer (HH:MM:SS)",
+                speed_levels: "Lüftungsstufen",
+                show_button_labels: "Stufenbeschriftungen anzeigen",
+                show_preview: "Lüfterbild und Prozentanzeige anzeigen",
+                show_action_button: "Aktionsbutton anzeigen",
+                action_entity: "Aktionsentität",
+                action_icon: "Aktionsicon",
+                button_size: "Stufenknopf-Größe",
+                title_size: "Beschriftungsgröße",
+                preview_size: "Lüfter- und Prozentgröße",
+                timer_text_size: "Timer-Textgröße",
+            })[field.name],
+        };
+    }
+    static getConfigElement() { return document.createElement("glass-ventilation-card-editor"); }
+    setConfig(config) {
+        if (!config?.entity)
+            throw new Error("Bitte eine Fan-Entität angeben.");
+        if (!config.entity.startsWith("fan."))
+            throw new Error("Die Entität muss eine Fan-Entität sein.");
+        if (config.timer_entity && !config.timer_entity.startsWith("timer."))
+            throw new Error("Die Timer-Entität muss mit timer. beginnen.");
+        const timerDuration = config.timer_duration ?? "00:30:00";
+        if (parseDuration(timerDuration) <= 0)
+            throw new Error("Die Timer-Dauer muss größer als 00:00:00 sein.");
+        this._config = {
+            title: "Raumklima",
+            timer_duration: "00:30:00",
+            speed_levels: 3,
+            show_button_labels: true,
+            show_preview: true,
+            show_action_button: true,
+            button_size: 5,
+            title_size: 5,
+            preview_size: 5,
+            timer_text_size: 5,
+            ...config,
+        };
+        this._config.speed_levels = clampVentilation(this._config.speed_levels, 1, 6);
+        this._render();
+    }
+    set hass(hass) {
+        this._hass = hass;
+        this._render();
+    }
+    get hass() { return this._hass; }
+    getCardSize() { return this._config?.timer_entity ? 5 : 4; }
+    disconnectedCallback() {
+        clearInterval(this._timerInterval);
+        this._timerInterval = null;
+    }
+    _call(domain, service, entity, data = {}) {
+        if (!this._hass || !entity)
+            return;
+        this._hass.callService(domain, service, { entity_id: entity, ...data });
+    }
+    _fanState() { return this._hass?.states?.[this._config.entity]; }
+    _timerState() { return this._config.timer_entity ? this._hass?.states?.[this._config.timer_entity] : null; }
+    _fanPercentage() {
+        const state = this._fanState();
+        if (state?.state !== "on")
+            return 0;
+        const percentage = Number(state.attributes?.percentage);
+        return Number.isFinite(percentage) ? clampVentilation(percentage, 0, 100) : 100;
+    }
+    _timerRemaining() {
+        const state = this._timerState();
+        if (state?.state === "active" && state.attributes?.finishes_at) {
+            const finish = Date.parse(state.attributes.finishes_at);
+            if (Number.isFinite(finish))
+                return Math.max(0, Math.ceil((finish - Date.now()) / 1000));
+        }
+        return parseDuration(state?.attributes?.remaining || "");
+    }
+    _formatTime(seconds) {
+        const value = Math.max(0, Math.floor(seconds));
+        const hours = Math.floor(value / 3600);
+        const minutes = Math.floor((value % 3600) / 60);
+        const remaining = value % 60;
+        return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}` : `${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}`;
+    }
+    _timerProgress() {
+        const total = parseDuration(this._config.timer_duration);
+        if (!total)
+            return 0;
+        return clampVentilation((total - this._timerRemaining()) / total * 100, 0, 100);
+    }
+    _setFanLevel(level) {
+        if (level === 0) {
+            this._call("fan", "turn_off", this._config.entity);
+            return;
+        }
+        const percentage = Math.round(level / this._config.speed_levels * 100);
+        this._call("fan", "set_percentage", this._config.entity, { percentage });
+    }
+    _timerAction(action) {
+        if (!this._config.timer_entity)
+            return;
+        if (action === "start")
+            this._call("timer", "start", this._config.timer_entity, this._timerState()?.state === "paused" ? {} : { duration: this._config.timer_duration });
+        else if (action === "pause")
+            this._call("timer", "pause", this._config.timer_entity);
+        else if (action === "cancel")
+            this._call("timer", "cancel", this._config.timer_entity);
+    }
+    _timerMarkup(timerState) {
+        if (!this._config.timer_entity)
+            return "";
+        const active = timerState?.state === "active";
+        const paused = timerState?.state === "paused";
+        const remaining = this._timerRemaining();
+        const timerStatus = active || paused ? `${paused ? "Pausiert · " : ""}<span class="timer-countdown">${this._formatTime(remaining)}</span>` : "Bereit";
+        const controls = active
+            ? `<button class="timer-control pause" data-timer-action="pause" aria-label="Timer pausieren" title="Pausieren">${this._icon("pause")}</button><button class="timer-control cancel" data-timer-action="cancel" aria-label="Timer stoppen" title="Stoppen">${this._icon("stop")}</button>`
+            : paused
+                ? `<button class="timer-control start" data-timer-action="start" aria-label="Timer fortsetzen" title="Fortsetzen">${this._icon("play")}</button><button class="timer-control cancel" data-timer-action="cancel" aria-label="Timer stoppen" title="Stoppen">${this._icon("stop")}</button>`
+                : `<button class="timer-control start" data-timer-action="start" aria-label="Timer starten" title="Starten">${this._icon("play")}</button>`;
+        return `<section class="timer-panel ${active ? "is-active" : ""} ${paused ? "is-paused" : ""}" aria-label="Stoßlüftung"><div class="timer-row"><span class="timer-icon">${this._icon("timer")}</span><div class="timer-status"><strong>Stoßlüftung</strong><span>${active ? `<i></i>` : ""}${timerStatus}</span></div><div class="timer-actions">${controls}</div></div>${active ? `<div class="timer-progress"><span style="width:${this._timerProgress()}%"></span></div>` : ""}</section>`;
+    }
+    _bindEvents() {
+        this.shadowRoot.querySelector(".header-action")?.addEventListener("click", () => this._toggleAction());
+        this.shadowRoot.querySelectorAll("[data-level]").forEach((button) => button.addEventListener("click", () => this._setFanLevel(Number(button.dataset.level))));
+        this.shadowRoot.querySelectorAll("[data-timer-action]").forEach((button) => button.addEventListener("click", () => this._timerAction(button.dataset.timerAction)));
+    }
+    _toggleAction() { this._call("homeassistant", "toggle", this._config.action_entity || this._config.entity); }
+    _levelIconMarkup(isOff) {
+        return `<ha-icon icon="${isOff ? "mdi:fan-off" : "mdi:fan"}" aria-hidden="true"></ha-icon>`;
+    }
+    _render() {
+        if (!this._config)
+            return;
+        const fan = this._fanState();
+        const timer = this._timerState();
+        const name = String(this._config.name ?? fan?.attributes?.friendly_name ?? this._config.entity).trim();
+        const title = String(this._config.title ?? "").trim();
+        const percentage = Math.round(this._fanPercentage());
+        const isOn = fan?.state === "on";
+        const speedLevels = Math.round(this._config.speed_levels);
+        const activeLevel = isOn ? Math.max(1, Math.round(percentage / 100 * speedLevels)) : 0;
+        const spinDuration = isOn ? 2.4 - ((activeLevel - 1) / Math.max(speedLevels - 1, 1)) * 1.95 : 0;
+        const buttonLevel = clampVentilation(this._config.button_size, 1, 5);
+        const titleLevel = clampVentilation(this._config.title_size, 1, 5);
+        const previewLevel = clampVentilation(this._config.preview_size, 1, 5);
+        const buttonScale = 0.62 + ((buttonLevel - 1) / 4) * 0.38;
+        const textScale = 0.72 + ((titleLevel - 1) / 4) * 0.28;
+        const previewScale = 0.5 + ((previewLevel - 1) / 4) * 0.5;
+        const titleFont = 32 * textScale;
+        const readoutFont = 76 * previewScale;
+        const titleContent = title || name
+            ? `<div class="heading">${title ? `<div class="eyebrow">${escapeVentilation(title)}</div>` : ""}${name ? `<h2 style="--heading-font:${titleFont}px">${escapeVentilation(name)}</h2>` : ""}</div>`
+            : "";
+        const levels = Array.from({ length: speedLevels + 1 }, (_, level) => {
+            const label = level === 0 ? "Aus" : `Stufe ${level}`;
+            const active = level === activeLevel;
+            return `<div class="level-item"><button type="button" class="level-button ${active ? "active" : ""}" data-level="${level}" aria-label="${label}" aria-pressed="${active}"><span class="level-icon">${this._levelIconMarkup(level === 0)}</span>${level > 0 ? `<sup>${level}</sup>` : ""}</button>${this._config.show_button_labels !== false ? `<span class="level-label">${label}</span>` : ""}</div>`;
+        }).join("");
+        const attributes = fan?.attributes || {};
+        const preset = attributes.preset_mode;
+        const stateText = isOn ? (preset ? `${preset} aktiv` : "Aktiv") : "Aus";
+        const timerState = timer?.state || "idle";
+        const timerScale = 0.6 + (clampVentilation(this._config.timer_text_size, 1, 5) - 1) * 0.1;
+        const actionEntity = this._config.action_entity || this._config.entity;
+        const actionOn = this._hass?.states?.[actionEntity]?.state === "on";
+        const style = `--button-size:${100 * buttonScale}px;--level-icon-size:${65 * buttonScale}px;--title-font:${titleFont}px;--readout-font:${readoutFont}px;--preview-scale:${previewScale};--fan-spin-duration:${spinDuration.toFixed(2)}s;--timer-title:${24 * timerScale}px;--timer-status:${18 * timerScale}px;--timer-countdown:${30 * timerScale}px`;
+        this.shadowRoot.innerHTML = `
       <style>
         :host { display:block; width:100%; min-width:0; color:var(--primary-text-color,#f5f5f7); font-family:var(--paper-font-body1_-_font-family,"Arial",sans-serif); }
         * { box-sizing:border-box; }
@@ -2401,227 +2329,624 @@ class GlassVentilationCard extends HTMLElement {
         <nav class="levels" aria-label="Lüftungsstufe">${levels}</nav>
         ${this._config.timer_entity ? `<div class="divider"></div>${this._timerMarkup(timer)}` : ""}
       </article>`;
-    this._bindEvents();
-    if (timerState === "active") {
-      this._timerInterval ??= setInterval(() => {
-        const countdown = this.shadowRoot.querySelector(".timer-countdown");
-        const progress = this.shadowRoot.querySelector(".timer-progress span");
-        if (countdown) countdown.textContent = this._formatTime(this._timerRemaining());
-        if (progress) progress.style.width = `${this._timerProgress()}%`;
-      }, 1000);
-    } else {
-      clearInterval(this._timerInterval);
-      this._timerInterval = null;
+        this._bindEvents();
+        if (timerState === "active") {
+            this._timerInterval ??= setInterval(() => {
+                const countdown = this.shadowRoot.querySelector(".timer-countdown");
+                const progress = this.shadowRoot.querySelector(".timer-progress span");
+                if (countdown)
+                    countdown.textContent = this._formatTime(this._timerRemaining());
+                if (progress)
+                    progress.style.width = `${this._timerProgress()}%`;
+            }, 1000);
+        }
+        else {
+            clearInterval(this._timerInterval);
+            this._timerInterval = null;
+        }
     }
-  }
-
-  _fanGraphic() {
-    return `<svg viewBox="0 0 260 190" role="img" aria-label="Lüfter"><defs><radialGradient id="fan-ring"><stop stop-color="#353535"/><stop offset=".8" stop-color="#0c0c0c"/><stop offset="1" stop-color="#46372a"/></radialGradient><linearGradient id="fan-blade" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#4c4a49"/><stop offset=".68" stop-color="#222120"/><stop offset="1" stop-color="#b45b18"/></linearGradient><linearGradient id="fan-air"><stop stop-color="#b85d1b" stop-opacity=".35"/><stop offset="1" stop-color="#b85d1b" stop-opacity="0"/></linearGradient></defs><g fill="none" stroke="url(#fan-air)" stroke-width="4" stroke-linecap="round"><path d="M172 65 C205 72 211 40 256 38"/><path d="M174 95 C207 102 215 78 257 79"/><path d="M171 126 C207 135 216 110 256 112"/></g><circle cx="94" cy="95" r="87" fill="url(#fan-ring)" stroke="#544438" stroke-width="2"/><g class="fan-rotor"><g fill="url(#fan-blade)" stroke="#67605a" stroke-width="1.5"><path d="M94 93 C76 80 73 21 93 19 C115 17 141 35 148 49 C152 58 122 73 103 93 Z"/><path d="M94 93 C107 75 166 74 168 94 C170 116 152 142 138 149 C129 153 114 123 94 104 Z"/><path d="M94 95 C112 108 115 167 95 169 C73 171 47 153 40 139 C36 130 66 115 85 95 Z"/><path d="M94 95 C81 113 22 114 20 94 C18 72 36 46 50 39 C59 35 74 65 94 84 Z"/></g><circle cx="94" cy="95" r="22" fill="#292929" stroke="#685544" stroke-width="3"/><circle cx="94" cy="95" r="17" fill="#373534"/></g></svg>`;
-  }
-
-  _icon(name) {
-    const icons = {
-      play: '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
-      pause: '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>',
-      stop: '<svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>',
-      timer: '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6M12 2v3M18 5l2 2"/></svg>',
-    };
-    return icons[name];
-  }
+    _fanGraphic() {
+        return `<svg viewBox="0 0 260 190" role="img" aria-label="Lüfter"><defs><radialGradient id="fan-ring"><stop stop-color="#353535"/><stop offset=".8" stop-color="#0c0c0c"/><stop offset="1" stop-color="#46372a"/></radialGradient><linearGradient id="fan-blade" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#4c4a49"/><stop offset=".68" stop-color="#222120"/><stop offset="1" stop-color="#b45b18"/></linearGradient><linearGradient id="fan-air"><stop stop-color="#b85d1b" stop-opacity=".35"/><stop offset="1" stop-color="#b85d1b" stop-opacity="0"/></linearGradient></defs><g fill="none" stroke="url(#fan-air)" stroke-width="4" stroke-linecap="round"><path d="M172 65 C205 72 211 40 256 38"/><path d="M174 95 C207 102 215 78 257 79"/><path d="M171 126 C207 135 216 110 256 112"/></g><circle cx="94" cy="95" r="87" fill="url(#fan-ring)" stroke="#544438" stroke-width="2"/><g class="fan-rotor"><g fill="url(#fan-blade)" stroke="#67605a" stroke-width="1.5"><path d="M94 93 C76 80 73 21 93 19 C115 17 141 35 148 49 C152 58 122 73 103 93 Z"/><path d="M94 93 C107 75 166 74 168 94 C170 116 152 142 138 149 C129 153 114 123 94 104 Z"/><path d="M94 95 C112 108 115 167 95 169 C73 171 47 153 40 139 C36 130 66 115 85 95 Z"/><path d="M94 95 C81 113 22 114 20 94 C18 72 36 46 50 39 C59 35 74 65 94 84 Z"/></g><circle cx="94" cy="95" r="22" fill="#292929" stroke="#685544" stroke-width="3"/><circle cx="94" cy="95" r="17" fill="#373534"/></g></svg>`;
+    }
+    _icon(name) {
+        const icons = {
+            play: '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
+            pause: '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>',
+            stop: '<svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>',
+            timer: '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6M12 2v3M18 5l2 2"/></svg>',
+        };
+        return icons[name];
+    }
 }
-
 class GlassVentilationCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this.shadowRoot.innerHTML = "<ha-form></ha-form>";
-    const form = this.shadowRoot.querySelector("ha-form");
-    const definition = GlassVentilationCard.getConfigForm();
-    form.schema = definition.schema;
-    form.computeLabel = definition.computeLabel;
-    form.addEventListener("value-changed", (event) => {
-      event.stopPropagation();
-      this._config = { ...this._config, ...event.detail.value };
-      this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
-    });
-  }
-
-  setConfig(config) {
-    this._config = { ...config };
-    this.shadowRoot.querySelector("ha-form").data = this._config;
-  }
-
-  set hass(hass) { this.shadowRoot.querySelector("ha-form").hass = hass; }
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.innerHTML = "<ha-form></ha-form>";
+        const form = this.shadowRoot.querySelector("ha-form");
+        const definition = GlassVentilationCard.getConfigForm();
+        form.schema = definition.schema;
+        form.computeLabel = definition.computeLabel;
+        form.addEventListener("value-changed", (event) => {
+            event.stopPropagation();
+            this._config = { ...this._config, ...event.detail.value };
+            this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
+        });
+    }
+    setConfig(config) {
+        this._config = { ...config };
+        this.shadowRoot.querySelector("ha-form").data = this._config;
+    }
+    set hass(hass) { this.shadowRoot.querySelector("ha-form").hass = hass; }
 }
-
-if (!customElements.get("glass-ventilation-card")) customElements.define("glass-ventilation-card", GlassVentilationCard);
-if (!customElements.get("glass-ventilation-card-editor")) customElements.define("glass-ventilation-card-editor", GlassVentilationCardEditor);
+if (!customElements.get("glass-ventilation-card"))
+    customElements.define("glass-ventilation-card", GlassVentilationCard);
+if (!customElements.get("glass-ventilation-card-editor"))
+    customElements.define("glass-ventilation-card-editor", GlassVentilationCardEditor);
 window.customCards = window.customCards || [];
-if (!window.customCards.some((card) => card.type === "glass-ventilation-card")) window.customCards.push({ type: "glass-ventilation-card", name: "Glass Ventilation Card", description: "Mehrstufige Lüftungssteuerung mit optionaler Timer-Steuerung.", preview: true, version: VENTILATION_CARD_VERSION });
+if (!window.customCards.some((card) => card.type === "glass-ventilation-card"))
+    window.customCards.push({ type: "glass-ventilation-card", name: "Glass Ventilation Card", description: "Mehrstufige Lüftungssteuerung mit optionaler Timer-Steuerung.", preview: true, version: VENTILATION_CARD_VERSION });
+
 })();
 
 (() => {
-const TIMER_BAR_VERSION = "1.0.0";
-
+const TIMER_BAR_VERSION = "1.1.0";
 const escapeTimerBar = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({
-  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
 })[character]);
-
 const timerBarDuration = (value) => {
-  if (typeof value !== "string") return 0;
-  const iso = value.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/i);
-  if (iso) return Number(iso[1] || 0) * 3600 + Number(iso[2] || 0) * 60 + Number(iso[3] || 0);
-  const match = value.match(/^(\d+):(\d{1,2}):(\d{1,2}(?:\.\d+)?)$/);
-  if (!match || Number(match[2]) >= 60 || Number(match[3]) >= 60) return 0;
-  return Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]);
+    if (typeof value !== "string")
+        return 0;
+    const iso = value.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/i);
+    if (iso)
+        return Number(iso[1] || 0) * 3600 + Number(iso[2] || 0) * 60 + Number(iso[3] || 0);
+    const match = value.match(/^(\d+):(\d{1,2}):(\d{1,2}(?:\.\d+)?)$/);
+    if (!match || Number(match[2]) >= 60 || Number(match[3]) >= 60)
+        return 0;
+    return Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]);
 };
-
 class GlassTimerBarCard extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._interval = null;
-  }
-
-  static getStubConfig() { return { entity: "timer.stosslueftung", name: "Stoßlüftung" }; }
-
-  static getConfigForm() {
-    return {
-      schema: [
-        { name: "entity", required: true, selector: { entity: { filter: { domain: "timer" } } } },
-        { name: "name", selector: { text: {} } },
-        { name: "duration", selector: { text: {} } },
-      ],
-      computeLabel: (field) => ({ entity: "Timer-Entität", name: "Beschriftung", duration: "Startdauer (HH:MM:SS, optional)" })[field.name],
-    };
-  }
-
-  static getConfigElement() { return document.createElement("glass-timer-bar-card-editor"); }
-
-  setConfig(config) {
-    if (typeof config?.entity !== "string" || !/^timer\.[a-z0-9_]+$/.test(config.entity)) throw new Error("Bitte eine gültige Timer-Entität angeben.");
-    if (config.duration && !timerBarDuration(config.duration)) throw new Error("Bitte eine gültige Dauer größer als 00:00:00 angeben.");
-    this._config = { ...config };
-    this._render();
-  }
-
-  set hass(value) { this._hass = value; this._render(); }
-  get hass() { return this._hass; }
-  getCardSize() { return 2; }
-  connectedCallback() { this._render(); }
-  disconnectedCallback() { clearInterval(this._interval); this._interval = null; }
-
-  _state() { return this._hass?.states?.[this._config?.entity]; }
-
-  _remaining() {
-    const state = this._state();
-    if (state?.state === "active" && state.attributes?.finishes_at) {
-      const finish = Date.parse(state.attributes.finishes_at);
-      if (Number.isFinite(finish)) return Math.max(0, Math.ceil((finish - Date.now()) / 1000));
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this._interval = null;
     }
-    return Math.max(0, Math.ceil(timerBarDuration(state?.attributes?.remaining)));
-  }
-
-  _progress() {
-    const total = timerBarDuration(this._state()?.attributes?.duration) || timerBarDuration(this._config.duration);
-    return total ? Math.max(0, Math.min(100, this._remaining() / total * 100)) : 0;
-  }
-
-  _formatTime(seconds) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor(seconds % 3600 / 60);
-    const remaining = seconds % 60;
-    return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}` : `${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}`;
-  }
-
-  _action(action) {
-    if (!this._hass || !this._state() || ["unavailable", "unknown"].includes(this._state().state)) return;
-    const service = action === "start" || action === "resume" ? "start" : action === "pause" ? "pause" : "cancel";
-    const data = { entity_id: this._config.entity };
-    if (action === "start" && this._config.duration) data.duration = this._config.duration;
-    this._hass.callService("timer", service, data);
-  }
-
-  _updateClock() {
-    const countdown = this.shadowRoot.querySelector(".countdown");
-    const progress = this.shadowRoot.querySelector(".progress-fill");
-    const ring = this.shadowRoot.querySelector(".timer-icon");
-    if (countdown) countdown.textContent = this._formatTime(this._remaining());
-    if (progress) progress.style.width = `${this._progress()}%`;
-    if (ring) ring.style.setProperty("--progress", `${this._progress()}%`);
-  }
-
-  _render() {
-    if (!this._config) return;
-    const state = this._state();
-    const active = state?.state === "active";
-    const paused = state?.state === "paused";
-    const running = active || paused;
-    const unavailable = !state || state.state === "unavailable" || state.state === "unknown";
-    const name = escapeTimerBar(this._config.name ?? state?.attributes?.friendly_name ?? "Timer");
-    const status = unavailable ? "Nicht verfügbar" : active ? "Läuft" : paused ? "Pausiert" : "Bereit";
-    const button = (action, icon, label) => `<button type="button" class="control ${action}" data-action="${action}" aria-label="${label}" title="${label}"><ha-icon icon="mdi:${icon}"></ha-icon></button>`;
-    const controls = running
-      ? `${paused ? button("resume", "play", "Fortsetzen") : button("pause", "pause", "Pausieren")}${button("cancel", "stop", "Stoppen")}`
-      : `<button type="button" class="start" data-action="start" ${unavailable ? "disabled" : ""}><ha-icon icon="mdi:play"></ha-icon><span>Starten</span></button>`;
-    this.shadowRoot.innerHTML = `
+    static getStubConfig() { return { entity: "timer.stosslueftung", name: "Stoßlüftung" }; }
+    static getConfigForm() {
+        return {
+            schema: [
+                { name: "entity", required: true, selector: { entity: { filter: { domain: "timer" } } } },
+                { name: "name", selector: { text: {} } },
+                { name: "duration", selector: { text: {} } },
+                { name: "icon_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+                { name: "text_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+                { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+                { name: "show_card_frame", default: true, selector: { boolean: {} } },
+            ],
+            computeLabel: (field) => ({ entity: "Timer-Entität", name: "Beschriftung", duration: "Startdauer (HH:MM:SS, optional)", icon_size: "Icon-Größe", text_size: "Textgröße", button_size: "Button-Größe", show_card_frame: "Kartenrahmen anzeigen" })[field.name],
+        };
+    }
+    static getConfigElement() { return document.createElement("glass-timer-bar-card-editor"); }
+    setConfig(config) {
+        if (typeof config?.entity !== "string" || !/^timer\.[a-z0-9_]+$/.test(config.entity))
+            throw new Error("Bitte eine gültige Timer-Entität angeben.");
+        if (config.duration && !timerBarDuration(config.duration))
+            throw new Error("Bitte eine gültige Dauer größer als 00:00:00 angeben.");
+        this._config = { icon_size: 5, text_size: 5, button_size: 5, show_card_frame: true, ...config };
+        this._render();
+    }
+    set hass(value) { this._hass = value; this._render(); }
+    get hass() { return this._hass; }
+    getCardSize() { return 2; }
+    connectedCallback() { this._render(); }
+    disconnectedCallback() { clearInterval(this._interval); this._interval = null; }
+    _state() { return this._hass?.states?.[this._config?.entity]; }
+    _remaining() {
+        const state = this._state();
+        if (state?.state === "active" && state.attributes?.finishes_at) {
+            const finish = Date.parse(state.attributes.finishes_at);
+            if (Number.isFinite(finish))
+                return Math.max(0, Math.ceil((finish - Date.now()) / 1000));
+        }
+        return Math.max(0, Math.ceil(timerBarDuration(state?.attributes?.remaining)));
+    }
+    _progress() {
+        const total = timerBarDuration(this._state()?.attributes?.duration) || timerBarDuration(this._config.duration);
+        return total ? Math.max(0, Math.min(100, this._remaining() / total * 100)) : 0;
+    }
+    _formatTime(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor(seconds % 3600 / 60);
+        const remaining = seconds % 60;
+        return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}` : `${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}`;
+    }
+    _action(action) {
+        if (!this._hass || !this._state() || ["unavailable", "unknown"].includes(this._state().state))
+            return;
+        const service = action === "start" || action === "resume" ? "start" : action === "pause" ? "pause" : "cancel";
+        const data = { entity_id: this._config.entity };
+        if (action === "start" && this._config.duration)
+            data.duration = this._config.duration;
+        this._hass.callService("timer", service, data);
+    }
+    _updateClock() {
+        const countdown = this.shadowRoot.querySelector(".countdown");
+        const progress = this.shadowRoot.querySelector(".progress-fill");
+        const ring = this.shadowRoot.querySelector(".timer-icon");
+        if (countdown)
+            countdown.textContent = this._formatTime(this._remaining());
+        if (progress)
+            progress.style.width = `${this._progress()}%`;
+        if (ring)
+            ring.style.setProperty("--progress", `${this._progress()}%`);
+    }
+    _render() {
+        if (!this._config)
+            return;
+        const state = this._state();
+        const active = state?.state === "active";
+        const paused = state?.state === "paused";
+        const running = active || paused;
+        const unavailable = !state || state.state === "unavailable" || state.state === "unknown";
+        const name = escapeTimerBar(this._config.name ?? state?.attributes?.friendly_name ?? "Timer");
+        const status = unavailable ? "Nicht verfügbar" : active ? "Läuft" : paused ? "Pausiert" : "Bereit";
+        const iconScale = 0.55 + ((Math.min(5, Math.max(1, Number(this._config.icon_size) || 5)) - 1) / 4) * 0.45;
+        const textScale = 0.6 + ((Math.min(5, Math.max(1, Number(this._config.text_size) || 5)) - 1) / 4) * 0.4;
+        const buttonScale = 0.6 + ((Math.min(5, Math.max(1, Number(this._config.button_size) || 5)) - 1) / 4) * 0.4;
+        const frameClass = this._config.show_card_frame === false ? "no-frame" : "";
+        const button = (action, icon, label) => `<button type="button" class="control ${action}" data-action="${action}" aria-label="${label}" title="${label}"><ha-icon icon="mdi:${icon}"></ha-icon></button>`;
+        const controls = running
+            ? `${paused ? button("resume", "play", "Fortsetzen") : button("pause", "pause", "Pausieren")}${button("cancel", "stop", "Stoppen")}`
+            : `<button type="button" class="start" data-action="start" ${unavailable ? "disabled" : ""}><ha-icon icon="mdi:play"></ha-icon><span>Starten</span></button>`;
+        this.shadowRoot.innerHTML = `
       <style>
         :host { display:block; min-width:0; color:#f4f4f4; font-family:var(--paper-font-body1_-_font-family,Arial,sans-serif); }
         * { box-sizing:border-box; }
         .card { container-type:inline-size; padding:clamp(16px,3%,28px); border:1px solid #333437; border-radius:24px; background:linear-gradient(145deg,#191a1c,#111213); box-shadow:inset 0 1px 1px #ffffff0b; }
+        .card.no-frame { padding:6px 0; border:0; border-radius:0; background:transparent; box-shadow:none; }
         .row { display:grid; grid-template-columns:auto minmax(0,1fr) auto auto; align-items:center; gap:clamp(12px,3%,28px); }
-        .timer-icon { display:grid; width:clamp(52px,10cqw,100px); aspect-ratio:1; place-items:center; color:#858585; }
+        .timer-icon { display:grid; width:clamp(${52 * iconScale}px,${10 * iconScale}cqw,${100 * iconScale}px); aspect-ratio:1; place-items:center; color:#858585; }
         .timer-icon.running { color:#f5f5f5; border-radius:50%; background:conic-gradient(#ff900d var(--progress),#373737 0); padding:6px; }
         .icon-inner { display:grid; width:100%; height:100%; place-items:center; }
         .timer-icon.running .icon-inner { border-radius:50%; background:#171819; }
-        .timer-icon ha-icon { display:block; width:clamp(30px,5.8cqw,58px); height:clamp(30px,5.8cqw,58px); --mdc-icon-size:clamp(30px,5.8cqw,58px); }
+        .timer-icon ha-icon { display:block; width:clamp(${30 * iconScale}px,${5.8 * iconScale}cqw,${58 * iconScale}px); height:clamp(${30 * iconScale}px,${5.8 * iconScale}cqw,${58 * iconScale}px); --mdc-icon-size:clamp(${30 * iconScale}px,${5.8 * iconScale}cqw,${58 * iconScale}px); }
         .label { display:grid; min-width:0; gap:5px; }
-        .label strong { font-size:clamp(17px,3.8cqw,30px); line-height:1.1; overflow-wrap:anywhere; }
-        .status { display:flex; align-items:center; gap:8px; color:#919191; font-size:clamp(14px,2.7cqw,21px); }
+        .label strong { font-size:clamp(${17 * textScale}px,${3.8 * textScale}cqw,${30 * textScale}px); line-height:1.1; overflow-wrap:anywhere; }
+        .status { display:flex; align-items:center; gap:8px; color:#919191; font-size:clamp(${14 * textScale}px,${2.7 * textScale}cqw,${21 * textScale}px); }
         .status.active::before { content:""; width:10px; height:10px; flex:none; border-radius:50%; background:#ff900d; }
-        .countdown { font-size:clamp(22px,6cqw,52px); font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
+        .countdown { font-size:clamp(${22 * textScale}px,${6 * textScale}cqw,${52 * textScale}px); font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
         .actions { display:flex; align-items:center; gap:10px; }
         button { display:flex; align-items:center; justify-content:center; flex:none; cursor:pointer; font:inherit; -webkit-tap-highlight-color:transparent; }
         button:focus-visible { outline:2px solid white; outline-offset:3px; }
         button:disabled { opacity:.45; cursor:not-allowed; }
-        .start { gap:8px; min-height:48px; padding:0 20px; border:2px solid #ff900d; border-radius:999px; background:transparent; color:#ff900d; font-size:clamp(16px,3cqw,22px); font-weight:600; }
-        .start ha-icon { --mdc-icon-size:24px; }
-        .control { width:clamp(42px,8cqw,70px); aspect-ratio:1; border:2px solid #38393a; border-radius:50%; background:transparent; color:#f4f4f4; }
-        .control ha-icon { width:clamp(22px,4cqw,36px); height:clamp(22px,4cqw,36px); --mdc-icon-size:clamp(22px,4cqw,36px); }
+        .start { gap:8px; min-height:${48 * buttonScale}px; padding:0 ${20 * buttonScale}px; border:2px solid #ff900d; border-radius:999px; background:transparent; color:#ff900d; font-size:clamp(${16 * textScale}px,${3 * textScale}cqw,${22 * textScale}px); font-weight:600; }
+        .start ha-icon { --mdc-icon-size:${24 * buttonScale}px; }
+        .control { width:clamp(${42 * buttonScale}px,${8 * buttonScale}cqw,${70 * buttonScale}px); aspect-ratio:1; border:2px solid #38393a; border-radius:50%; background:transparent; color:#f4f4f4; }
+        .control ha-icon { width:clamp(${22 * buttonScale}px,${4 * buttonScale}cqw,${36 * buttonScale}px); height:clamp(${22 * buttonScale}px,${4 * buttonScale}cqw,${36 * buttonScale}px); --mdc-icon-size:clamp(${22 * buttonScale}px,${4 * buttonScale}cqw,${36 * buttonScale}px); }
         .control.cancel { border-color:#ff900d; color:#ff900d; }
         .progress { height:8px; margin-top:18px; overflow:hidden; border-radius:99px; background:#393a3b; }
         .progress-fill { height:100%; border-radius:inherit; background:#ff900d; transition:width .5s linear; }
         @container (max-width:400px) { .row { grid-template-columns:auto minmax(0,1fr) auto; gap:10px; } .countdown { grid-column:2; grid-row:2; } .actions { grid-column:3; grid-row:1 / 3; } .timer-icon { grid-row:1 / 3; } .start { padding:0 12px; } }
         @media (prefers-reduced-motion:reduce) { .progress-fill { transition:none; } }
       </style>
-      <article class="card"><div class="row"><div class="timer-icon ${running ? "running" : ""}" style="--progress:${this._progress()}%"><span class="icon-inner"><ha-icon icon="mdi:timer-outline"></ha-icon></span></div><div class="label"><strong>${name}</strong><span class="status ${active ? "active" : ""}">${status}</span></div>${running ? `<span class="countdown">${this._formatTime(this._remaining())}</span>` : ""}<div class="actions">${controls}</div></div>${running ? `<div class="progress" role="progressbar" aria-label="Verbleibende Zeit"><div class="progress-fill" style="width:${this._progress()}%"></div></div>` : ""}</article>`;
-    this.shadowRoot.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", () => this._action(button.dataset.action)));
-    if (active && this.isConnected) this._interval ??= setInterval(() => this._updateClock(), 1000);
-    else { clearInterval(this._interval); this._interval = null; }
-  }
+      <article class="card ${frameClass}"><div class="row"><div class="timer-icon ${running ? "running" : ""}" style="--progress:${this._progress()}%"><span class="icon-inner"><ha-icon icon="mdi:timer-outline"></ha-icon></span></div><div class="label"><strong>${name}</strong><span class="status ${active ? "active" : ""}">${status}</span></div>${running ? `<span class="countdown">${this._formatTime(this._remaining())}</span>` : ""}<div class="actions">${controls}</div></div>${running ? `<div class="progress" role="progressbar" aria-label="Verbleibende Zeit"><div class="progress-fill" style="width:${this._progress()}%"></div></div>` : ""}</article>`;
+        this.shadowRoot.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", () => this._action(button.dataset.action)));
+        if (active && this.isConnected)
+            this._interval ??= setInterval(() => this._updateClock(), 1000);
+        else {
+            clearInterval(this._interval);
+            this._interval = null;
+        }
+    }
 }
-
 class GlassTimerBarCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this.shadowRoot.innerHTML = "<ha-form></ha-form>";
-    const form = this.shadowRoot.querySelector("ha-form");
-    const definition = GlassTimerBarCard.getConfigForm();
-    form.schema = definition.schema;
-    form.computeLabel = definition.computeLabel;
-    form.addEventListener("value-changed", (event) => {
-      event.stopPropagation();
-      this._config = { ...this._config, ...event.detail.value };
-      this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
-    });
-  }
-  setConfig(config) { this._config = { ...config }; this.shadowRoot.querySelector("ha-form").data = this._config; }
-  set hass(value) { this.shadowRoot.querySelector("ha-form").hass = value; }
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.innerHTML = "<ha-form></ha-form>";
+        const form = this.shadowRoot.querySelector("ha-form");
+        const definition = GlassTimerBarCard.getConfigForm();
+        form.schema = definition.schema;
+        form.computeLabel = definition.computeLabel;
+        form.addEventListener("value-changed", (event) => {
+            event.stopPropagation();
+            this._config = { ...this._config, ...event.detail.value };
+            this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
+        });
+    }
+    setConfig(config) { this._config = { ...config }; this.shadowRoot.querySelector("ha-form").data = this._config; }
+    set hass(value) { this.shadowRoot.querySelector("ha-form").hass = value; }
 }
-
-if (!customElements.get("glass-timer-bar-card")) customElements.define("glass-timer-bar-card", GlassTimerBarCard);
-if (!customElements.get("glass-timer-bar-card-editor")) customElements.define("glass-timer-bar-card-editor", GlassTimerBarCardEditor);
+if (!customElements.get("glass-timer-bar-card"))
+    customElements.define("glass-timer-bar-card", GlassTimerBarCard);
+class GlassTimerCard extends GlassTimerBarCard {
+}
+if (!customElements.get("glass-timer-card"))
+    customElements.define("glass-timer-card", GlassTimerCard);
+if (!customElements.get("glass-timer-bar-card-editor"))
+    customElements.define("glass-timer-bar-card-editor", GlassTimerBarCardEditor);
 window.customCards = window.customCards || [];
-if (!window.customCards.some((card) => card.type === "glass-timer-bar-card")) window.customCards.push({ type: "glass-timer-bar-card", name: "Glass Timer Bar Card", description: "Timer mit Countdown und Fortschrittsanzeige.", preview: true, version: TIMER_BAR_VERSION });
+if (!window.customCards.some((card) => card.type === "glass-timer-bar-card"))
+    window.customCards.push({ type: "glass-timer-bar-card", name: "Glass Timer Bar Card", description: "Timer mit Countdown und Fortschrittsanzeige.", preview: true, version: TIMER_BAR_VERSION });
+if (!window.customCards.some((card) => card.type === "glass-timer-card"))
+    window.customCards.push({ type: "glass-timer-card", name: "Glass Timer", description: "Timer mit Countdown, Fortschrittsanzeige und Größenoptionen.", preview: true, version: TIMER_BAR_VERSION });
+
+})();
+
+(() => {
+const GLASS_TEXT_VERSION = "1.0.0";
+const escapeGlassText = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;",
+}[character] || character));
+class GlassTextCard extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this._config = null;
+        this._hass = null;
+    }
+    static getStubConfig() {
+        return { title: "AKTIONEN", subtitle: "Wohnzimmer", title_size: 5, button_size: 5 };
+    }
+    static getConfigForm() {
+        return {
+            schema: [
+                { name: "title", default: "", selector: { text: {} } },
+                { name: "subtitle", default: "", selector: { text: {} } },
+                { name: "title_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+                { name: "show_action_button", default: false, selector: { boolean: {} } },
+                { name: "action_entity", selector: { entity: {} }, visible: { field: "show_action_button", value: true } },
+                { name: "action_icon", selector: { icon: {} }, visible: { field: "show_action_button", value: true } },
+                {
+                    name: "action",
+                    default: "toggle",
+                    selector: { select: { mode: "dropdown", options: [["toggle", "Ein-/Ausschalten"], ["more-info", "Mehr Informationen anzeigen"]] } },
+                    visible: { field: "show_action_button", value: true },
+                },
+                { name: "button_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } }, visible: { field: "show_action_button", value: true } },
+            ],
+            computeLabel: (field) => ({
+                title: "Titel",
+                subtitle: "Beschriftung",
+                title_size: "Beschriftungsgröße",
+                show_action_button: "Aktionsbutton anzeigen",
+                action_entity: "Aktions-Entität",
+                action_icon: "Aktions-Icon",
+                action: "Aktion",
+                button_size: "Button-Größe",
+            }[field.name]),
+        };
+    }
+    static getConfigElement() { return document.createElement("glass-text-card-editor"); }
+    setConfig(config) {
+        this._config = { title_size: 5, button_size: 5, show_action_button: false, action: "toggle", ...config };
+        this._render();
+        this._syncActionState();
+    }
+    set hass(value) {
+        this._hass = value;
+        this._syncActionState();
+    }
+    get hass() { return this._hass; }
+    getCardSize() { return 2; }
+    _callAction() {
+        const entity = this._config?.action_entity;
+        if (!this._hass || !entity)
+            return;
+        if (this._config.action === "more-info") {
+            this.dispatchEvent(new CustomEvent("hass-more-info", { bubbles: true, composed: true, detail: { entityId: entity } }));
+        }
+        else
+            this._hass.callService("homeassistant", "toggle", { entity_id: entity });
+    }
+    _syncActionState() {
+        const button = this.shadowRoot.querySelector(".header-action");
+        if (!button)
+            return;
+        const state = this._hass?.states?.[this._config?.action_entity || ""];
+        button.classList.toggle("active", Boolean(state && !["off", "closed", "idle", "standby", "unavailable", "unknown", "not_home"].includes(state.state)));
+        button.classList.toggle("inactive", Boolean(state && ["off", "closed", "idle", "standby", "not_home"].includes(state.state)));
+        const label = this.shadowRoot.querySelector(".action-state");
+        if (label)
+            label.textContent = ["on", "off"].includes(state?.state) ? (state.state === "on" ? "An" : "Aus") : "";
+    }
+    _render() {
+        if (!this._config)
+            return;
+        const title = escapeGlassText(String(this._config.title ?? "").trim());
+        const subtitle = escapeGlassText(String(this._config.subtitle ?? "").trim());
+        const titleScale = 0.65 + ((Math.min(5, Math.max(1, Number(this._config.title_size) || 5)) - 1) / 4) * 0.35;
+        const buttonScale = 1 / 3 + ((Math.min(5, Math.max(1, Number(this._config.button_size) || 5)) - 1) / 4) * (2 / 3);
+        const menuScale = 0.5 + buttonScale * 0.5;
+        const actionVisible = this._config.show_action_button && this._config.action_entity;
+        this.shadowRoot.innerHTML = `
+      <style>
+        :host { display:block; width:100%; min-width:0; color:var(--primary-text-color,#f3f3f5); font-family:var(--paper-font-body1_-_font-family,"Arial",sans-serif); }
+        * { box-sizing:border-box; }
+        .header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:clamp(20px,3vw,30px); }
+        .header[hidden] { display:none; }
+        .header:has(> .header-action:only-child) { justify-content:flex-end; }
+        .titles { min-width:0; }
+        .title { color:#9295a0; font-size:clamp(11px,2.1vw,15px); font-weight:700; letter-spacing:.12em; line-height:normal; text-transform:uppercase; }
+        .subtitle { margin:7px 0 0; color:var(--primary-text-color,#f3f3f5); font-size:var(--subtitle-font); font-weight:700; line-height:1.08; overflow-wrap:anywhere; }
+        .subtitle:first-child { margin-top:0; }
+        .header-action { position:relative; display:grid; flex:none; width:var(--header-action-size); aspect-ratio:1; place-items:center; border:2px solid #303239; border-radius:50%; background:linear-gradient(145deg,#272a30,#17191d); color:#ff8b2b; font:inherit; box-shadow:0 6px 15px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+        .header-action.active { border-color:#ff8b2b; color:#ff9b4a; box-shadow:inset 0 0 20px rgba(255,139,43,.12),0 0 0 1px rgba(255,139,43,.2),0 6px 15px rgba(0,0,0,.25); }
+        .header-action.inactive { color:#85878b; border-color:#45474b; }
+        .header-action ha-icon { display:block; width:var(--header-icon-size); height:var(--header-icon-size); --mdc-icon-size:var(--header-icon-size); }
+        .action-state { position:absolute; bottom:11%; font-size:clamp(5px,calc(var(--header-action-size) * .15),13px); line-height:1; color:inherit; }
+        @media (max-width:380px) { .header { gap:10px; } }
+      </style>
+      <header class="header" ${!title && !subtitle && !actionVisible ? "hidden" : ""} style="--subtitle-font:clamp(${22 * titleScale}px,${4.8 * titleScale}vw,${38 * titleScale}px);--header-action-size:clamp(${56 * menuScale}px,${11 * menuScale}vw,${88 * menuScale}px);--header-icon-size:calc((var(--header-action-size) - 16px) * .46)">
+        ${title || subtitle ? `<div class="titles">${title ? `<div class="title">${title}</div>` : ""}${subtitle ? `<h2 class="subtitle">${subtitle}</h2>` : ""}</div>` : ""}
+        ${actionVisible ? `<button class="header-action" aria-label="${escapeGlassText(this._config.action_entity)}" title="${escapeGlassText(this._config.action_entity)}"><ha-icon icon="${escapeGlassText(this._config.action_icon || "mdi:gesture-tap-button")}"></ha-icon><span class="action-state"></span></button>` : ""}
+      </header>`;
+        this.shadowRoot.querySelector(".header-action")?.addEventListener("click", () => this._callAction());
+    }
+}
+class GlassTextCardEditor extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.innerHTML = "<ha-form></ha-form>";
+        const form = this.shadowRoot.querySelector("ha-form");
+        const definition = GlassTextCard.getConfigForm();
+        form.schema = definition.schema;
+        form.computeLabel = definition.computeLabel;
+        form.addEventListener("value-changed", (event) => {
+            event.stopPropagation();
+            this._config = { ...this._config, ...event.detail.value };
+            this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
+        });
+    }
+    setConfig(config) { this._config = { ...config }; this.shadowRoot.querySelector("ha-form").data = this._config; }
+    set hass(value) { this.shadowRoot.querySelector("ha-form").hass = value; }
+}
+if (!customElements.get("glass-text-card"))
+    customElements.define("glass-text-card", GlassTextCard);
+if (!customElements.get("glass-text-card-editor"))
+    customElements.define("glass-text-card-editor", GlassTextCardEditor);
+window.customCards = window.customCards || [];
+if (!window.customCards.some((card) => card.type === "glass-text-card"))
+    window.customCards.push({ type: "glass-text-card", name: "Glass Text", description: "Überschrift mit optionalem Aktionsbutton.", preview: true, version: GLASS_TEXT_VERSION });
+
+})();
+
+(() => {
+const GLASS_VALUE_VERSION = "1.0.0";
+const VALUE_VISUAL_OPTIONS = [
+    { value: "auto", label: "Automatisch" },
+    { value: "fan", label: "Lüfter" },
+    { value: "cover", label: "Jalousie" },
+    { value: "icon", label: "Icon" },
+    { value: "image", label: "Bild" },
+];
+const escapeGlassValue = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;",
+}[character] || character));
+class GlassValueCard extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this._config = null;
+        this._hass = null;
+    }
+    static getStubConfig() {
+        return { entity: "fan.wohnzimmer", name: "Lüftung", visual_type: "fan", image_size: 5, value_size: 5, show_card_frame: true };
+    }
+    static getConfigForm() {
+        return {
+            schema: [
+                { name: "entity", required: true, selector: { entity: {} } },
+                { name: "name", selector: { text: {} } },
+                { name: "visual_type", default: "auto", selector: { select: { mode: "dropdown", options: VALUE_VISUAL_OPTIONS } } },
+                { name: "image", selector: { text: {} } },
+                { name: "icon", selector: { icon: {} } },
+                { name: "attribute", selector: { text: {} } },
+                { name: "unit", selector: { text: {} } },
+                { name: "image_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+                { name: "value_size", default: 5, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+                { name: "show_card_frame", default: true, selector: { boolean: {} } },
+            ],
+            computeLabel: (field) => ({
+                entity: "Entität",
+                name: "Beschriftung",
+                visual_type: "Visualisierung",
+                image: "Bildpfad oder Bild-URL",
+                icon: "Icon",
+                attribute: "Attribut (leer verwendet den Standardwert)",
+                unit: "Einheit überschreiben",
+                image_size: "Bildgröße",
+                value_size: "Wertgröße",
+                show_card_frame: "Kartenrahmen anzeigen",
+            }[field.name]),
+        };
+    }
+    static getConfigElement() { return document.createElement("glass-value-card-editor"); }
+    setConfig(config) {
+        if (!config.entity)
+            throw new Error("Bitte eine Entität für den Wert angeben.");
+        const image = String(config.image ?? "").trim();
+        if (image && !/^(?:https?:\/\/|\/[^/]|\.\.?\/)/i.test(image))
+            throw new Error("Bitte einen lokalen Bildpfad oder eine HTTP(S)-Bild-URL angeben.");
+        this._config = { visual_type: "auto", icon: "mdi:chart-box-outline", image_size: 5, value_size: 5, show_card_frame: true, ...config, image };
+        this._render();
+    }
+    set hass(value) { this._hass = value; this._render(); }
+    get hass() { return this._hass; }
+    getCardSize() { return 2; }
+    _visualType() {
+        const requested = this._config.visual_type || "auto";
+        if (requested !== "auto")
+            return requested;
+        const domain = this._config.entity?.split(".")[0];
+        return domain === "fan" ? "fan" : domain === "cover" ? "cover" : this._config.image ? "image" : "icon";
+    }
+    _readout() {
+        const state = this._hass?.states?.[this._config.entity];
+        if (!state || state.state === "unavailable")
+            return { value: "Nicht verfügbar", unit: "" };
+        if (state.state === "unknown")
+            return { value: "Unbekannt", unit: "" };
+        const domain = this._config.entity.split(".")[0];
+        let value;
+        let unit = this._config.unit || "";
+        if (this._config.attribute)
+            value = state.attributes[this._config.attribute];
+        else if (domain === "fan" && state.attributes.percentage != null) {
+            value = state.attributes.percentage;
+            unit ||= "%";
+        }
+        else if (domain === "cover" && Number.isFinite(Number(state.attributes.current_position))) {
+            value = 100 - Number(state.attributes.current_position);
+            unit ||= "%";
+        }
+        else
+            value = state.state;
+        if (value == null || value === "")
+            return { value: "–", unit: "" };
+        if (!this._config.unit && !unit)
+            unit = String(state.attributes.unit_of_measurement || "");
+        return { value: typeof value === "number" ? `${Math.round(value * 10) / 10}` : String(value), unit };
+    }
+    _visualMarkup(type, running) {
+        if (type === "image" && this._config.image)
+            return `<img class="image" src="${escapeGlassValue(this._config.image)}" alt="">`;
+        if (type === "cover") {
+            const position = Number(this._hass?.states?.[this._config.entity]?.attributes?.current_position) || 0;
+            return `<div class="window" style="--position:${position}%"><div class="glass"><span class="slats"></span></div></div>`;
+        }
+        const icon = type === "fan" ? (running ? "mdi:fan" : "mdi:fan-off") : (this._config.icon || "mdi:chart-box-outline");
+        return `<ha-icon class="visual-icon ${type === "fan" && running ? "spinning" : ""}" icon="${escapeGlassValue(icon)}" aria-hidden="true"></ha-icon>`;
+    }
+    _render() {
+        if (!this._config)
+            return;
+        const state = this._hass?.states?.[this._config.entity];
+        const visualType = this._visualType();
+        const readout = this._readout();
+        const name = String(this._config.name ?? state?.attributes?.friendly_name ?? this._config.entity).trim();
+        const imageScale = 0.55 + ((Math.min(5, Math.max(1, Number(this._config.image_size) || 5)) - 1) / 4) * 0.45;
+        const valueScale = 0.58 + ((Math.min(5, Math.max(1, Number(this._config.value_size) || 5)) - 1) / 4) * 0.42;
+        const running = state?.state === "on";
+        const hasFrame = this._config.show_card_frame !== false;
+        this.shadowRoot.innerHTML = `
+      <style>
+        :host { display:block; width:100%; min-width:0; color:var(--primary-text-color,#f3f3f5); font-family:var(--paper-font-body1_-_font-family,"Arial",sans-serif); }
+        * { box-sizing:border-box; }
+        .card { display:flex; align-items:center; gap:clamp(14px,4vw,32px); width:100%; min-width:0; padding:clamp(16px,3vw,30px); border:1px solid rgba(255,255,255,.1); border-radius:28px; background:radial-gradient(ellipse at 50% 0,#22252a 0,#15171a 62%,#101214 100%); box-shadow:inset 0 1px 1px rgba(255,255,255,.06),0 12px 30px rgba(0,0,0,.2); }
+        .card.no-frame { padding:8px 0; border:0; border-radius:0; background:transparent; box-shadow:none; }
+        .visual { display:grid; flex:none; width:clamp(${54 * imageScale}px,${18 * imageScale}vw,${136 * imageScale}px); aspect-ratio:1; place-items:center; overflow:hidden; color:#ff8b2b; }
+        .visual-icon { width:72%; height:72%; --mdc-icon-size:72%; }
+        .visual-icon.spinning { animation:spin 2.4s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .image { width:100%; height:100%; object-fit:contain; }
+        .window { position:relative; width:82%; height:100%; padding:11% 8% 8%; border:6px solid #25262a; border-top-width:12px; border-bottom-width:7px; border-radius:4px; background:linear-gradient(130deg,#d9b78c,#6c665b 48%,#ead0a5); box-shadow:inset 0 0 0 2px #090a0b,0 8px 16px #0008; }
+        .window::before { content:""; position:absolute; top:-13px; left:-8px; right:-8px; height:7px; border:1px solid #4a4b51; background:linear-gradient(#303238,#191a1f); }
+        .glass { position:absolute; inset:10px 6px 6px; overflow:hidden; border:2px solid #d5b591; background:linear-gradient(180deg,#b8ab92,#d8bb94 52%,#87674e); }
+        .slats { position:absolute; top:0; left:0; right:0; height:var(--position); background:repeating-linear-gradient(to bottom,#343237 0 8%,#77706d 9%,#17181b 12%,transparent 13%); }
+        .readout { min-width:0; flex:1; }
+        .name { color:#9295a0; font-size:clamp(13px,2.2vw,18px); line-height:1.2; overflow-wrap:anywhere; }
+        .value { margin-top:5px; font-size:clamp(${30 * valueScale}px,${8 * valueScale}vw,${66 * valueScale}px); line-height:1; font-weight:700; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+        .unit { margin-left:.16em; color:#a0a2ad; font-size:.48em; font-weight:500; }
+        @media (prefers-reduced-motion:reduce) { .visual-icon.spinning { animation:none; } }
+      </style>
+      <article class="card ${hasFrame ? "" : "no-frame"}">
+        <div class="visual" aria-hidden="true">${this._visualMarkup(visualType, running)}</div>
+        <div class="readout"><div class="name">${escapeGlassValue(name)}</div><div class="value">${escapeGlassValue(readout.value)}${readout.unit ? `<small class="unit">${escapeGlassValue(readout.unit)}</small>` : ""}</div></div>
+      </article>`;
+        this.shadowRoot.querySelector(".image")?.addEventListener("error", (event) => { event.currentTarget.hidden = true; });
+    }
+}
+class GlassValueCardEditor extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.innerHTML = "<ha-form></ha-form>";
+        const form = this.shadowRoot.querySelector("ha-form");
+        const definition = GlassValueCard.getConfigForm();
+        form.schema = definition.schema;
+        form.computeLabel = definition.computeLabel;
+        form.addEventListener("value-changed", (event) => {
+            event.stopPropagation();
+            this._config = { ...this._config, ...event.detail.value };
+            this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
+        });
+    }
+    setConfig(config) { this._config = { ...config }; this.shadowRoot.querySelector("ha-form").data = this._config; }
+    set hass(value) { this.shadowRoot.querySelector("ha-form").hass = value; }
+}
+if (!customElements.get("glass-value-card"))
+    customElements.define("glass-value-card", GlassValueCard);
+if (!customElements.get("glass-value-card-editor"))
+    customElements.define("glass-value-card-editor", GlassValueCardEditor);
+window.customCards = window.customCards || [];
+if (!window.customCards.some((card) => card.type === "glass-value-card"))
+    window.customCards.push({ type: "glass-value-card", name: "Glass Value", description: "Visualisierung und Zustandswert einer Entität.", preview: true, version: GLASS_VALUE_VERSION });
+
+})();
+
+(() => {
+const GLASS_SPLITTER_VERSION = "1.0.0";
+class GlassSplitterCard extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this._config = null;
+    }
+    static getStubConfig() { return { thickness: 1, spacing: 3 }; }
+    static getConfigForm() {
+        return {
+            schema: [
+                { name: "thickness", default: 1, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+                { name: "spacing", default: 3, selector: { number: { min: 1, max: 5, step: 1, mode: "slider" } } },
+            ],
+            computeLabel: (field) => ({ thickness: "Linienstärke", spacing: "Abstand" }[field.name]),
+        };
+    }
+    static getConfigElement() { return document.createElement("glass-splitter-card-editor"); }
+    setConfig(config) {
+        this._config = { thickness: 1, spacing: 3, ...config };
+        this._render();
+    }
+    getCardSize() { return 1; }
+    _render() {
+        if (!this._config)
+            return;
+        const thickness = Math.min(5, Math.max(1, Number(this._config.thickness) || 1));
+        const spacing = Math.min(5, Math.max(1, Number(this._config.spacing) || 3));
+        this.shadowRoot.innerHTML = `
+      <style>
+        :host { display:block; width:100%; }
+        .splitter { height:1px; margin:${8 + spacing * 4}px 0; background:#303239; }
+      </style>
+      <div class="splitter" role="separator" aria-orientation="horizontal" style="height:${thickness}px"></div>`;
+    }
+}
+class GlassSplitterCardEditor extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.innerHTML = "<ha-form></ha-form>";
+        const form = this.shadowRoot.querySelector("ha-form");
+        const definition = GlassSplitterCard.getConfigForm();
+        form.schema = definition.schema;
+        form.computeLabel = definition.computeLabel;
+        form.addEventListener("value-changed", (event) => {
+            event.stopPropagation();
+            this._config = { ...this._config, ...event.detail.value };
+            this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
+        });
+    }
+    setConfig(config) { this._config = { ...config }; this.shadowRoot.querySelector("ha-form").data = this._config; }
+    set hass(value) { this.shadowRoot.querySelector("ha-form").hass = value; }
+}
+if (!customElements.get("glass-splitter-card"))
+    customElements.define("glass-splitter-card", GlassSplitterCard);
+if (!customElements.get("glass-splitter-card-editor"))
+    customElements.define("glass-splitter-card-editor", GlassSplitterCardEditor);
+window.customCards = window.customCards || [];
+if (!window.customCards.some((card) => card.type === "glass-splitter-card"))
+    window.customCards.push({ type: "glass-splitter-card", name: "Glass Splitter", description: "Horizontaler Trenner mit einstellbarer Stärke und Abstand.", preview: true, version: GLASS_SPLITTER_VERSION });
+
 })();

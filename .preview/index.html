@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Glass Cover Cards Vorschau</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+      background: #101214;
+      color: #f3f3f5;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; background: radial-gradient(ellipse at 50% -20%, #282b2e 0, #17191b 48rem, #101214 100%); }
+    .page { width: min(1320px, calc(100% - 48px)); margin: 0 auto; padding: 34px 0 56px; }
+    .topline { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-bottom:30px; color:#a5a7ab; font-size:12px; }
+    .brand { display:flex; align-items:center; gap:11px; color:#f0f0f1; font-weight:700; letter-spacing:.03em; }
+    .brand-mark { width:28px; aspect-ratio:1; display:grid; place-items:center; border-radius:9px; background:#ff8b2b; color:#17191b; font-size:16px; }
+    .demo-badge { border:1px solid #373a3d; border-radius:99px; padding:7px 11px; color:#c2c3c6; }
+    h1 { margin:0; font-size:clamp(25px, 4vw, 38px); line-height:1.05; font-weight:650; }
+    .lede { max-width:620px; margin:11px 0 0; color:#a6a8ad; font-size:14px; line-height:1.55; }
+    .dashboard { display:grid; grid-template-columns:minmax(0, 1.35fr) minmax(350px, .9fr); gap:22px; align-items:start; margin-top:28px; }
+    .column { display:grid; gap:22px; min-width:0; }
+    .pair { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; align-items:start; }
+    .sample { min-width:0; }
+    .sample-label { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:0 3px 8px; color:#b5b6b9; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+    .sample-label small { color:#74777b; font-size:10px; font-weight:500; letter-spacing:0; text-transform:none; }
+    glass-cover-card, glass-panel-card, glass-rgb-card, glass-value-card, glass-timer-card, glass-ventilation-card, glass-room-card, glass-navigation-card, glass-splitter-card, glass-text-card, glass-buttons-card, glass-button-card { display:block; min-width:0; }
+    .stack { display:grid; gap:14px; min-width:0; }
+    .stack.horizontal { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; }
+    .stack.vertical { grid-template-columns:minmax(0,1fr); }
+    ha-icon { display:inline-flex; align-items:center; justify-content:center; width:1em; height:1em; font-family:"Segoe UI Symbol",sans-serif; font-size:var(--mdc-icon-size, 24px); font-weight:600; line-height:1; vertical-align:middle; }
+    ha-icon > span { font-size:inherit; line-height:1; }
+    hui-vertical-stack-card, hui-horizontal-stack-card { display:block; min-width:0; }
+    @media (max-width:850px) { .dashboard { grid-template-columns:minmax(0,1fr); } .column.aside { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width:560px) { .page { width:calc(100% - 28px); padding-top:20px; } .topline { margin-bottom:25px; } .pair, .column.aside { grid-template-columns:minmax(0,1fr); } .dashboard { gap:18px; margin-top:23px; } .column { gap:18px; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="topline"><div class="brand"><span class="brand-mark">◈</span><span>GLASS COVER CARDS</span></div><span class="demo-badge">Lokale Vorschau · Demo-Zustände</span></div>
+    <h1>Dein Dashboard, modular aufgebaut.</h1>
+    <p class="lede">Echte Karten aus dem Projekt-Build mit simulierten Home-Assistant-Zuständen. Panel, Text, Werte, Buttons, Trenner und Timer in einer Ansicht.</p>
+    <section class="dashboard" aria-label="Kartenübersicht">
+      <div class="column">
+        <div class="sample"><div class="sample-label">Panel <small>Shell mit Kindkarten</small></div><glass-panel-card id="panel"></glass-panel-card></div>
+        <div class="sample"><div class="sample-label">Cover <small>Glass Cover Card</small></div><glass-cover-card id="cover"></glass-cover-card></div>
+        <div class="pair">
+          <div class="sample"><div class="sample-label">RGB Licht</div><glass-rgb-card id="rgb"></glass-rgb-card></div>
+          <div class="sample"><div class="sample-label">Lüftung</div><glass-ventilation-card id="ventilation"></glass-ventilation-card></div>
+        </div>
+      </div>
+      <aside class="column aside">
+        <div class="sample"><div class="sample-label">Werte <small>Visualisierungen</small></div><div class="stack vertical"><glass-value-card id="fan-value"></glass-value-card><glass-value-card id="cover-value"></glass-value-card></div></div>
+        <div class="sample"><div class="sample-label">Timer</div><glass-timer-card id="timer"></glass-timer-card></div>
+      </aside>
+    </section>
+  </main>
+  <script>
+    class HaIcon extends HTMLElement {
+      static get observedAttributes() { return ["icon"]; }
+      connectedCallback() { this.renderIcon(); }
+      attributeChangedCallback() { this.renderIcon(); }
+      renderIcon() {
+        const name = (this.getAttribute("icon") || "mdi:help-circle-outline").replace(/^mdi:/, "mdi-");
+        const glyphs = {
+          "mdi-sofa-outline": "⌂", "mdi-ceiling-light-outline": "◉", "mdi-thermometer": "♨", "mdi-water-percent": "◌",
+          "mdi-fan": "✣", "mdi-fan-off": "✣", "mdi-timer-outline": "◷", "mdi-lightbulb-outline": "◉", "mdi-gesture-tap-button": "◎",
+          "mdi-play": "▶", "mdi-pause": "Ⅱ", "mdi-stop": "■", "mdi-chevron-up": "↑", "mdi-chevron-down": "↓",
+          "mdi-chevron-left": "‹", "mdi-chevron-right": "›", "mdi-arrow-up": "↑", "mdi-arrow-down": "↓", "mdi-close": "×",
+          "mdi-menu": "⋮", "mdi-dots-horizontal": "···", "mdi-window-shutter": "▤", "mdi-home-outline": "⌂",
+          "mdi-lightbulb": "◉", "mdi-television": "▣", "mdi-pencil": "✎", "mdi-check": "✓",
+        };
+        const span = document.createElement("span");
+        span.className = name;
+        span.textContent = glyphs[name] || "•";
+        this.replaceChildren(span);
+      }
+    }
+    customElements.define("ha-icon", HaIcon);
+
+    class PreviewStack extends HTMLElement {
+      constructor() { super(); this.attachShadow({ mode: "open" }); }
+      setConfig(config) {
+        this.shadowRoot.innerHTML = `<style>:host{display:block;min-width:0}.stack{display:grid;min-width:0;gap:14px}.horizontal{grid-template-columns:repeat(${Math.max(1, config.cards.length)},minmax(0,1fr));align-items:start}.vertical{grid-template-columns:minmax(0,1fr)}.stack>*{min-width:0}</style><div class="stack ${config.type === "horizontal-stack" ? "horizontal" : "vertical"}"></div>`;
+        this._children = config.cards.map((childConfig) => {
+          if (childConfig.type === "horizontal-stack" || childConfig.type === "vertical-stack") {
+            const child = document.createElement(childConfig.type === "horizontal-stack" ? "hui-horizontal-stack-card" : "hui-vertical-stack-card");
+            child.setConfig(childConfig);
+            this.shadowRoot.querySelector(".stack").append(child);
+            return child;
+          }
+          const tag = childConfig.type.replace(/^custom:/, "");
+          const ChildCard = customElements.get(tag);
+          if (!ChildCard) throw new Error(`Unknown preview card: ${tag}`);
+          const child = new ChildCard();
+          child.setConfig(childConfig);
+          this.shadowRoot.querySelector(".stack").append(child);
+          return child;
+        });
+        if (this._hass) this.hass = this._hass;
+      }
+      set hass(value) {
+        this._hass = value;
+        for (const child of this._children || []) child.hass = value;
+      }
+      get hass() { return this._hass; }
+    }
+    class PreviewVerticalStack extends PreviewStack {}
+    class PreviewHorizontalStack extends PreviewStack {}
+    customElements.define("hui-vertical-stack-card", PreviewVerticalStack);
+    customElements.define("hui-horizontal-stack-card", PreviewHorizontalStack);
+    window.loadCardHelpers = async () => ({ createCardElement(config) {
+      const stack = document.createElement(config.type === "horizontal-stack" ? "hui-horizontal-stack-card" : "hui-vertical-stack-card");
+      stack.setConfig(config);
+      return stack;
+    } });
+    window.customCards = [];
+
+    const now = Date.now();
+    const hass = {
+      states: {
+        "cover.wohnzimmer": { state: "open", attributes: { friendly_name: "Wohnzimmer", current_position: 64, current_tilt_position: 42, supported_features: 15 } },
+        "fan.wohnzimmer": { state: "on", attributes: { friendly_name: "Lüftung", percentage: 67, percentage_step: 1, preset_mode: "Stufe 2" } },
+        "light.wohnzimmer": { state: "on", attributes: { friendly_name: "Wohnzimmer", brightness: 186, supported_color_modes: ["hs"], hs_color: [27, 82] } },
+        "light.deckenlampe": { state: "off", attributes: { friendly_name: "Deckenlampe", supported_color_modes: ["brightness"] } },
+        "timer.stosslueftung": { state: "active", attributes: { friendly_name: "Stoßlüftung", duration: "00:30:00", finishes_at: new Date(now + 12 * 60 * 1000 + 34 * 1000).toISOString() } },
+        "sensor.temperatur": { state: "21.8", attributes: { friendly_name: "Temperatur", unit_of_measurement: "°C", temperature: 21.8 } },
+        "sensor.luftfeuchtigkeit": { state: "48", attributes: { friendly_name: "Luftfeuchtigkeit", unit_of_measurement: "%", humidity: 48 } },
+        "media_player.fernseher": { state: "playing", attributes: { friendly_name: "Fernseher" } },
+      },
+      callService(domain, service, data) { console.info("Demo service call", domain, service, data); },
+    };
+
+    function setup(tag, config) {
+      const card = document.getElementById(tag);
+      card.setConfig(config);
+      card.hass = hass;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      setup("panel", {
+        panel_size: 5,
+        cards: [
+          { type: "custom:glass-text-card", title: "AKTIONEN", subtitle: "Wohnzimmer", title_size: 5, show_action_button: true, action_entity: "light.wohnzimmer", action_icon: "mdi:sofa-outline", button_size: 4 },
+          { type: "horizontal-stack", cards: [
+            { type: "custom:glass-buttons-card", entity: "light.wohnzimmer", icon: "mdi:sofa-outline", name: "Wohnzimmer", button_size: 4, show_card_frame: false },
+            { type: "custom:glass-buttons-card", entity: "light.deckenlampe", icon: "mdi:ceiling-light-outline", name: "Deckenlampe", button_size: 4, show_card_frame: false },
+          ] },
+          { type: "custom:glass-splitter-card", thickness: 1, spacing: 2 },
+          { type: "horizontal-stack", cards: [
+            { type: "custom:glass-value-card", entity: "sensor.temperatur", name: "Temperatur", visual_type: "icon", icon: "mdi:thermometer", unit: "°C", image_size: 1, value_size: 3, show_card_frame: false },
+            { type: "custom:glass-value-card", entity: "sensor.luftfeuchtigkeit", name: "Feuchte", visual_type: "icon", icon: "mdi:water-percent", unit: "%", image_size: 1, value_size: 3, show_card_frame: false },
+          ] },
+        ],
+      });
+      setup("cover", { entity: "cover.wohnzimmer", title: "Beschattung", name: "Wohnzimmer", show_tilt: true, show_position_slider: true, show_main_controls: true, show_close_tilt: true, show_preview: true, button_size: 4, title_size: 5, preview_size: 4 });
+      setup("rgb", { entity: "light.wohnzimmer", title: "RGB", name: "Sofa", icon: "mdi:lightbulb-outline", turn_on_text: "RGB", title_size: 4, button_size: 3, show_presets: true, preset_1: [255, 91, 33], preset_2: [0, 175, 255], show_action_button: true });
+      setup("ventilation", { entity: "fan.wohnzimmer", title: "Raumklima", name: "Lüftung", speed_levels: 3, timer_entity: "timer.stosslueftung", timer_duration: "00:30:00", title_size: 4, button_size: 3, preview_size: 3, timer_text_size: 3 });
+      setup("fan-value", { entity: "fan.wohnzimmer", name: "Lüftung", visual_type: "auto", image_size: 4, value_size: 4 });
+      setup("cover-value", { entity: "cover.wohnzimmer", name: "Beschattung", visual_type: "auto", image_size: 4, value_size: 4 });
+      setup("timer", { entity: "timer.stosslueftung", name: "Stoßlüftung", icon_size: 3, text_size: 4, button_size: 3 });
+    });
+  </script>
+  <script src="../dist/glass-cover-card.js"></script>
+</body>
+</html>

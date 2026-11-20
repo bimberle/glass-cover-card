@@ -17,6 +17,10 @@ const rgbToHs = (rgb) => {
 const escapeRgb = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 
 class GlassRgbCard extends HTMLElement {
+  [key: string]: any;
+  declare _config: GlassCardConfig | null;
+  declare _hass: GlassHass | null;
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -166,12 +170,12 @@ class GlassRgbCard extends HTMLElement {
     this.shadowRoot.querySelector(".turn-on").hidden = state?.state !== "off";
     this.shadowRoot.querySelector(".turn-off").hidden = state?.state !== "on";
     this.shadowRoot.querySelector(".wheel").setAttribute("tabindex", state?.state === "off" ? "-1" : "0");
-    this.shadowRoot.querySelector(".brightness").disabled = state?.state === "off";
+    this.shadowRoot.querySelector<HTMLInputElement>(".brightness").disabled = state?.state === "off";
     this.shadowRoot.querySelector(".unavailable").hidden = supportsColor && available;
     this.shadowRoot.querySelector(".unavailable").textContent = !state ? "Licht nicht gefunden." : !available ? "Licht nicht verfügbar." : "Dieses Licht unterstützt keine RGB-Farben.";
     const temp = this.shadowRoot.querySelector(".temperature");
     temp.hidden = !supportsTemperature;
-    const temperatureInput = this.shadowRoot.querySelector(".temperature input");
+    const temperatureInput = this.shadowRoot.querySelector<HTMLInputElement>(".temperature input");
     const min = state?.attributes?.min_color_temp_kelvin || (state?.attributes?.max_mireds ? Math.round(1000000 / state.attributes.max_mireds) : 2000);
     const max = state?.attributes?.max_color_temp_kelvin || (state?.attributes?.min_mireds ? Math.round(1000000 / state.attributes.min_mireds) : 6500);
     temperatureInput.min = min; temperatureInput.max = max;
@@ -188,7 +192,7 @@ class GlassRgbCard extends HTMLElement {
     colorControl.style.setProperty("--light-level", `${Math.max(0, Math.min(100, this._brightness))}%`);
     wheel.setAttribute("aria-valuenow", String(Math.round(this._hue)));
     this.shadowRoot.querySelector(".brightness-number").textContent = `${Math.round(this._brightness)} %`;
-    const brightness = this.shadowRoot.querySelector(".brightness");
+    const brightness = this.shadowRoot.querySelector<HTMLInputElement>(".brightness");
     brightness.value = this._brightness;
     brightness.style.setProperty("--brightness", `${this._brightness}%`);
     this.shadowRoot.querySelectorAll(".preset").forEach((button, index) => {
@@ -262,11 +266,11 @@ class GlassRgbCard extends HTMLElement {
     wheel.addEventListener("pointerup", (event) => { if (!this._dragging) return; this._setHue(event); this._dragging = false; this._sendColor(); });
     wheel.addEventListener("pointercancel", () => { this._dragging = false; this._sync(); });
     wheel.addEventListener("keydown", (event) => { if (!["ArrowLeft", "ArrowDown", "ArrowRight", "ArrowUp"].includes(event.key)) return; event.preventDefault(); this._hue = (Math.round(this._hue) + (event.key === "ArrowLeft" || event.key === "ArrowDown" ? 355 : 5)) % 360; this._saturation = 100; this._temperatureValue = null; this._selected = -1; this._updateView(); this._sendColor(); });
-    const brightness = this.shadowRoot.querySelector(".brightness");
+    const brightness = this.shadowRoot.querySelector<HTMLInputElement>(".brightness");
     brightness.addEventListener("input", () => { this._dragging = true; this._brightness = Number(brightness.value); this._updateView(); });
     brightness.addEventListener("change", () => { this._dragging = false; this._brightness = Number(brightness.value); this._sendBrightness(); });
     this.shadowRoot.querySelectorAll(".preset").forEach((button, index) => button.addEventListener("click", () => this._selectPreset(index)));
-    const temperature = this.shadowRoot.querySelector(".temperature input");
+    const temperature = this.shadowRoot.querySelector<HTMLInputElement>(".temperature input");
     temperature.addEventListener("input", () => { this._dragging = true; });
     temperature.addEventListener("change", () => { this._dragging = false; this._temperatureValue = Number(temperature.value); this._selected = -1; this._updateView(); this._markPending(); this._hass?.callService("light", "turn_on", { entity_id: this._config.entity, color_temp_kelvin: this._temperatureValue }); });
   }

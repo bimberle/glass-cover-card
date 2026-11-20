@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.6.5";
+const CARD_VERSION = "1.7.0";
 const BUTTON_COLORS = {
   orange: "#ff8b2b",
   white: "#f2f2f4",
@@ -16,6 +16,10 @@ const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => 
 })[char]);
 
 class GlassButtonCard extends HTMLElement {
+  [key: string]: any;
+  declare _config: GlassCardConfig | null;
+  declare _hass: GlassHass | null;
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -161,7 +165,7 @@ class GlassButtonCard extends HTMLElement {
 
   _displayBrightness(value) {
     this._brightness = Math.max(0, Math.min(100, Math.round(value)));
-    const slider = this.shadowRoot.querySelector(".dimmer");
+    const slider = this.shadowRoot.querySelector<SVGSVGElement>(".dimmer");
     if (slider) {
       slider.style.setProperty("--brightness", this._brightness);
       slider.setAttribute("aria-valuenow", String(this._brightness));
@@ -347,6 +351,8 @@ class GlassButtonCard extends HTMLElement {
 }
 
 class GlassButtonCardEditor extends HTMLElement {
+  [key: string]: any;
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -393,9 +399,14 @@ class GlassButtonCardEditor extends HTMLElement {
 }
 
 if (!customElements.get("glass-button-card")) customElements.define("glass-button-card", GlassButtonCard);
+class GlassButtonsCard extends GlassButtonCard {}
+if (!customElements.get("glass-buttons-card")) customElements.define("glass-buttons-card", GlassButtonsCard);
 if (!customElements.get("glass-button-card-editor")) customElements.define("glass-button-card-editor", GlassButtonCardEditor);
 
 window.customCards = window.customCards || [];
 if (!window.customCards.some((card) => card.type === "glass-button-card")) {
   window.customCards.push({ type: "glass-button-card", name: "Glass Button Card", description: "Einzelner runder Home Assistant Button mit Icon- und Farbauswahl.", preview: true, version: CARD_VERSION });
+}
+if (!window.customCards.some((card) => card.type === "glass-buttons-card")) {
+  window.customCards.push({ type: "glass-buttons-card", name: "Glass Buttons", description: "Runder Aktionsbutton für Vertical- und Horizontal-Stacks.", preview: true, version: CARD_VERSION });
 }

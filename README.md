@@ -1,6 +1,6 @@
 # Glass Cover Cards
 
-Eine Sammlung responsiver Home-Assistant-Lovelace-Karten. Die Kartenquellen liegen getrennt unter `cards/<kartenname>/`; `npm run build` legt die HACS-Dateien gemeinsam in `dist/` ab.
+Eine Sammlung responsiver Home-Assistant-Lovelace-Karten. Alle Kartenquellen liegen als TypeScript unter `cards/<kartenname>/`; `npm run build` prüft und kompiliert sie als Home-Assistant-kompatible Dateien nach `dist/`.
 
 ## Entwicklung
 
@@ -9,7 +9,7 @@ npm run build
 npm test
 ```
 
-Die Quellen der acht Karten liegen jeweils in `cards/<kartenname>/`. Die gebauten `dist/*.js`-Dateien werden mit versioniert, damit HACS sie direkt aus einer GitHub-Release installieren kann.
+Die TypeScript-Quellen liegen jeweils in `cards/<kartenname>/`. Die gebauten `dist/*.js`-Dateien werden mit versioniert, damit HACS sie direkt aus einer GitHub-Release installieren kann. Home-Assistant- und Editor-Typen stehen in `cards/glass-types.d.ts`.
 
 ## Karten
 
@@ -19,6 +19,73 @@ Die Texteingaben sind in allen Karteneditoren einheitlich als **Titel** und **Be
 # Beispiel: Cover- oder RGB-Karte ohne Ueberschriften
 title: ""
 name: ""
+```
+
+### Glass Text
+
+Eigenständige Panel-Kopfzeile mit Titel, Untertitel und optionalem Aktionsbutton. Größen von Überschrift und Button sind getrennt einstellbar.
+
+```yaml
+type: custom:glass-text-card
+title: AKTIONEN
+subtitle: Wohnzimmer
+title_size: 5
+show_action_button: true
+action_entity: light.wohnzimmer
+action_icon: mdi:sofa-outline
+action: toggle
+button_size: 5
+```
+
+### Glass Value
+
+Visualisierung und Wert einer Entität nebeneinander. `visual_type: auto` erkennt Lüfter und Cover; alternativ stehen Lüfter, Jalousie, Icon und Bild zur Auswahl. `attribute` und `unit` erlauben eigene Werte.
+
+```yaml
+type: custom:glass-value-card
+entity: fan.wohnzimmer
+name: Lüftung
+visual_type: fan
+image_size: 5
+value_size: 5
+show_card_frame: false
+```
+
+```yaml
+type: custom:glass-value-card
+entity: sensor.temperatur
+name: Temperatur
+visual_type: image
+image: /local/temperatur.png
+attribute: temperature
+unit: °C
+```
+
+### Glass Buttons
+
+Einzelner runder Button. Mehrere Buttons werden in einem Home-Assistant-`horizontal-stack` nebeneinander angeordnet. `custom:glass-button-card` bleibt als bisherige Karten-ID unterstützt.
+
+```yaml
+type: horizontal-stack
+cards:
+  - type: custom:glass-buttons-card
+    entity: light.wohnzimmer
+    icon: mdi:sofa-outline
+    show_card_frame: false
+  - type: custom:glass-buttons-card
+    entity: light.deckenlampe
+    icon: mdi:lightbulb-outline
+    show_card_frame: false
+```
+
+### Glass Splitter
+
+Horizontaler Trenner zwischen Panel-Bereichen mit einstellbarer Stärke und Abstand.
+
+```yaml
+type: custom:glass-splitter-card
+thickness: 1
+spacing: 3
 ```
 
 ### Glass Cover Card
@@ -173,36 +240,40 @@ Interne URLs beginnen mit `/`, zum Beispiel `/lovelace/kueche`; externe Links m�
 
 ## Installation ueber Marketplace / HACS
 
-Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle acht Karten. Bei gleicher `button_size` verwenden Panel- und Cover-Karte dieselbe Größe und Position für den Kopfbutton. `title_size` skaliert die Beschriftung. Die Panelkarte nutzt Home Assistants Standard-Kartenpicker und rendert ihre Inhalte in einem nativen Vertical Stack. Die aktuelle Repository-Version ist `v1.23.11`.
+Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die gleichnamige Einstiegskarte erkennt. Die automatisch geladene `glass-cover-card.js` registriert alle Karten. Das Panel ist die Hülle; Glass Text, Value, Buttons, Splitter und Timer werden als Kindkarten konfiguriert. Bestehende Panel-Kopfoptionen werden beim Laden in eine Glass Text-Kindkarte übernommen. Der Paneleditor nutzt Home Assistants Standard-Kartenpicker und rendert seine Inhalte in einem nativen Vertical Stack.
 
 1. Oeffne in Home Assistant **Einstellungen > Marketplace** (ab Home Assistant 2026.11) beziehungsweise **HACS** (bis Home Assistant 2026.10).
 2. Oeffne das Menue oben rechts und waehle **Benutzerdefinierte Repositories**.
 3. Fuege `https://github.com/bimberle/glass-cover-card` hinzu und waehle den Typ **Dashboard**.
 4. Suche nach **Glass Cover Cards**, oeffne den Eintrag und installiere ihn.
-5. Lade die Dashboard-Ressource neu. Die Ressource `glass-cover-card.js` registriert `custom:glass-cover-card`, `custom:glass-button-card`, `custom:glass-panel-card`, `custom:glass-rgb-card`, `custom:glass-room-card`, `custom:glass-navigation-card`, `custom:glass-ventilation-card` und `custom:glass-timer-bar-card`.
+5. Lade die Dashboard-Ressource neu. Die Ressource `glass-cover-card.js` registriert `custom:glass-cover-card`, `custom:glass-text-card`, `custom:glass-value-card`, `custom:glass-buttons-card`, `custom:glass-button-card`, `custom:glass-splitter-card`, `custom:glass-timer-card`, `custom:glass-timer-bar-card`, `custom:glass-panel-card`, `custom:glass-rgb-card`, `custom:glass-room-card`, `custom:glass-navigation-card` und `custom:glass-ventilation-card`.
 
   - Home Assistant 2026.11+: `/local/community/glass-cover-card/glass-cover-card.js`
   - Aeltere HACS-Versionen: `/hacsfiles/glass-cover-card.js`
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.23.10 installiert?** Aktualisiere auf v1.23.11 und lade die Repository-Dateien in Marketplace/HACS erneut herunter.
+**Schon v1.7.0 bis v1.23.11 installiert?** Aktualisiere auf v1.24.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter. Bisherige Panel-Kopfoptionen werden beim Laden in eine Glass Text-Kindkarte übernommen.
 
 ## Manuelle Installation
 
-Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/local/glass-cover-card.js` unter **Einstellungen > Dashboards > Ressourcen** als **JavaScript-Modul**. Die Datei enthaelt alle acht Karten. Optional kann fuer eine isolierte Buttonkarten-Installation stattdessen nur `glass-button-card.js` kopiert und `/local/glass-button-card.js` registriert werden.
+Kopiere `glass-cover-card.js` aus `dist/` nach `/config/www/` und registriere `/local/glass-cover-card.js` unter **Einstellungen > Dashboards > Ressourcen** als **JavaScript-Modul**. Die Datei enthält alle Karten. Für eine isolierte Button- oder Timerinstallation gibt es zusätzlich `glass-buttons-card.js` und `glass-timer-card.js`.
 
 ## Optionen
 
-### Glass Timer Bar Card
+### Glass Timer
 
 Eigenständige Timerleiste mit Start, Countdown, verbleibendem Fortschritt, Pause, Fortsetzen und Stopp. Die Timer-Entität muss in Home Assistant bereits vorhanden sein. Ohne `duration` verwendet der Start die in Home Assistant konfigurierte Timerdauer; ein pausierter Timer wird mit seiner Restzeit fortgesetzt.
 
 ```yaml
-type: custom:glass-timer-bar-card
+type: custom:glass-timer-card
 entity: timer.stosslueftung
 name: Stoßlüftung
 duration: "00:30:00"
+icon_size: 5
+text_size: 5
+button_size: 5
+show_card_frame: true
 ```
 
 | Option | Standard | Beschreibung |
@@ -210,6 +281,12 @@ duration: "00:30:00"
 | `entity` | erforderlich | Home-Assistant-Timer-Entität |
 | `name` | Friendly Name | Beschriftung der Timerleiste |
 | `duration` | Timerdauer | Optionale Startdauer im Format `HH:MM:SS` |
+| `icon_size` | `5` | Timericon von `1` bis `5` skalieren |
+| `text_size` | `5` | Titel, Status und Countdown von `1` bis `5` skalieren |
+| `button_size` | `5` | Timerbuttons von `1` bis `5` skalieren |
+| `show_card_frame` | `true` | Kartenrahmen, Hintergrund und Außenabstand anzeigen |
+
+Die bisherige ID `custom:glass-timer-bar-card` bleibt als Alias verfügbar.
 
 ### Glass Ventilation Card
 
@@ -248,7 +325,7 @@ preview_size: 5
 
 Ohne `timer_entity` wird der Timerbereich nicht angezeigt. Eine Stufe von `0` schaltet den Lüfter aus. Die Timer-Steuerung verwendet `timer.start`, `timer.pause` und `timer.cancel`.
 
-### Glass Button Card
+### Glass Buttons / Glass Button Card
 
 | Option | Standard | Beschreibung |
 | --- | --- | --- |
@@ -323,47 +400,41 @@ preset_2: [0, 180, 255]
 
 ### Glass Panel Card
 
-Container mit Titel und Untertitel, optionalem runden Aktionsbutton oben rechts und einer Liste beliebiger Home-Assistant-Karten. Die enthaltenen Karten koennen direkt als Liste angegeben werden, zum Beispiel mit mehreren Glass Button Cards:
+Das Panel ist die äußere Hülle mit einer beliebig langen Liste von Kindkarten. Es rendert selbst keinen Titel, Untertitel oder Aktionsbutton. Diese Inhalte werden als Glass Text-Karte in die Liste eingefügt. Ältere Konfigurationen mit den bisherigen Panel-Kopfoptionen werden beim Laden automatisch migriert. Der Editor nutzt den Home-Assistant-Kartenpicker und Standardeditor für die Kindkarten.
 
 ```yaml
 type: custom:glass-panel-card
-title: Aktionen
-subtitle: Wohnzimmer
-title_size: 5
-show_action_button: true
-action_entity: light.wohnzimmer
-action_icon: mdi:sofa-outline
-action: toggle
+panel_size: 5
 cards:
-  - type: vertical-stack
+  - type: custom:glass-text-card
+    title: AKTIONEN
+    subtitle: Wohnzimmer
+    show_action_button: true
+    action_entity: light.wohnzimmer
+    action_icon: mdi:sofa-outline
+  - type: horizontal-stack
     cards:
-      - type: custom:glass-button-card
+      - type: custom:glass-buttons-card
         entity: light.wohnzimmer
         icon: mdi:sofa-outline
         show_card_frame: false
-      - type: custom:glass-button-card
+      - type: custom:glass-buttons-card
         entity: light.deckenlampe
         icon: mdi:lightbulb-outline
         show_card_frame: false
-      - type: custom:glass-button-card
-        entity: media_player.fernseher
-        icon: mdi:television
-        action: more-info
-        show_card_frame: false
+  - type: custom:glass-splitter-card
+  - type: custom:glass-value-card
+    entity: cover.wohnzimmer
+    name: Beschattung
+  - type: custom:glass-timer-card
+    entity: timer.stosslueftung
 ```
 
-Im Bearbeitungsmodus wählst du über **Karte hinzufügen** den normalen Home-Assistant-Kartenpicker. Dort stehen alle Standard- und Custom Cards zur Auswahl. Die ausgewählte Karte lässt sich danach mit ihrem Standardeditor konfigurieren; Karten können entfernt, ausgewählt und sortiert werden. Der Panelinhalt ist vertikal gestapelt. Für nebeneinanderliegende Karten fügst du darin einen normalen `horizontal-stack` oder `grid` ein.
+Im Bearbeitungsmodus wählst du über **Karte hinzufügen** den normalen Home-Assistant-Kartenpicker. Dort stehen alle Standard- und Custom Cards zur Auswahl. Die ausgewählte Karte lässt sich danach mit ihrem Standardeditor konfigurieren; Karten können entfernt, ausgewählt und sortiert werden. Die Kindkarten liegen vertikal. Für nebeneinanderliegende Karten fügst du `horizontal-stack` oder `grid` ein.
 
 | Option | Standard | Beschreibung |
 | --- | --- | --- |
-| `title` | leer | Titel, zum Beispiel `AKTIONEN` |
-| `subtitle` | leer | Beschriftung unter dem Titel |
-| `title_size` | `5` | Beschriftungsgröße wie bei der Cover Card von `1` (klein) bis `5` (Vorlagengröße) |
-| `show_action_button` | `false` | Runden Button rechts oben anzeigen; bei Ein/Aus-Entitaeten zeigt er den Zustand und ist ausgeschaltet grau |
-| `button_size` | `5` | Größe des Aktionsbuttons von `1` bis `5`, entsprechend der Cover Card |
-| `action_entity` | keine | Entität für den Aktionsbutton |
-| `action_icon` | `mdi:gesture-tap-button` | Icon des Aktionsbuttons |
-| `action` | `toggle` | Entität umschalten oder mit `more-info` deren Details öffnen |
+| `panel_size` | `5` | Größe der Panel-Hülle von `1` bis `5` |
 | `cards` | `[]` | Liste beliebiger Lovelace-Kartenkonfigurationen |
 
 ### Glass Cover Card

@@ -20,6 +20,10 @@ const parseDuration = (value) => {
 };
 
 class GlassVentilationCard extends HTMLElement {
+  [key: string]: any;
+  declare _config: GlassCardConfig | null;
+  declare _hass: GlassHass | null;
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -324,6 +328,8 @@ class GlassVentilationCard extends HTMLElement {
 }
 
 class GlassVentilationCardEditor extends HTMLElement {
+  [key: string]: any;
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });

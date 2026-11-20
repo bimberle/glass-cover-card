@@ -409,11 +409,20 @@ assert.ok(marketplaceEntry.definitions.has("glass-button-card"));
 assert.equal(typeof marketplaceEntry.Card.getConfigForm, "function");
 assert.ok(marketplaceEntry.definitions.has("glass-panel-card"));
 assert.ok(marketplaceEntry.definitions.has("glass-rgb-card"));
+assert.ok(marketplaceEntry.definitions.has("glass-text-card"));
+assert.ok(marketplaceEntry.definitions.has("glass-value-card"));
+assert.ok(marketplaceEntry.definitions.has("glass-splitter-card"));
+assert.ok(marketplaceEntry.definitions.has("glass-buttons-card"));
+assert.ok(marketplaceEntry.definitions.has("glass-timer-card"));
 assert.ok(marketplaceEntry.definitions.has("glass-navigation-card"));
 assert.ok(marketplaceEntry.definitions.has("glass-ventilation-card"));
 const TimerBarCard = marketplaceEntry.definitions.get("glass-timer-bar-card");
 assert.ok(TimerBarCard);
-assert.equal(TimerBarCard.getConfigForm().schema[0].selector.entity.filter.domain, "timer");
+const timerForm = TimerBarCard.getConfigForm();
+assert.equal(timerForm.schema[0].selector.entity.filter.domain, "timer");
+const timerSchema = Object.fromEntries(timerForm.schema.map((field) => [field.name, field]));
+for (const field of ["icon_size", "text_size", "button_size"]) assert.equal(timerSchema[field].selector.number.mode, "slider");
+assert.equal(timerSchema.show_card_frame.selector.boolean !== undefined, true);
 const timerBar = new TimerBarCard();
 assert.throws(() => timerBar.setConfig({ entity: "fan.test" }), /Timer-Entität/);
 assert.throws(() => timerBar.setConfig({ entity: "timer.test", duration: "00:99:00" }), /Dauer/);
@@ -445,7 +454,48 @@ timerBarStates["timer.test"] = { state: "unavailable", attributes: {} };
 timerBar.hass = timerBarHass;
 assert.match(timerBar.shadowRoot.innerHTML, /Nicht verfügbar/);
 assert.match(timerBar.shadowRoot.innerHTML, /disabled/);
+timerBar.setConfig({ entity: "timer.test", name: "Stoßlüftung", icon_size: 1, text_size: 1, button_size: 1, show_card_frame: false });
+assert.match(timerBar.shadowRoot.innerHTML, /class="card no-frame"/);
+assert.match(timerBar.shadowRoot.innerHTML, /\.timer-icon \{ display:grid; width:clamp\(28\.6px/);
+const TimerCard = marketplaceEntry.definitions.get("glass-timer-card");
+const timerAlias = new TimerCard();
+timerAlias.setConfig({ entity: "timer.test" });
+assert.match(timerAlias.shadowRoot.innerHTML, /class="card /);
+const ButtonAlias = marketplaceEntry.definitions.get("glass-buttons-card");
+const buttonAlias = new ButtonAlias();
+buttonAlias.setConfig({ entity: "switch.alias", button_size: 2, show_card_frame: false });
+assert.match(buttonAlias.shadowRoot.innerHTML, /class="card no-frame"/);
 timerBar.disconnectedCallback();
+
+const ValueCard = marketplaceEntry.definitions.get("glass-value-card");
+const valueForm = ValueCard.getConfigForm();
+const valueSchema = Object.fromEntries(valueForm.schema.map((field) => [field.name, field]));
+assert.equal(valueSchema.image_size.selector.number.mode, "slider");
+assert.equal(valueSchema.value_size.selector.number.mode, "slider");
+const valueCard = new ValueCard();
+valueCard.setConfig({ entity: "fan.living_room", name: "Lüftung" });
+valueCard.hass = { states: { "fan.living_room": { state: "on", attributes: { percentage: 45 } } } };
+assert.match(valueCard.shadowRoot.innerHTML, /class="visual-icon spinning" icon="mdi:fan"/);
+assert.match(valueCard.shadowRoot.innerHTML, />45<small class="unit">%<\/small>/);
+valueCard.setConfig({ entity: "cover.office", name: "Jalousie", visual_type: "auto" });
+valueCard.hass = { states: { "cover.office": { state: "open", attributes: { current_position: 30 } } } };
+assert.match(valueCard.shadowRoot.innerHTML, /class="window" style="--position:30%"/);
+assert.match(valueCard.shadowRoot.innerHTML, />70<small class="unit">%<\/small>/);
+valueCard.setConfig({ entity: "sensor.temperature", visual_type: "image", image: "/local/temperature.png", attribute: "temperature", unit: "°C", image_size: 2, value_size: 4, show_card_frame: false });
+valueCard.hass = { states: { "sensor.temperature": { state: "22.5", attributes: { temperature: 22.5 } } } };
+assert.match(valueCard.shadowRoot.innerHTML, /class="card no-frame"/);
+assert.match(valueCard.shadowRoot.innerHTML, /src="\/local\/temperature.png"/);
+assert.match(valueCard.shadowRoot.innerHTML, />22\.5<small class="unit">°C<\/small>/);
+assert.throws(() => valueCard.setConfig({ entity: "sensor.temperature", image: "javascript:alert(1)" }), /Bild/);
+
+const SplitterCard = marketplaceEntry.definitions.get("glass-splitter-card");
+const splitterForm = SplitterCard.getConfigForm();
+assert.equal(splitterForm.schema.find((field) => field.name === "thickness").selector.number.max, 5);
+const splitter = new SplitterCard();
+splitter.setConfig({ thickness: 3, spacing: 4 });
+assert.match(splitter.shadowRoot.innerHTML, /role="separator" aria-orientation="horizontal" style="height:3px"/);
+assert.match(splitter.shadowRoot.innerHTML, /margin:24px 0/);
+
 const VentilationCard = marketplaceEntry.definitions.get("glass-ventilation-card");
 const ventilationForm = VentilationCard.getConfigForm();
 const ventilationSchema = Object.fromEntries(ventilationForm.schema.map((field) => [field.name, field]));
@@ -685,9 +735,9 @@ assert.match(rgbSource, /\.turn-off \{[^}]*solid var\(--light-color\);[^}]*color
 assert.match(rgbSource, /<button class="turn-on"[^>]*><ha-icon icon=/);
 assert.match(rgbSource, /this\._config\.turn_on_text/);
 assert.match(rgbSource, /class="turn-on-label"/);
-assert.deepEqual(marketplaceEntry.customCards.map((card) => card.type).sort(), ["glass-button-card", "glass-cover-card", "glass-navigation-card", "glass-panel-card", "glass-rgb-card", "glass-room-card", "glass-timer-bar-card", "glass-ventilation-card"]);
+assert.deepEqual(marketplaceEntry.customCards.map((card) => card.type).sort(), ["glass-button-card", "glass-buttons-card", "glass-cover-card", "glass-navigation-card", "glass-panel-card", "glass-rgb-card", "glass-room-card", "glass-splitter-card", "glass-text-card", "glass-timer-bar-card", "glass-timer-card", "glass-value-card", "glass-ventilation-card"]);
 await marketplaceEntry.runSource(await readFile("dist/glass-button-card.js", "utf8"), "dist/glass-button-card.js");
-assert.equal(marketplaceEntry.customCards.length, 8, "Loading standalone cards must not register duplicate card entries");
+assert.equal(marketplaceEntry.customCards.length, 13, "Loading standalone cards must not register duplicate card entries");
 const RoomCard = marketplaceEntry.definitions.get("glass-room-card");
 const roomEditor = RoomCard.getConfigElement();
 roomEditor.setConfig({ name: "Wohnzimmer", height: 430 });
@@ -842,28 +892,23 @@ await panelCard.setConfig({
   cards: [{ type: "custom:glass-button-card", entity: "light.living_room" }, { type: "custom:glass-button-card", entity: "light.deckenlampe" }],
 });
 panelCard.hass = panelHass;
-assert.equal(panelCard.shadowRoot.querySelector(".header-action").classList.active, true);
-assert.equal(panelCard.shadowRoot.querySelector(".action-state").textContent, "An");
+assert.equal(panelCard._config.title, undefined);
+assert.equal(panelCard._config.cards[0].type, "custom:glass-text-card");
+assert.equal(panelCard._config.cards[0].title, "Aktionen");
+assert.equal(panelCard._config.cards[0].subtitle, "Wohnzimmer");
+assert.equal(panelCard._config.cards[0].title_size, 1);
+assert.equal(panelCard._config.cards[0].button_size, 1);
+assert.equal(panelCard._config.cards[0].action_entity, "light.living_room");
+assert.doesNotMatch(panelCard.shadowRoot.innerHTML, /header-action|Aktionen|Wohnzimmer/);
+assert.match(panelCard.shadowRoot.innerHTML, /class="panel"/);
+assert.match(panelCard.shadowRoot.innerHTML, /--panel-padding:clamp\(20px,4\.7vw,38px\)/);
 const panelRenderCount = panelCard._innerHTMLWrites;
 panelCard.hass = { ...panelHass, states: { "light.living_room": { state: "off", attributes: {} } } };
-assert.equal(panelCard.shadowRoot.querySelector(".header-action").classList.active, false);
-assert.equal(panelCard.shadowRoot.querySelector(".header-action").classList.inactive, true);
-assert.equal(panelCard.shadowRoot.querySelector(".action-state").textContent, "Aus");
 assert.equal(panelCard._innerHTMLWrites, panelRenderCount);
-panelCard.hass = { ...panelHass, states: { "light.living_room": { state: "unknown", attributes: {} } } };
-assert.equal(panelCard.shadowRoot.querySelector(".header-action").classList.inactive, false);
-assert.equal(panelCard.shadowRoot.querySelector(".action-state").textContent, "");
-panelCard.hass = panelHass;
-assert.match(panelCard.shadowRoot.innerHTML, /Aktionen/);
-assert.match(panelCard.shadowRoot.innerHTML, /Wohnzimmer/);
-assert.match(panelCard.shadowRoot.innerHTML, /--header-action-size:clamp\(37\.33333333333333px,7\.333333333333333vw,58\.666666666666664px\)/);
-assert.match(panelCard.shadowRoot.innerHTML, /\.header-action ha-icon \{ display:block; width:var\(--header-icon-size\); height:var\(--header-icon-size\); --mdc-icon-size:var\(--header-icon-size\); \}/);
-const smallSubtitleFont = Number(panelCard.shadowRoot.innerHTML.match(/--subtitle-font:clamp\(([\d.]+)px/)?.[1]);
-assert.ok(smallSubtitleFont > 14 && smallSubtitleFont < 16);
 assert.equal(panelCard.shadowRoot.querySelector(".children").children.length, 1);
 assert.equal(panelCard.shadowRoot.querySelector(".children").children[0].config.type, "vertical-stack");
-assert.equal(panelCard.shadowRoot.querySelector(".children").children[0].config.cards.length, 2);
-assert.equal(panelCard.shadowRoot.querySelector(".children").children[0].hass, panelHass);
+assert.equal(panelCard.shadowRoot.querySelector(".children").children[0].config.cards.length, 3);
+assert.equal(panelCard.shadowRoot.querySelector(".children").children[0].hass, panelCard.hass);
 await panelCard.setConfig({
   title: "Aktionen",
   subtitle: "Wohnzimmer",
@@ -872,30 +917,35 @@ await panelCard.setConfig({
   cards: [{ type: "custom:glass-button-card", entity: "light.living_room" }, { type: "custom:glass-button-card", entity: "light.deckenlampe" }],
 });
 assert.equal(panelCard.shadowRoot.querySelector(".children").children.length, 1, "Panel updates must not accumulate nested stacks");
-panelCard._callHeaderAction();
+assert.equal(panelCard._config.cards.filter((card) => card.type === "custom:glass-text-card").length, 1, "Legacy header migration must not duplicate after a second config load");
+
+const TextCard = marketplaceEntry.definitions.get("glass-text-card");
+const textCard = new TextCard();
+textCard.setConfig({ title: "Aktionen", subtitle: "Wohnzimmer", title_size: 1, button_size: 1, show_action_button: true, action_entity: "light.living_room", action_icon: "mdi:sofa-outline" });
+textCard.hass = panelHass;
+assert.match(textCard.shadowRoot.innerHTML, /Aktionen/);
+assert.match(textCard.shadowRoot.innerHTML, /Wohnzimmer/);
+assert.match(textCard.shadowRoot.innerHTML, /--header-action-size:clamp\(37\.33333333333333px,7\.333333333333333vw,58\.666666666666664px\)/);
+assert.equal(textCard.shadowRoot.querySelector(".header-action").classList.active, true);
+assert.equal(textCard.shadowRoot.querySelector(".action-state").textContent, "An");
+textCard._callAction();
 assert.equal(serviceCalls.at(-1)[0], "homeassistant");
 assert.equal(serviceCalls.at(-1)[1], "toggle");
-assert.equal(serviceCalls.at(-1)[2].entity_id, "light.wohnzimmer");
-await panelCard.setConfig({ title: "Aktionen", subtitle: "Wohnzimmer", title_size: 5, cards: [] });
-assert.match(panelCard.shadowRoot.innerHTML, /--header-action-size:clamp\(56px,11vw,88px\)/);
-const largeSubtitleFont = Number(panelCard.shadowRoot.innerHTML.match(/--subtitle-font:clamp\(([\d.]+)px/)?.[1]);
-assert.equal(largeSubtitleFont, 22);
-for (const level of [1, 2, 3, 4, 5]) {
-  coverCard.setConfig({ entity: "cover.office", button_size: level });
-  await panelCard.setConfig({ title: "Aktionen", button_size: level, cards: [] });
-  const coverSize = coverCard.shadowRoot.innerHTML.match(/--menu-size:(clamp\([^)]*\))/)?.[1];
-  const panelSize = panelCard.shadowRoot.innerHTML.match(/--header-action-size:(clamp\([^)]*\))/)?.[1];
-  assert.equal(panelSize, coverSize, `Panel and cover buttons must match at size ${level}`);
-}
+assert.equal(serviceCalls.at(-1)[2].entity_id, "light.living_room");
+const textSchema = Object.fromEntries(TextCard.getConfigForm().schema.map((field) => [field.name, field]));
+assert.equal(textSchema.title_size.selector.number.mode, "slider");
+assert.equal(textSchema.button_size.selector.number.mode, "slider");
+const largeTextCard = new TextCard();
+largeTextCard.setConfig({ title: "Aktionen", subtitle: "Wohnzimmer", title_size: 5 });
+assert.match(largeTextCard.shadowRoot.innerHTML, /--subtitle-font:clamp\(22px/);
 
 const panelEditor = await panelCardClass.getConfigElement();
 panelEditor.setConfig({ title: "Aktionen", subtitle: "Wohnzimmer", cards: [] });
 const panelForm = panelEditor.shadowRoot.querySelector("ha-form");
-const panelButtonSize = panelForm.schema.find((field) => field.name === "button_size");
-assert.equal(panelButtonSize.selector.number.mode, "slider");
-assert.equal(panelForm.computeLabel(panelButtonSize), "Button-Größe");
-assert.equal(panelForm.computeLabel(panelForm.schema.find((field) => field.name === "title")), "Titel");
-assert.equal(panelForm.computeLabel(panelForm.schema.find((field) => field.name === "subtitle")), "Beschriftung");
+assert.equal(panelForm.schema.map((field) => field.name).join(","), "panel_size");
+assert.equal(panelForm.schema[0].selector.number.mode, "slider");
+assert.equal(panelForm.computeLabel(panelForm.schema[0]), "Panel-Größe");
+assert.equal(panelEditor._config.cards[0].type, "custom:glass-text-card");
 assert.match(panelEditor.shadowRoot.innerHTML, /ha-form/);
 assert.match(panelEditor.shadowRoot.innerHTML, /hui-card-picker/);
 assert.match(panelEditor.shadowRoot.innerHTML, /hui-card-element-editor/);
@@ -903,8 +953,8 @@ panelEditor._handleCardPicked({
   stopPropagation() {},
   detail: { config: { type: "custom:glass-button-card", entity: "light.deckenlampe" } },
 });
-assert.equal(panelEditor._config.cards.length, 1);
-assert.equal(panelEditor._config.cards[0].entity, "light.deckenlampe");
+assert.equal(panelEditor._config.cards.length, 2);
+assert.equal(panelEditor._config.cards[1].entity, "light.deckenlampe");
 
 coverCard.setConfig({ entity: "cover.office", title: "", name: "" });
 coverCard.hass = { states: { "cover.office": { state: "open", attributes: { friendly_name: "Office", current_position: 55 } } } };
@@ -930,11 +980,12 @@ buttonCard.setConfig({ entity: "light.living_room" });
 assert.match(buttonCard.shadowRoot.innerHTML, /<span class="name">Living Room<\/span>/);
 
 await panelCard.setConfig({ title: " ", subtitle: "", show_action_button: false, cards: [] });
-assert.match(panelCard.shadowRoot.innerHTML, /<header class="header" hidden>/);
-assert.doesNotMatch(panelCard.shadowRoot.innerHTML, /<div class="titles">|<h2 class="subtitle">/);
+assert.match(panelCard.shadowRoot.innerHTML, /class="empty">Keine Karten konfiguriert/);
+assert.doesNotMatch(panelCard.shadowRoot.innerHTML, /<header|<h2|header-action/);
 await panelCard.setConfig({ title: "", subtitle: "Room", cards: [] });
-assert.doesNotMatch(panelCard.shadowRoot.innerHTML, /<div class="title">/);
-assert.match(panelCard.shadowRoot.innerHTML, /<h2 class="subtitle">Room<\/h2>/);
+assert.equal(panelCard._config.cards[0].type, "custom:glass-text-card");
+assert.equal(panelCard._config.cards[0].subtitle, "Room");
+assert.doesNotMatch(panelCard.shadowRoot.innerHTML, /Room|<h2/);
 
 rgbCard._config = { ...rgbCard._config, title: "", name: "" };
 rgbCard._sync();

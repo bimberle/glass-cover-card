@@ -11,6 +11,15 @@
 
 ## Umsetzung
 
+- [x] Sämtliche Kartenquellen nach TypeScript migrieren und den Build mit TypeScript-Compilerprüfung ausstatten.
+- [x] Glass Text, Glass Value, Glass Buttons, Glass Splitter und Glass Timer als eigenständige Karten ergänzen.
+- [x] Panel auf die äußere Hülle mit `panel_size` und einer beliebigen vertikalen Kindkartenliste reduzieren.
+- [x] Vorhandene Panel-Kopfkonfiguration beim Laden in eine Glass Text-Kindkarte migrieren.
+- [x] Glass Buttons und Glass Timer mit neuen IDs registrieren und bisherige Karten-IDs als kompatible Aliase beibehalten.
+- [x] Timer-Icon, Timertext und Timerbuttons unabhängig skalierbar machen sowie einen rahmenlosen Modus ergänzen.
+- [x] Smoke-Tests für neue Karten, Konfigurationseditoren, Größenregler, Aliase und Panel-Migration ergänzen.
+- [x] README mit neuer Kartenarchitektur, Kindkartenbeispiel und Kompatibilitätsverhalten aktualisieren.
+
 - [x] Eigenstaendige Lovelace-Custom-Card ohne externe Laufzeitabhaengigkeiten erstellen.
 - [x] Standard-Home-Assistant-Cover-Dienste fuer Position, Fahrt und Lamellen verwenden.
 - [x] Schnellwahl-Menue, Positionsregler und optionale Lamellensteuerung implementieren.

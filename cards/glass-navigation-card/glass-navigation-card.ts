@@ -25,6 +25,10 @@ const escapeNav = (value) => String(value ?? "").replace(/[&<>"']/g, (character)
 })[character]);
 
 class GlassNavigationCard extends HTMLElement {
+  [key: string]: any;
+  declare _config: GlassCardConfig | null;
+  declare _hass: GlassHass | null;
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -238,7 +242,7 @@ class GlassNavigationCard extends HTMLElement {
   }
 
   _bindEvents() {
-    this.shadowRoot.querySelectorAll("[data-root-index]").forEach((button) => button.addEventListener("click", () => {
+    this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-root-index]").forEach((button) => button.addEventListener("click", () => {
       const index = Number(button.dataset.rootIndex);
       const item = this._config.items[index];
       if (item.children?.length) {
@@ -247,7 +251,7 @@ class GlassNavigationCard extends HTMLElement {
         this._render();
       } else this._navigate(item.url.trim());
     }));
-    this.shadowRoot.querySelectorAll("[data-child-index]").forEach((button) => button.addEventListener("click", () => {
+    this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-child-index]").forEach((button) => button.addEventListener("click", () => {
       const index = Number(button.dataset.childIndex);
       const item = this._visibleItems()[index];
       if (item.children?.length) {
@@ -256,7 +260,7 @@ class GlassNavigationCard extends HTMLElement {
         this._render();
       } else this._navigate(item.url.trim());
     }));
-    this.shadowRoot.querySelectorAll("[data-segment-level]").forEach((button) => button.addEventListener("click", () => {
+    this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-segment-level]").forEach((button) => button.addEventListener("click", () => {
       const level = Number(button.dataset.segmentLevel);
       this._menuPath = [...this._menuPath.slice(0, level), Number(button.dataset.segmentIndex)];
       this._render();
@@ -343,6 +347,8 @@ class GlassNavigationCard extends HTMLElement {
 }
 
 class GlassNavigationCardEditor extends HTMLElement {
+  [key: string]: any;
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -521,12 +527,8 @@ class GlassNavigationCardEditor extends HTMLElement {
   _updatePreview() {
     const preview = this.shadowRoot.querySelector(".preview-bar");
     if (preview) preview.innerHTML = this._previewMarkup();
-    const previewShell = this.shadowRoot.querySelector(".preview");
+    const previewShell = this.shadowRoot.querySelector<HTMLElement>(".preview");
     if (previewShell) previewShell.style.setProperty("--nav-color", NAV_COLORS[this._config.color] || NAV_COLORS.orange);
-  }
-
-  _emitConfig() {
-    this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
   }
 
   setConfig(config) {

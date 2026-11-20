@@ -3,6 +3,10 @@ const ROOM_TEXT_COLORS = { black: "#151515", white: "#ffffff", gray: "#a0a2a6" }
 const escapeRoom = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 
 class GlassRoomCard extends HTMLElement {
+  [key: string]: any;
+  declare _config: GlassCardConfig | null;
+  declare _hass: GlassHass | null;
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -104,11 +108,13 @@ class GlassRoomCard extends HTMLElement {
         <div class="sensor-value"></div>
       </article>`;
     this.shadowRoot.querySelector(".sensor-action")?.addEventListener("click", () => this._openSensor());
-    this.shadowRoot.querySelector(".image")?.addEventListener("error", (event) => { event.currentTarget.hidden = true; });
+    this.shadowRoot.querySelector<HTMLImageElement>(".image")?.addEventListener("error", (event) => { (event.currentTarget as HTMLImageElement).hidden = true; });
   }
 }
 
 class GlassRoomCardEditor extends HTMLElement {
+  [key: string]: any;
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });

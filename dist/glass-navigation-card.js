@@ -1,287 +1,291 @@
 const NAV_CARD_VERSION = "1.0.6";
 const NAV_COLORS = {
-  orange: "#ff8b2b",
-  white: "#f2f2f4",
-  gray: "#a0a2a6",
-  green: "#4bc785",
-  red: "#f05c5c",
+    orange: "#ff8b2b",
+    white: "#f2f2f4",
+    gray: "#a0a2a6",
+    green: "#4bc785",
+    red: "#f05c5c",
 };
 const NAV_COLOR_OPTIONS = Object.entries(NAV_COLORS).map(([value]) => ({
-  value,
-  label: value[0].toUpperCase() + value.slice(1),
+    value,
+    label: value[0].toUpperCase() + value.slice(1),
 }));
 const NAV_POSITION_OPTIONS = [
-  { value: "top", label: "Oben (horizontal)" },
-  { value: "bottom", label: "Unten (horizontal)" },
-  { value: "left", label: "Links (vertikal)" },
-  { value: "right", label: "Rechts (vertikal)" },
+    { value: "top", label: "Oben (horizontal)" },
+    { value: "bottom", label: "Unten (horizontal)" },
+    { value: "left", label: "Links (vertikal)" },
+    { value: "right", label: "Rechts (vertikal)" },
 ];
 const escapeNav = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;",
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
 })[character]);
-
 class GlassNavigationCard extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = null;
-    this._menuRootIndex = null;
-    this._menuPath = [];
-    this._handleDocumentPointer = (event) => {
-      if (this._menuRootIndex === null || event.composedPath?.().includes(this)) return;
-      this._closeMenu();
-    };
-    this._handleDocumentKey = (event) => {
-      if (event.key === "Escape" && this._menuRootIndex !== null) {
-        this._closeMenu();
-      }
-    };
-  }
-
-  connectedCallback() {
-    document.addEventListener("pointerdown", this._handleDocumentPointer, true);
-    document.addEventListener("keydown", this._handleDocumentKey);
-  }
-
-  disconnectedCallback() {
-    document.removeEventListener("pointerdown", this._handleDocumentPointer, true);
-    document.removeEventListener("keydown", this._handleDocumentKey);
-  }
-
-  _closeMenu() {
-    this._menuRootIndex = null;
-    this._menuPath = [];
-    this._render();
-  }
-
-  static getStubConfig() {
-    return {
-      position: "bottom",
-      scale: 100,
-      color: "orange",
-      items: [
-        { name: "Home", icon: "mdi:home-outline", url: "/lovelace/home" },
-        {
-          name: "Räume",
-          icon: "mdi:view-grid",
-          menu_title: "Raum wählen",
-          children: [
-            {
-              name: "EG",
-              icon: "mdi:home-floor-0",
-              default: true,
-              children: [
-                { name: "Küche", icon: "mdi:pot-steam", url: "/lovelace/kueche" },
-                { name: "Wohnen", icon: "mdi:sofa-outline", url: "/lovelace/wohnen" },
-              ],
-            },
-          ],
-        },
-        { name: "Mehr", icon: "mdi:dots-horizontal", url: "/lovelace/mehr" },
-      ],
-    };
-  }
-
-  static getConfigForm() {
-    const schema = [
-      { name: "items", required: true, selector: { object: { multiple: true } } },
-      { name: "color", default: "orange", selector: { select: { mode: "dropdown", options: NAV_COLOR_OPTIONS } } },
-      { name: "position", default: "bottom", selector: { select: { mode: "dropdown", options: NAV_POSITION_OPTIONS } } },
-      { name: "scale", default: 100, selector: { number: { min: 70, max: 140, step: 5, mode: "slider", unit_of_measurement: "%" } } },
-      { name: "active", selector: { text: {} } },
-    ];
-    return {
-      schema,
-      computeLabel: (field) => ({
-        items: "Menüpunkte (verschachtelte Liste)",
-        color: "Farbe für Icons und Texte",
-        position: "Position der Navigationsleiste",
-        scale: "Gesamte Navigation skalieren",
-        active: "Aktiver Hauptpunkt (Name)",
-      })[field.name],
-    };
-  }
-
-  static getConfigElement() {
-    return document.createElement("glass-navigation-card-editor");
-  }
-
-  setConfig(config) {
-    const nextConfig = {
-      color: "orange",
-      position: "bottom",
-      scale: 100,
-      active: "",
-      items: [],
-      ...config,
-    };
-    if (!Array.isArray(nextConfig.items) || nextConfig.items.length === 0) {
-      throw new Error("Bitte mindestens einen Navigationspunkt in 'items' konfigurieren.");
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this._config = null;
+        this._menuRootIndex = null;
+        this._menuPath = [];
+        this._handleDocumentPointer = (event) => {
+            if (this._menuRootIndex === null || event.composedPath?.().includes(this))
+                return;
+            this._closeMenu();
+        };
+        this._handleDocumentKey = (event) => {
+            if (event.key === "Escape" && this._menuRootIndex !== null) {
+                this._closeMenu();
+            }
+        };
     }
-    if (!NAV_COLORS[nextConfig.color]) throw new Error("Nicht unterstützte Navigationsfarbe.");
-    if (!NAV_POSITION_OPTIONS.some(({ value }) => value === nextConfig.position)) throw new Error("Ungültige Position der Navigationsleiste.");
-    const requestedScale = Number(nextConfig.scale);
-    nextConfig.scale = Number.isFinite(requestedScale) ? Math.min(140, Math.max(70, requestedScale)) : 100;
-    this._validateItems(nextConfig.items);
-    this._config = nextConfig;
-    this._menuRootIndex = null;
-    this._menuPath = [];
-    this._render();
-  }
-
-  getCardSize() { return 1; }
-
-  _validateItems(items, depth = 0) {
-    if (depth > 8) throw new Error("Navigationsmenüs dürfen höchstens acht Ebenen tief sein.");
-    let defaultCount = 0;
-    for (const item of items) {
-      if (!item || typeof item !== "object" || Array.isArray(item)) throw new Error("Jeder Navigationspunkt muss ein Objekt sein.");
-      if (item.type === "separator") {
-        if (depth !== 0) throw new Error("Trenner sind nur in der Hauptnavigation erlaubt.");
-        continue;
-      }
-      if (item.default === true) defaultCount += 1;
-      if (typeof item.name !== "string" || !item.name.trim()) throw new Error("Jeder Navigationspunkt benötigt einen Namen.");
-      if (item.label != null && typeof item.label !== "string") throw new Error(`'label' für '${item.name}' muss Text sein.`);
-      if (typeof item.icon !== "string" || !item.icon.trim()) throw new Error(`Bitte ein Icon für '${item.name}' angeben.`);
-      if (item.menu_title != null && typeof item.menu_title !== "string") throw new Error(`'menu_title' für '${item.name}' muss Text sein.`);
-      const hasChildren = Array.isArray(item.children) && item.children.length > 0;
-      if (hasChildren && item.url) throw new Error(`'${item.name}' darf entweder eine URL oder Unterpunkte haben, nicht beides.`);
-      if (hasChildren) {
-        this._validateItems(item.children, depth + 1);
-        continue;
-      }
-      if (typeof item.url !== "string" || !item.url.trim() || !/^(?:\/(?!\/)|https?:\/\/)/i.test(item.url.trim())) {
-        throw new Error(`'${item.name}' benötigt eine interne URL oder eine HTTP(S)-URL.`);
-      }
+    connectedCallback() {
+        document.addEventListener("pointerdown", this._handleDocumentPointer, true);
+        document.addEventListener("keydown", this._handleDocumentKey);
     }
-    if (defaultCount > 1) throw new Error("Pro Menüebene darf nur ein Punkt als Standard ausgewählt sein.");
-  }
-
-  _visibleItems() {
-    return this._menuModel().items;
-  }
-
-  _menuModel() {
-    let items = this._config.items[this._menuRootIndex]?.children || [];
-    let level = 0;
-    const segments = [];
-    const isGroup = (item) => Array.isArray(item?.children) && item.children.length > 0;
-    while (items.length) {
-      if (items.every(isGroup)) {
-        const defaultIndex = Math.max(0, items.findIndex((item) => item.default === true));
-        const selectedIndex = Math.min(this._menuPath[level] ?? defaultIndex, items.length - 1);
-        segments.push({ items, selectedIndex, level });
-        items = items[selectedIndex].children;
-        level += 1;
-      } else if (level < this._menuPath.length && isGroup(items[this._menuPath[level]])) {
-        items = items[this._menuPath[level]].children;
-        level += 1;
-      } else break;
+    disconnectedCallback() {
+        document.removeEventListener("pointerdown", this._handleDocumentPointer, true);
+        document.removeEventListener("keydown", this._handleDocumentKey);
     }
-    return { items, segments, level };
-  }
-
-  _menuTitle() {
-    const item = this._config.items[this._menuRootIndex];
-    return item?.menu_title?.trim() || `${item?.name || "Menü"} wählen`;
-  }
-
-  _itemLabel(item) {
-    return item.label == null ? item.name : item.label.trim();
-  }
-
-  _maxMenuRows(items) {
-    if (!items?.length) return 1;
-    const leafCount = items.filter((item) => !Array.isArray(item.children) || item.children.length === 0).length;
-    const childRows = items
-      .filter((item) => Array.isArray(item.children) && item.children.length > 0)
-      .map((item) => this._maxMenuRows(item.children));
-    return Math.max(1, Math.ceil(leafCount / 3), ...childRows);
-  }
-
-  _itemMarkup(item, index, root = false) {
-    if (item.type === "separator" && root) {
-      const orientation = this._config.position === "left" || this._config.position === "right" ? "horizontal" : "vertical";
-      return `<span class="nav-separator" role="separator" aria-orientation="${orientation}"></span>`;
-    }
-    const hasChildren = Array.isArray(item.children) && item.children.length > 0;
-    const url = item.url ? item.url.trim() : "";
-    const siblings = root ? this._config.items : this._visibleItems();
-    const hasLocationMatch = siblings.some((candidate) => candidate.url?.startsWith("/") && window.location?.pathname === candidate.url.split(/[?#]/)[0]);
-    const defaultIndex = siblings.findIndex((candidate) => candidate.default === true);
-    const active = (root && (this._menuRootIndex === index || this._config.active === item.name))
-      || (url.startsWith("/") && window.location?.pathname === url.split(/[?#]/)[0])
-      || (!hasLocationMatch && defaultIndex === index);
-    const dataAttribute = root ? `data-root-index="${index}"` : `data-child-index="${index}"`;
-    const label = this._itemLabel(item);
-    const chevronIcon = root
-      ? ({ top: "mdi:chevron-down", bottom: "mdi:chevron-up", left: "mdi:chevron-right", right: "mdi:chevron-left" }[this._config.position])
-      : "mdi:chevron-right";
-    return `<button type="button" class="nav-item ${active ? "active" : ""} ${hasChildren ? "has-children" : ""}" ${dataAttribute} ${hasChildren ? `aria-haspopup="menu" aria-expanded="${root ? this._menuRootIndex === index : false}"` : `aria-current="${active ? "page" : "false"}"`} ${!hasChildren ? `data-url="${escapeNav(url)}"` : ""} aria-label="${escapeNav(item.name)}" title="${escapeNav(item.name)}"><ha-icon icon="${escapeNav(item.icon)}"></ha-icon>${label ? `<span>${escapeNav(label)}</span>` : ""}${hasChildren ? `<span class="chevron" aria-hidden="true"><ha-icon icon="${chevronIcon}"></ha-icon></span>` : ""}</button>`;
-  }
-
-  _navigate(url) {
-    if (/^https?:\/\//i.test(url)) {
-      window.location.assign(url);
-      return;
-    }
-    window.history.pushState(null, "", url);
-    window.dispatchEvent(new Event("location-changed"));
-    this._menuRootIndex = null;
-    this._menuPath = [];
-    this._render();
-  }
-
-  _bindEvents() {
-    this.shadowRoot.querySelectorAll("[data-root-index]").forEach((button) => button.addEventListener("click", () => {
-      const index = Number(button.dataset.rootIndex);
-      const item = this._config.items[index];
-      if (item.children?.length) {
-        this._menuRootIndex = this._menuRootIndex === index ? null : index;
+    _closeMenu() {
+        this._menuRootIndex = null;
         this._menuPath = [];
         this._render();
-      } else this._navigate(item.url.trim());
-    }));
-    this.shadowRoot.querySelectorAll("[data-child-index]").forEach((button) => button.addEventListener("click", () => {
-      const index = Number(button.dataset.childIndex);
-      const item = this._visibleItems()[index];
-      if (item.children?.length) {
-        const model = this._menuModel();
-        this._menuPath = [...this._menuPath.slice(0, model.level), index];
+    }
+    static getStubConfig() {
+        return {
+            position: "bottom",
+            scale: 100,
+            color: "orange",
+            items: [
+                { name: "Home", icon: "mdi:home-outline", url: "/lovelace/home" },
+                {
+                    name: "Räume",
+                    icon: "mdi:view-grid",
+                    menu_title: "Raum wählen",
+                    children: [
+                        {
+                            name: "EG",
+                            icon: "mdi:home-floor-0",
+                            default: true,
+                            children: [
+                                { name: "Küche", icon: "mdi:pot-steam", url: "/lovelace/kueche" },
+                                { name: "Wohnen", icon: "mdi:sofa-outline", url: "/lovelace/wohnen" },
+                            ],
+                        },
+                    ],
+                },
+                { name: "Mehr", icon: "mdi:dots-horizontal", url: "/lovelace/mehr" },
+            ],
+        };
+    }
+    static getConfigForm() {
+        const schema = [
+            { name: "items", required: true, selector: { object: { multiple: true } } },
+            { name: "color", default: "orange", selector: { select: { mode: "dropdown", options: NAV_COLOR_OPTIONS } } },
+            { name: "position", default: "bottom", selector: { select: { mode: "dropdown", options: NAV_POSITION_OPTIONS } } },
+            { name: "scale", default: 100, selector: { number: { min: 70, max: 140, step: 5, mode: "slider", unit_of_measurement: "%" } } },
+            { name: "active", selector: { text: {} } },
+        ];
+        return {
+            schema,
+            computeLabel: (field) => ({
+                items: "Menüpunkte (verschachtelte Liste)",
+                color: "Farbe für Icons und Texte",
+                position: "Position der Navigationsleiste",
+                scale: "Gesamte Navigation skalieren",
+                active: "Aktiver Hauptpunkt (Name)",
+            })[field.name],
+        };
+    }
+    static getConfigElement() {
+        return document.createElement("glass-navigation-card-editor");
+    }
+    setConfig(config) {
+        const nextConfig = {
+            color: "orange",
+            position: "bottom",
+            scale: 100,
+            active: "",
+            items: [],
+            ...config,
+        };
+        if (!Array.isArray(nextConfig.items) || nextConfig.items.length === 0) {
+            throw new Error("Bitte mindestens einen Navigationspunkt in 'items' konfigurieren.");
+        }
+        if (!NAV_COLORS[nextConfig.color])
+            throw new Error("Nicht unterstützte Navigationsfarbe.");
+        if (!NAV_POSITION_OPTIONS.some(({ value }) => value === nextConfig.position))
+            throw new Error("Ungültige Position der Navigationsleiste.");
+        const requestedScale = Number(nextConfig.scale);
+        nextConfig.scale = Number.isFinite(requestedScale) ? Math.min(140, Math.max(70, requestedScale)) : 100;
+        this._validateItems(nextConfig.items);
+        this._config = nextConfig;
+        this._menuRootIndex = null;
+        this._menuPath = [];
         this._render();
-      } else this._navigate(item.url.trim());
-    }));
-    this.shadowRoot.querySelectorAll("[data-segment-level]").forEach((button) => button.addEventListener("click", () => {
-      const level = Number(button.dataset.segmentLevel);
-      this._menuPath = [...this._menuPath.slice(0, level), Number(button.dataset.segmentIndex)];
-      this._render();
-    }));
-    this.shadowRoot.querySelector("[data-menu-back]")?.addEventListener("click", () => {
-      if (this._menuPath.length) this._menuPath.pop();
-      else this._menuRootIndex = null;
-      this._render();
-    });
-  }
-
-  _render() {
-    if (!this._config) return;
-    const color = NAV_COLORS[this._config.color];
-    const position = this._config.position;
-    const scale = this._config.scale / 100;
-    const vertical = position === "left" || position === "right";
-    const rootItems = this._config.items.map((item, index) => this._itemMarkup(item, index, true)).join("");
-    const menuModel = this._menuRootIndex === null ? { items: [], segments: [] } : this._menuModel();
-    const menuItems = menuModel.items.map((item, index) => this._itemMarkup(item, index)).join("");
-    const menuSegments = menuModel.segments.map(({ items, selectedIndex, level }) => `<div class="menu-segments" role="tablist" aria-label="Ebene ${level + 1}">${items.map((item, index) => `<button type="button" class="segment ${index === selectedIndex ? "selected" : ""}" role="tab" aria-selected="${index === selectedIndex}" data-segment-level="${level}" data-segment-index="${index}">${escapeNav(this._itemLabel(item))}</button>`).join("")}</div>`).join("");
-    const menuRows = this._menuRootIndex === null ? 1 : this._maxMenuRows(this._config.items[this._menuRootIndex]?.children);
-    const menu = this._menuRootIndex === null ? "" : `<section class="submenu" role="menu" aria-label="${escapeNav(this._menuTitle())}" style="--submenu-rows:${menuRows}"><header class="submenu-header"><h2>${escapeNav(this._menuTitle())}</h2></header>${menuSegments}<div class="submenu-items ${vertical ? "vertical" : ""}">${menuItems}</div></section><span class="pointer" aria-hidden="true"></span>`;
-
-    this.shadowRoot.innerHTML = `
+    }
+    getCardSize() { return 1; }
+    _validateItems(items, depth = 0) {
+        if (depth > 8)
+            throw new Error("Navigationsmenüs dürfen höchstens acht Ebenen tief sein.");
+        let defaultCount = 0;
+        for (const item of items) {
+            if (!item || typeof item !== "object" || Array.isArray(item))
+                throw new Error("Jeder Navigationspunkt muss ein Objekt sein.");
+            if (item.type === "separator") {
+                if (depth !== 0)
+                    throw new Error("Trenner sind nur in der Hauptnavigation erlaubt.");
+                continue;
+            }
+            if (item.default === true)
+                defaultCount += 1;
+            if (typeof item.name !== "string" || !item.name.trim())
+                throw new Error("Jeder Navigationspunkt benötigt einen Namen.");
+            if (item.label != null && typeof item.label !== "string")
+                throw new Error(`'label' für '${item.name}' muss Text sein.`);
+            if (typeof item.icon !== "string" || !item.icon.trim())
+                throw new Error(`Bitte ein Icon für '${item.name}' angeben.`);
+            if (item.menu_title != null && typeof item.menu_title !== "string")
+                throw new Error(`'menu_title' für '${item.name}' muss Text sein.`);
+            const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+            if (hasChildren && item.url)
+                throw new Error(`'${item.name}' darf entweder eine URL oder Unterpunkte haben, nicht beides.`);
+            if (hasChildren) {
+                this._validateItems(item.children, depth + 1);
+                continue;
+            }
+            if (typeof item.url !== "string" || !item.url.trim() || !/^(?:\/(?!\/)|https?:\/\/)/i.test(item.url.trim())) {
+                throw new Error(`'${item.name}' benötigt eine interne URL oder eine HTTP(S)-URL.`);
+            }
+        }
+        if (defaultCount > 1)
+            throw new Error("Pro Menüebene darf nur ein Punkt als Standard ausgewählt sein.");
+    }
+    _visibleItems() {
+        return this._menuModel().items;
+    }
+    _menuModel() {
+        let items = this._config.items[this._menuRootIndex]?.children || [];
+        let level = 0;
+        const segments = [];
+        const isGroup = (item) => Array.isArray(item?.children) && item.children.length > 0;
+        while (items.length) {
+            if (items.every(isGroup)) {
+                const defaultIndex = Math.max(0, items.findIndex((item) => item.default === true));
+                const selectedIndex = Math.min(this._menuPath[level] ?? defaultIndex, items.length - 1);
+                segments.push({ items, selectedIndex, level });
+                items = items[selectedIndex].children;
+                level += 1;
+            }
+            else if (level < this._menuPath.length && isGroup(items[this._menuPath[level]])) {
+                items = items[this._menuPath[level]].children;
+                level += 1;
+            }
+            else
+                break;
+        }
+        return { items, segments, level };
+    }
+    _menuTitle() {
+        const item = this._config.items[this._menuRootIndex];
+        return item?.menu_title?.trim() || `${item?.name || "Menü"} wählen`;
+    }
+    _itemLabel(item) {
+        return item.label == null ? item.name : item.label.trim();
+    }
+    _maxMenuRows(items) {
+        if (!items?.length)
+            return 1;
+        const leafCount = items.filter((item) => !Array.isArray(item.children) || item.children.length === 0).length;
+        const childRows = items
+            .filter((item) => Array.isArray(item.children) && item.children.length > 0)
+            .map((item) => this._maxMenuRows(item.children));
+        return Math.max(1, Math.ceil(leafCount / 3), ...childRows);
+    }
+    _itemMarkup(item, index, root = false) {
+        if (item.type === "separator" && root) {
+            const orientation = this._config.position === "left" || this._config.position === "right" ? "horizontal" : "vertical";
+            return `<span class="nav-separator" role="separator" aria-orientation="${orientation}"></span>`;
+        }
+        const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+        const url = item.url ? item.url.trim() : "";
+        const siblings = root ? this._config.items : this._visibleItems();
+        const hasLocationMatch = siblings.some((candidate) => candidate.url?.startsWith("/") && window.location?.pathname === candidate.url.split(/[?#]/)[0]);
+        const defaultIndex = siblings.findIndex((candidate) => candidate.default === true);
+        const active = (root && (this._menuRootIndex === index || this._config.active === item.name))
+            || (url.startsWith("/") && window.location?.pathname === url.split(/[?#]/)[0])
+            || (!hasLocationMatch && defaultIndex === index);
+        const dataAttribute = root ? `data-root-index="${index}"` : `data-child-index="${index}"`;
+        const label = this._itemLabel(item);
+        const chevronIcon = root
+            ? ({ top: "mdi:chevron-down", bottom: "mdi:chevron-up", left: "mdi:chevron-right", right: "mdi:chevron-left" }[this._config.position])
+            : "mdi:chevron-right";
+        return `<button type="button" class="nav-item ${active ? "active" : ""} ${hasChildren ? "has-children" : ""}" ${dataAttribute} ${hasChildren ? `aria-haspopup="menu" aria-expanded="${root ? this._menuRootIndex === index : false}"` : `aria-current="${active ? "page" : "false"}"`} ${!hasChildren ? `data-url="${escapeNav(url)}"` : ""} aria-label="${escapeNav(item.name)}" title="${escapeNav(item.name)}"><ha-icon icon="${escapeNav(item.icon)}"></ha-icon>${label ? `<span>${escapeNav(label)}</span>` : ""}${hasChildren ? `<span class="chevron" aria-hidden="true"><ha-icon icon="${chevronIcon}"></ha-icon></span>` : ""}</button>`;
+    }
+    _navigate(url) {
+        if (/^https?:\/\//i.test(url)) {
+            window.location.assign(url);
+            return;
+        }
+        window.history.pushState(null, "", url);
+        window.dispatchEvent(new Event("location-changed"));
+        this._menuRootIndex = null;
+        this._menuPath = [];
+        this._render();
+    }
+    _bindEvents() {
+        this.shadowRoot.querySelectorAll("[data-root-index]").forEach((button) => button.addEventListener("click", () => {
+            const index = Number(button.dataset.rootIndex);
+            const item = this._config.items[index];
+            if (item.children?.length) {
+                this._menuRootIndex = this._menuRootIndex === index ? null : index;
+                this._menuPath = [];
+                this._render();
+            }
+            else
+                this._navigate(item.url.trim());
+        }));
+        this.shadowRoot.querySelectorAll("[data-child-index]").forEach((button) => button.addEventListener("click", () => {
+            const index = Number(button.dataset.childIndex);
+            const item = this._visibleItems()[index];
+            if (item.children?.length) {
+                const model = this._menuModel();
+                this._menuPath = [...this._menuPath.slice(0, model.level), index];
+                this._render();
+            }
+            else
+                this._navigate(item.url.trim());
+        }));
+        this.shadowRoot.querySelectorAll("[data-segment-level]").forEach((button) => button.addEventListener("click", () => {
+            const level = Number(button.dataset.segmentLevel);
+            this._menuPath = [...this._menuPath.slice(0, level), Number(button.dataset.segmentIndex)];
+            this._render();
+        }));
+        this.shadowRoot.querySelector("[data-menu-back]")?.addEventListener("click", () => {
+            if (this._menuPath.length)
+                this._menuPath.pop();
+            else
+                this._menuRootIndex = null;
+            this._render();
+        });
+    }
+    _render() {
+        if (!this._config)
+            return;
+        const color = NAV_COLORS[this._config.color];
+        const position = this._config.position;
+        const scale = this._config.scale / 100;
+        const vertical = position === "left" || position === "right";
+        const rootItems = this._config.items.map((item, index) => this._itemMarkup(item, index, true)).join("");
+        const menuModel = this._menuRootIndex === null ? { items: [], segments: [] } : this._menuModel();
+        const menuItems = menuModel.items.map((item, index) => this._itemMarkup(item, index)).join("");
+        const menuSegments = menuModel.segments.map(({ items, selectedIndex, level }) => `<div class="menu-segments" role="tablist" aria-label="Ebene ${level + 1}">${items.map((item, index) => `<button type="button" class="segment ${index === selectedIndex ? "selected" : ""}" role="tab" aria-selected="${index === selectedIndex}" data-segment-level="${level}" data-segment-index="${index}">${escapeNav(this._itemLabel(item))}</button>`).join("")}</div>`).join("");
+        const menuRows = this._menuRootIndex === null ? 1 : this._maxMenuRows(this._config.items[this._menuRootIndex]?.children);
+        const menu = this._menuRootIndex === null ? "" : `<section class="submenu" role="menu" aria-label="${escapeNav(this._menuTitle())}" style="--submenu-rows:${menuRows}"><header class="submenu-header"><h2>${escapeNav(this._menuTitle())}</h2></header>${menuSegments}<div class="submenu-items ${vertical ? "vertical" : ""}">${menuItems}</div></section><span class="pointer" aria-hidden="true"></span>`;
+        this.shadowRoot.innerHTML = `
       <style>
         :host { --nav-color:${color}; display:block; font-family:var(--paper-font-body1_-_font-family,"Arial",sans-serif); }
         * { box-sizing:border-box; }
@@ -338,39 +342,36 @@ class GlassNavigationCard extends HTMLElement {
         ${menu}
         <nav class="bar" aria-label="Hauptnavigation">${rootItems}</nav>
       </div>`;
-    this._bindEvents();
-  }
+        this._bindEvents();
+    }
 }
-
 class GlassNavigationCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = {};
-    this._editing = false;
-    this._hass = null;
-    this._onClick = (event) => this._handleClick(event);
-    this._onInput = (event) => this._handleInput(event);
-    this._onChange = (event) => this._handleInput(event);
-    this.shadowRoot.addEventListener("click", this._onClick);
-    this.shadowRoot.addEventListener("input", this._onInput);
-    this.shadowRoot.addEventListener("change", this._onChange);
-    this._render();
-  }
-
-  _emitConfig() {
-    this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
-  }
-
-  _itemList(items, path = [], root = false) {
-    const rows = items.map((item, index) => {
-      const itemPath = [...path, index];
-      const pathValue = itemPath.join(".");
-      if (item.type === "separator") {
-        return `<div class="tree-separator"><span>Trenner</span><button type="button" class="remove" data-action="remove" data-path="${pathValue}" aria-label="Trenner entfernen">Entfernen</button></div>`;
-      }
-      const group = Array.isArray(item.children) && item.children.length > 0;
-      return `<section class="tree-item ${group ? "is-group" : ""}">
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this._config = {};
+        this._editing = false;
+        this._hass = null;
+        this._onClick = (event) => this._handleClick(event);
+        this._onInput = (event) => this._handleInput(event);
+        this._onChange = (event) => this._handleInput(event);
+        this.shadowRoot.addEventListener("click", this._onClick);
+        this.shadowRoot.addEventListener("input", this._onInput);
+        this.shadowRoot.addEventListener("change", this._onChange);
+        this._render();
+    }
+    _emitConfig() {
+        this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
+    }
+    _itemList(items, path = [], root = false) {
+        const rows = items.map((item, index) => {
+            const itemPath = [...path, index];
+            const pathValue = itemPath.join(".");
+            if (item.type === "separator") {
+                return `<div class="tree-separator"><span>Trenner</span><button type="button" class="remove" data-action="remove" data-path="${pathValue}" aria-label="Trenner entfernen">Entfernen</button></div>`;
+            }
+            const group = Array.isArray(item.children) && item.children.length > 0;
+            return `<section class="tree-item ${group ? "is-group" : ""}">
         <div class="item-heading"><span class="item-kind">${group ? "Gruppe" : "Link"}</span><button type="button" class="remove" data-action="remove" data-path="${pathValue}" aria-label="${escapeNav(item.name)} entfernen">Entfernen</button></div>
         <div class="fields">
           <label>Name<input type="text" data-path="${pathValue}" data-field="name" value="${escapeNav(item.name)}"></label>
@@ -381,28 +382,26 @@ class GlassNavigationCardEditor extends HTMLElement {
         </div>
         ${group ? `<div class="children"><h4>Unterpunkte</h4>${this._itemList(item.children, itemPath)}${this._addButtons(itemPath, false)}</div>` : ""}
       </section>`;
-    }).join("");
-    return `${rows}${root ? this._addButtons(path, true) : ""}`;
-  }
-
-  _addButtons(path, root) {
-    const parentPath = path.join(".");
-    return `<div class="add-actions"><button type="button" data-action="add-link" data-parent="${parentPath}">+ Link</button><button type="button" data-action="add-group" data-parent="${parentPath}">+ Gruppe</button>${root ? `<button type="button" data-action="add-separator" data-parent="${parentPath}">+ Trenner</button>` : ""}</div>`;
-  }
-
-  _previewMarkup() {
-    return (this._config.items || []).map((item, index) => {
-      if (item.type === "separator") return `<span class="preview-separator" role="separator"></span>`;
-      const label = item.label == null ? item.name : item.label.trim();
-      const active = this._config.active === item.name;
-      return `<div class="preview-item ${active ? "active" : ""}"><ha-icon icon="${escapeNav(item.icon || "mdi:gesture-tap-button")}"></ha-icon>${label ? `<span>${escapeNav(label)}</span>` : ""}${item.children?.length ? `<i>${index === this._config.items.findIndex((entry) => entry.name === this._config.active) ? "⌃" : ""}</i>` : ""}</div>`;
-    }).join("");
-  }
-
-  _render() {
-    const definition = GlassNavigationCard.getConfigForm();
-    const formSchema = definition.schema.filter((field) => field.name !== "items");
-    this.shadowRoot.innerHTML = `
+        }).join("");
+        return `${rows}${root ? this._addButtons(path, true) : ""}`;
+    }
+    _addButtons(path, root) {
+        const parentPath = path.join(".");
+        return `<div class="add-actions"><button type="button" data-action="add-link" data-parent="${parentPath}">+ Link</button><button type="button" data-action="add-group" data-parent="${parentPath}">+ Gruppe</button>${root ? `<button type="button" data-action="add-separator" data-parent="${parentPath}">+ Trenner</button>` : ""}</div>`;
+    }
+    _previewMarkup() {
+        return (this._config.items || []).map((item, index) => {
+            if (item.type === "separator")
+                return `<span class="preview-separator" role="separator"></span>`;
+            const label = item.label == null ? item.name : item.label.trim();
+            const active = this._config.active === item.name;
+            return `<div class="preview-item ${active ? "active" : ""}"><ha-icon icon="${escapeNav(item.icon || "mdi:gesture-tap-button")}"></ha-icon>${label ? `<span>${escapeNav(label)}</span>` : ""}${item.children?.length ? `<i>${index === this._config.items.findIndex((entry) => entry.name === this._config.active) ? "⌃" : ""}</i>` : ""}</div>`;
+        }).join("");
+    }
+    _render() {
+        const definition = GlassNavigationCard.getConfigForm();
+        const formSchema = definition.schema.filter((field) => field.name !== "items");
+        this.shadowRoot.innerHTML = `
       <style>
         :host { display:block; color:var(--primary-text-color); font-family:var(--paper-font-body1_-_font-family,Arial,sans-serif); }
         * { box-sizing:border-box; }
@@ -441,107 +440,112 @@ class GlassNavigationCardEditor extends HTMLElement {
         <ha-form ${this._editing ? "" : "hidden"}></ha-form>
         <div class="tree" ${this._editing ? "" : "hidden"}><h3>Menüstruktur</h3>${this._itemList(this._config.items || [], [], true)}</div>
       </section>`;
-    const form = this.shadowRoot.querySelector("ha-form");
-    form.schema = formSchema;
-    form.data = this._config;
-    form.hass = this._hass;
-    form.computeLabel = definition.computeLabel;
-    form.addEventListener("value-changed", (event) => {
-      event.stopPropagation();
-      this._config = { ...this._config, ...event.detail.value };
-      this._updatePreview();
-      this._emitConfig();
-    });
-  }
-
-  _pathParts(path) { return path === "" ? [] : path.split(".").map(Number); }
-
-  _getItem(path) {
-    const parts = this._pathParts(path);
-    let items = this._config.items;
-    let item;
-    for (const index of parts) {
-      item = items[index];
-      items = item?.children || [];
+        const form = this.shadowRoot.querySelector("ha-form");
+        form.schema = formSchema;
+        form.data = this._config;
+        form.hass = this._hass;
+        form.computeLabel = definition.computeLabel;
+        form.addEventListener("value-changed", (event) => {
+            event.stopPropagation();
+            this._config = { ...this._config, ...event.detail.value };
+            this._updatePreview();
+            this._emitConfig();
+        });
     }
-    return item;
-  }
-
-  _getList(path) {
-    const parts = this._pathParts(path);
-    let items = this._config.items;
-    for (const index of parts) items = items[index]?.children || [];
-    return items;
-  }
-
-  _handleClick(event) {
-    const button = event.composedPath?.().find((node) => node?.dataset?.action);
-    if (!button) return;
-    const action = button.dataset.action;
-    if (action === "toggle-edit") {
-      this._editing = !this._editing;
-      this._render();
-      return;
+    _pathParts(path) { return path === "" ? [] : path.split(".").map(Number); }
+    _getItem(path) {
+        const parts = this._pathParts(path);
+        let items = this._config.items;
+        let item;
+        for (const index of parts) {
+            item = items[index];
+            items = item?.children || [];
+        }
+        return item;
     }
-    const path = button.dataset.parent || button.dataset.path || "";
-    const list = this._getList(path);
-    if (action === "remove") {
-      const parts = this._pathParts(button.dataset.path);
-      const index = parts.pop();
-      const parent = parts.reduce((items, part) => items[part]?.children || [], this._config.items);
-      parent.splice(index, 1);
-    } else if (action === "add-link") {
-      list.push({ name: "Neuer Link", icon: "mdi:link", url: "/lovelace/seite" });
-    } else if (action === "add-group") {
-      list.push({ name: "Neue Gruppe", icon: "mdi:folder-outline", children: [{ name: "Neuer Link", icon: "mdi:link", url: "/lovelace/seite" }] });
-    } else if (action === "add-separator") {
-      list.push({ type: "separator" });
+    _getList(path) {
+        const parts = this._pathParts(path);
+        let items = this._config.items;
+        for (const index of parts)
+            items = items[index]?.children || [];
+        return items;
     }
-    this._render();
-    this._emitConfig();
-  }
-
-  _handleInput(event) {
-    const input = event.composedPath?.().find((node) => node?.dataset?.field);
-    if (!input) return;
-    if (event.type === "input" && input.type === "checkbox") return;
-    if (event.type === "change" && input.type !== "checkbox") return;
-    const item = this._getItem(input.dataset.path);
-    if (!item) return;
-    const field = input.dataset.field;
-    if (field === "default") {
-      const siblings = this._getList(this._pathParts(input.dataset.path).slice(0, -1).join("."));
-      if (input.checked) siblings.forEach((sibling) => { sibling.default = false; });
-      item.default = input.checked;
-    } else item[field] = input.value;
-    this._updatePreview();
-    this._emitConfig();
-  }
-
-  _updatePreview() {
-    const preview = this.shadowRoot.querySelector(".preview-bar");
-    if (preview) preview.innerHTML = this._previewMarkup();
-    const previewShell = this.shadowRoot.querySelector(".preview");
-    if (previewShell) previewShell.style.setProperty("--nav-color", NAV_COLORS[this._config.color] || NAV_COLORS.orange);
-  }
-
-  _emitConfig() {
-    this.dispatchEvent(new CustomEvent("config-changed", { bubbles: true, composed: true, detail: { config: this._config } }));
-  }
-
-  setConfig(config) {
-    this._config = { ...GlassNavigationCard.getStubConfig(), ...config };
-    if (!Array.isArray(config.items)) this._config.items = GlassNavigationCard.getStubConfig().items;
-    this._render();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    this.shadowRoot.querySelector("ha-form").hass = hass;
-  }
+    _handleClick(event) {
+        const button = event.composedPath?.().find((node) => node?.dataset?.action);
+        if (!button)
+            return;
+        const action = button.dataset.action;
+        if (action === "toggle-edit") {
+            this._editing = !this._editing;
+            this._render();
+            return;
+        }
+        const path = button.dataset.parent || button.dataset.path || "";
+        const list = this._getList(path);
+        if (action === "remove") {
+            const parts = this._pathParts(button.dataset.path);
+            const index = parts.pop();
+            const parent = parts.reduce((items, part) => items[part]?.children || [], this._config.items);
+            parent.splice(index, 1);
+        }
+        else if (action === "add-link") {
+            list.push({ name: "Neuer Link", icon: "mdi:link", url: "/lovelace/seite" });
+        }
+        else if (action === "add-group") {
+            list.push({ name: "Neue Gruppe", icon: "mdi:folder-outline", children: [{ name: "Neuer Link", icon: "mdi:link", url: "/lovelace/seite" }] });
+        }
+        else if (action === "add-separator") {
+            list.push({ type: "separator" });
+        }
+        this._render();
+        this._emitConfig();
+    }
+    _handleInput(event) {
+        const input = event.composedPath?.().find((node) => node?.dataset?.field);
+        if (!input)
+            return;
+        if (event.type === "input" && input.type === "checkbox")
+            return;
+        if (event.type === "change" && input.type !== "checkbox")
+            return;
+        const item = this._getItem(input.dataset.path);
+        if (!item)
+            return;
+        const field = input.dataset.field;
+        if (field === "default") {
+            const siblings = this._getList(this._pathParts(input.dataset.path).slice(0, -1).join("."));
+            if (input.checked)
+                siblings.forEach((sibling) => { sibling.default = false; });
+            item.default = input.checked;
+        }
+        else
+            item[field] = input.value;
+        this._updatePreview();
+        this._emitConfig();
+    }
+    _updatePreview() {
+        const preview = this.shadowRoot.querySelector(".preview-bar");
+        if (preview)
+            preview.innerHTML = this._previewMarkup();
+        const previewShell = this.shadowRoot.querySelector(".preview");
+        if (previewShell)
+            previewShell.style.setProperty("--nav-color", NAV_COLORS[this._config.color] || NAV_COLORS.orange);
+    }
+    setConfig(config) {
+        this._config = { ...GlassNavigationCard.getStubConfig(), ...config };
+        if (!Array.isArray(config.items))
+            this._config.items = GlassNavigationCard.getStubConfig().items;
+        this._render();
+    }
+    set hass(hass) {
+        this._hass = hass;
+        this.shadowRoot.querySelector("ha-form").hass = hass;
+    }
 }
-
-if (!customElements.get("glass-navigation-card")) customElements.define("glass-navigation-card", GlassNavigationCard);
-if (!customElements.get("glass-navigation-card-editor")) customElements.define("glass-navigation-card-editor", GlassNavigationCardEditor);
+if (!customElements.get("glass-navigation-card"))
+    customElements.define("glass-navigation-card", GlassNavigationCard);
+if (!customElements.get("glass-navigation-card-editor"))
+    customElements.define("glass-navigation-card-editor", GlassNavigationCardEditor);
 window.customCards = window.customCards || [];
-if (!window.customCards.some((card) => card.type === "glass-navigation-card")) window.customCards.push({ type: "glass-navigation-card", name: "Glass Navigation Card", description: "Verschachtelte Navigation mit konfigurierbarer Position und Farbe.", preview: true, version: NAV_CARD_VERSION });
+if (!window.customCards.some((card) => card.type === "glass-navigation-card"))
+    window.customCards.push({ type: "glass-navigation-card", name: "Glass Navigation Card", description: "Verschachtelte Navigation mit konfigurierbarer Position und Farbe.", preview: true, version: NAV_CARD_VERSION });
