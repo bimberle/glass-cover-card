@@ -31,6 +31,7 @@ async function loadCard(filePath, cardTag, editorTag) {
       };
       const nameLabel = { textContent: "" };
       const form = { addEventListener() {} };
+      const stackEditor = { config: null, addEventListener() {}, setConfig(config) { this.config = config; } };
       const dimmer = {
         attributes: {},
         style: { setProperty(name, value) { this[name] = value; } },
@@ -43,6 +44,19 @@ async function loadCard(filePath, cardTag, editorTag) {
       const brightnessLabel = { textContent: "" };
       const stateLabel = { textContent: "" };
       const cardIcon = { attributes: {}, setAttribute(name, value) { this.attributes[name] = value; }, getAttribute(name) { return this.attributes[name]; } };
+      const queryElements = {
+        "hui-stack-card-editor": stackEditor,
+        ".button ha-icon": cardIcon,
+        ".action-state": actionStateLabel,
+        ".state-value": stateLabel,
+        ".dimmer": dimmer,
+        ".brightness-value": brightnessLabel,
+        "ha-form": form,
+        ".children": childContainer,
+        ".header-action": headerButton,
+        ".button": cardButton,
+        ".name": nameLabel,
+      };
       this.shadowRoot = {
         _innerHTML: "",
         get innerHTML() {
@@ -52,7 +66,7 @@ async function loadCard(filePath, cardTag, editorTag) {
           this._innerHTML = value;
           host._innerHTMLWrites += 1;
         },
-        querySelector: (selector) => selector === ".button ha-icon" ? cardIcon : (selector === ".action-state" ? actionStateLabel : (selector === ".state-value" ? stateLabel : (selector === ".dimmer" ? dimmer : (selector === ".brightness-value" ? brightnessLabel : (selector === "ha-form" ? form : (selector === ".children" ? childContainer : (selector === ".header-action" ? headerButton : (selector === ".button" ? cardButton : (selector === ".name" ? nameLabel : null))))))))),
+        querySelector: (selector) => queryElements[selector] || null,
         querySelectorAll: () => [],
         addEventListener() {},
       };
@@ -125,8 +139,7 @@ async function loadCard(filePath, cardTag, editorTag) {
               }
 
               static async getConfigElement() {
-                definitions.set("hui-card-picker", class {});
-                definitions.set("hui-card-element-editor", class {});
+                definitions.set("hui-stack-card-editor", class {});
                 return {};
               }
             }
@@ -479,8 +492,16 @@ assert.match(valueCard.shadowRoot.innerHTML, /class="visual-icon spinning" icon=
 assert.match(valueCard.shadowRoot.innerHTML, />45<small class="unit">%<\/small>/);
 valueCard.setConfig({ entity: "cover.office", name: "Jalousie", visual_type: "auto" });
 valueCard.hass = { states: { "cover.office": { state: "open", attributes: { current_position: 30 } } } };
-assert.match(valueCard.shadowRoot.innerHTML, /class="window" style="--position:30%"/);
+assert.match(valueCard.shadowRoot.innerHTML, /class="window" style="--position:30%;--tilt:50"/);
+assert.match(valueCard.shadowRoot.innerHTML, /class="glass"/);
+assert.match(valueCard.shadowRoot.innerHTML, /\.glass::before \{[^}]*#323d38/);
+assert.match(valueCard.shadowRoot.innerHTML, /class="slats"><i style="--i:0"><\/i>/);
+assert.equal((valueCard.shadowRoot.innerHTML.match(/<i style="--i:/g) || []).length, 7);
+assert.match(valueCard.shadowRoot.innerHTML, /radial-gradient\(ellipse at 70% 42%,#fff5cd/);
 assert.match(valueCard.shadowRoot.innerHTML, />70<small class="unit">%<\/small>/);
+valueCard.hass = { states: { "cover.office": { state: "open", attributes: { current_position: 100 } } } };
+assert.match(valueCard.shadowRoot.innerHTML, /class="window" style="--position:100%;--tilt:50"/);
+assert.match(valueCard.shadowRoot.innerHTML, /\.glass::before \{[^}]*#323d38/);
 valueCard.setConfig({ entity: "sensor.temperature", visual_type: "image", image: "/local/temperature.png", attribute: "temperature", unit: "°C", image_size: 2, value_size: 4, show_card_frame: false });
 valueCard.hass = { states: { "sensor.temperature": { state: "22.5", attributes: { temperature: 22.5 } } } };
 assert.match(valueCard.shadowRoot.innerHTML, /class="card no-frame"/);
@@ -947,14 +968,19 @@ assert.equal(panelForm.schema[0].selector.number.mode, "slider");
 assert.equal(panelForm.computeLabel(panelForm.schema[0]), "Panel-Größe");
 assert.equal(panelEditor._config.cards[0].type, "custom:glass-text-card");
 assert.match(panelEditor.shadowRoot.innerHTML, /ha-form/);
-assert.match(panelEditor.shadowRoot.innerHTML, /hui-card-picker/);
-assert.match(panelEditor.shadowRoot.innerHTML, /hui-card-element-editor/);
-panelEditor._handleCardPicked({
+assert.match(panelEditor.shadowRoot.innerHTML, /hui-stack-card-editor/);
+assert.equal(panelEditor.shadowRoot.querySelector("hui-stack-card-editor").config.type, "vertical-stack");
+assert.deepEqual(panelEditor.shadowRoot.querySelector("hui-stack-card-editor").config.cards, panelEditor._config.cards);
+panelEditor._handleStackChanged({
   stopPropagation() {},
-  detail: { config: { type: "custom:glass-button-card", entity: "light.deckenlampe" } },
+  detail: { config: { type: "vertical-stack", cards: [...panelEditor._config.cards, { type: "custom:glass-button-card", entity: "light.deckenlampe" }] } },
 });
 assert.equal(panelEditor._config.cards.length, 2);
 assert.equal(panelEditor._config.cards[1].entity, "light.deckenlampe");
+const emptyPanelEditor = await panelCardClass.getConfigElement();
+emptyPanelEditor.setConfig({ cards: [] });
+assert.equal(emptyPanelEditor.shadowRoot.querySelector("hui-stack-card-editor").config.type, "vertical-stack");
+assert.equal(emptyPanelEditor.shadowRoot.querySelector("hui-stack-card-editor").config.cards.length, 0);
 
 coverCard.setConfig({ entity: "cover.office", title: "", name: "" });
 coverCard.hass = { states: { "cover.office": { state: "open", attributes: { friendly_name: "Office", current_position: 55 } } } };
@@ -966,6 +992,10 @@ assert.doesNotMatch(coverCard.shadowRoot.innerHTML, /class="menu-wrap"/);
 assert.match(coverCard.shadowRoot.innerHTML, /class="controls"/);
 coverCard.setConfig({ entity: "cover.office" });
 assert.match(coverCard.shadowRoot.innerHTML, /<div class="eyebrow">Beschattung<\/div><h2>Office<\/h2>/);
+assert.match(coverCard.shadowRoot.innerHTML, /\.glass::before \{[^}]*#323d38/);
+coverCard.hass = { states: { "cover.office": { state: "open", attributes: { friendly_name: "Office", current_position: 100 } } } };
+assert.match(coverCard.shadowRoot.innerHTML, /class="window" style="--position:100%;--tilt:50"/);
+assert.match(coverCard.shadowRoot.innerHTML, /\.glass::before \{[^}]*#323d38/);
 coverCard.setConfig({ entity: "cover.office", title: " ", name: "Office" });
 assert.doesNotMatch(coverCard.shadowRoot.innerHTML, /<div class="eyebrow">/);
 assert.match(coverCard.shadowRoot.innerHTML, /<h2>Office<\/h2>/);

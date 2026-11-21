@@ -1,4 +1,4 @@
-const CARD_VERSION = "2.0.0";
+const CARD_VERSION = "2.0.1";
 const escapePanelText = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
     "<": "&lt;",
@@ -63,8 +63,7 @@ class GlassPanelCard extends HTMLElement {
         await customElements.whenDefined("hui-vertical-stack-card");
         const stackCard = customElements.get("hui-vertical-stack-card");
         await stackCard.getConfigElement();
-        await customElements.whenDefined("hui-card-picker");
-        await customElements.whenDefined("hui-card-element-editor");
+        await customElements.whenDefined("hui-stack-card-editor");
         return document.createElement("glass-panel-card-editor");
     }
     async _loadChildren() {
@@ -126,12 +125,9 @@ class GlassPanelCardEditor extends HTMLElement {
         this._config = null;
         this._hass = null;
         this._lovelace = undefined;
-        this._selectedCard = -1;
-        this._showPicker = false;
         this._renderShell();
     }
     setConfig(config) {
-        const previousCards = JSON.stringify(this._config?.cards ?? []);
         this._config = normalizePanelConfig(config);
         const form = this.shadowRoot.querySelector("ha-form");
         if (form) {
@@ -140,151 +136,55 @@ class GlassPanelCardEditor extends HTMLElement {
             form.hass = this._hass;
             form.computeLabel = (field) => ({ panel_size: "Panel-Größe" })[field.name] || field.name;
         }
-        if (previousCards !== JSON.stringify(this._config.cards)) {
-            this._selectedCard = Math.min(this._selectedCard, this._config.cards.length - 1);
-            this._renderCardList();
-        }
-        this._syncCardEditor();
+        this._syncStackEditor();
     }
     set hass(hass) {
         this._hass = hass;
         const form = this.shadowRoot.querySelector("ha-form");
-        const picker = this.shadowRoot.querySelector("hui-card-picker");
-        const cardEditor = this.shadowRoot.querySelector("hui-card-element-editor");
+        const stackEditor = this.shadowRoot.querySelector("hui-stack-card-editor");
         if (form)
             form.hass = hass;
-        if (picker)
-            picker.hass = hass;
-        if (cardEditor)
-            cardEditor.hass = hass;
+        if (stackEditor)
+            stackEditor.hass = hass;
     }
     set lovelace(lovelace) {
         this._lovelace = lovelace;
-        const picker = this.shadowRoot.querySelector("hui-card-picker");
-        const cardEditor = this.shadowRoot.querySelector("hui-card-element-editor");
-        if (picker)
-            picker.lovelace = lovelace;
-        if (cardEditor)
-            cardEditor.lovelace = lovelace;
+        const stackEditor = this.shadowRoot.querySelector("hui-stack-card-editor");
+        if (stackEditor)
+            stackEditor.lovelace = lovelace;
     }
     _renderShell() {
         this.shadowRoot.innerHTML = `
       <style>
         .editor { display:grid; gap:20px; }
-        .cards-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-        .card-tabs { display:flex; flex:1; min-width:0; gap:6px; overflow-x:auto; }
-        .card-order { display:flex; gap:4px; }
-        button { min-height:40px; padding:8px 12px; color:var(--primary-text-color); background:var(--card-background-color,#202124); border:1px solid var(--divider-color,#555); border-radius:6px; font:inherit; cursor:pointer; }
-        button[aria-pressed="true"] { border-color:var(--primary-color,#ff8b2b); }
-        .card-editor[hidden],.card-picker[hidden] { display:none; }
-        .card-picker { min-height:300px; }
+        .stack-editor { display:block; min-width:0; }
       </style>
       <div class="editor">
         <ha-form></ha-form>
-        <section class="cards-manager">
-          <div class="cards-toolbar">
-            <div class="card-tabs"></div>
-            <div class="card-order">
-              <button type="button" class="move-before" title="Karte nach links verschieben" aria-label="Karte nach links verschieben">←</button>
-              <button type="button" class="move-after" title="Karte nach rechts verschieben" aria-label="Karte nach rechts verschieben">→</button>
-            </div>
-            <button type="button" class="remove-card" title="Ausgewählte Karte entfernen">Entfernen</button>
-            <button type="button" class="add-card">Karte hinzufügen</button>
-          </div>
-          <hui-card-element-editor class="card-editor" hidden></hui-card-element-editor>
-          <hui-card-picker class="card-picker" hide-clipboard hidden></hui-card-picker>
-        </section>
+        <hui-stack-card-editor class="stack-editor"></hui-stack-card-editor>
       </div>`;
         this.shadowRoot.querySelector("ha-form")?.addEventListener("value-changed", (event) => this._handleFormChanged(event));
-        this.shadowRoot.querySelector("hui-card-picker")?.addEventListener("config-changed", (event) => this._handleCardPicked(event));
-        this.shadowRoot.querySelector("hui-card-element-editor")?.addEventListener("config-changed", (event) => this._handleChildChanged(event));
-        this.shadowRoot.querySelector(".add-card")?.addEventListener("click", () => this._togglePicker());
-        this.shadowRoot.querySelector(".remove-card")?.addEventListener("click", () => this._removeSelectedCard());
-        this.shadowRoot.querySelector(".move-before")?.addEventListener("click", () => this._moveSelectedCard(-1));
-        this.shadowRoot.querySelector(".move-after")?.addEventListener("click", () => this._moveSelectedCard(1));
+        this.shadowRoot.querySelector("hui-stack-card-editor")?.addEventListener("config-changed", (event) => this._handleStackChanged(event));
     }
     _handleFormChanged(event) {
         this._config = { ...this._config, ...event.detail.value };
         this._notifyConfig();
     }
-    _handleCardPicked(event) {
+    _handleStackChanged(event) {
         event.stopPropagation();
-        this._config = { ...this._config, cards: [...this._config.cards, event.detail.config] };
-        this._selectedCard = this._config.cards.length - 1;
-        this._showPicker = false;
-        this._renderCardList();
-        this._syncCardEditor();
+        const stackConfig = event.detail.config ?? event.detail.value;
+        if (!Array.isArray(stackConfig?.cards))
+            return;
+        this._config = { ...this._config, cards: stackConfig.cards };
         this._notifyConfig();
     }
-    _handleChildChanged(event) {
-        event.stopPropagation();
-        if (this._selectedCard < 0)
-            return;
-        const cards = [...this._config.cards];
-        cards[this._selectedCard] = event.detail.config ?? event.detail.value;
-        this._config = { ...this._config, cards };
-        this._notifyConfig();
-    }
-    _togglePicker() {
-        this._showPicker = !this._showPicker;
-        const picker = this.shadowRoot.querySelector("hui-card-picker");
-        const editor = this.shadowRoot.querySelector("hui-card-element-editor");
-        if (picker) {
-            picker.hidden = !this._showPicker;
-            picker.hass = this._hass;
-            picker.lovelace = this._lovelace;
-        }
-        if (editor)
-            editor.hidden = this._showPicker || this._selectedCard < 0;
-    }
-    _removeSelectedCard() {
-        if (this._selectedCard < 0)
-            return;
-        const cards = this._config.cards.filter((_, index) => index !== this._selectedCard);
-        this._config = { ...this._config, cards };
-        this._selectedCard = Math.min(this._selectedCard, cards.length - 1);
-        this._renderCardList();
-        this._syncCardEditor();
-        this._notifyConfig();
-    }
-    _moveSelectedCard(offset) {
-        const target = this._selectedCard + offset;
-        if (target < 0 || target >= this._config.cards.length)
-            return;
-        const cards = [...this._config.cards];
-        [cards[this._selectedCard], cards[target]] = [cards[target], cards[this._selectedCard]];
-        this._config = { ...this._config, cards };
-        this._selectedCard = target;
-        this._renderCardList();
-        this._syncCardEditor();
-        this._notifyConfig();
-    }
-    _selectCard(index) {
-        this._selectedCard = index;
-        this._showPicker = false;
-        this._renderCardList();
-        this._syncCardEditor();
-    }
-    _renderCardList() {
-        const tabs = this.shadowRoot.querySelector(".card-tabs");
-        if (!tabs)
-            return;
-        tabs.innerHTML = this._config.cards.map((card, index) => `<button type="button" data-card-index="${index}" aria-pressed="${index === this._selectedCard}">${escapePanelText(card.type || `Karte ${index + 1}`)}</button>`).join("");
-        tabs.querySelectorAll("[data-card-index]").forEach((button) => button.addEventListener("click", () => this._selectCard(Number(button.dataset.cardIndex))));
-        const picker = this.shadowRoot.querySelector("hui-card-picker");
-        const editor = this.shadowRoot.querySelector("hui-card-element-editor");
-        if (picker)
-            picker.hidden = !this._showPicker;
-        if (editor)
-            editor.hidden = this._showPicker || this._selectedCard < 0;
-    }
-    _syncCardEditor() {
-        const editor = this.shadowRoot.querySelector("hui-card-element-editor");
-        if (!editor || this._selectedCard < 0)
+    _syncStackEditor() {
+        const editor = this.shadowRoot.querySelector("hui-stack-card-editor");
+        if (!editor || !this._config)
             return;
         editor.hass = this._hass;
         editor.lovelace = this._lovelace;
-        editor.value = this._config.cards[this._selectedCard];
+        editor.setConfig({ type: "vertical-stack", cards: this._config.cards });
         editor.hidden = this._showPicker;
     }
     _notifyConfig() {

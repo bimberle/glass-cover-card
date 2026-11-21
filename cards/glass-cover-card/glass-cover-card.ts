@@ -1,4 +1,4 @@
-const CARD_VERSION = "1.24.0";
+const CARD_VERSION = "1.24.1";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 class GlassCoverCard extends HTMLElement {
@@ -255,8 +255,9 @@ class GlassCoverCard extends HTMLElement {
         .no-titles .visual { margin-top:calc(clamp(22px,5vw,36px) / 2); }
         .window { position:relative; width:var(--preview-width); aspect-ratio:1.14; padding:12px 8px 9px; border:7px solid #25262a; border-top-width:17px; border-bottom-width:9px; border-radius:4px; background:linear-gradient(180deg,rgba(23,25,29,.22),rgba(255,145,67,.1)),linear-gradient(130deg,#d9b78c,#6c665b 48%,#ead0a5); box-shadow:0 8px 16px #0008,inset 0 0 0 2px #090a0b; }
         .window::before { content:""; position:absolute; z-index:1; top:-18px; left:-9px; right:-9px; height:clamp(12px,2.5vw,20px); border:1px solid #4a4b51; border-radius:2px; background:linear-gradient(#303238,#191a1f); box-shadow:0 3px 8px #0008; }
-        .glass { position:absolute; inset:12px 7px 8px; overflow:hidden; border:2px solid #d5b591; background:radial-gradient(ellipse at 22% 35%,#fff5cd 0 3%,transparent 23%),linear-gradient(180deg,#b8ab92,#d8bb94 52%,#87674e); }
-        .glass::after { content:""; position:absolute; inset:0; opacity:.42; background:linear-gradient(100deg,transparent 35%,#fff8df 49%,transparent 62%); }
+        .glass { position:absolute; inset:12px 7px 8px; overflow:hidden; border:2px solid #d5b591; background:radial-gradient(ellipse at 70% 42%,#fff5cd 0 4%,#ffe4ae 12%,transparent 35%),linear-gradient(180deg,#aebac0 0%,#eac99b 48%,#f4bb72 70%,#61574c 100%); }
+        .glass::before { content:""; position:absolute; inset:38% -8% -18%; background:radial-gradient(ellipse at 12% 72%,#323d38 0 12%,transparent 33%),radial-gradient(ellipse at 34% 64%,#4a4a3c 0 16%,transparent 34%),radial-gradient(ellipse at 60% 73%,#343c37 0 18%,transparent 36%),radial-gradient(ellipse at 88% 62%,#45483c 0 16%,transparent 34%),linear-gradient(178deg,transparent 0 37%,#75604b 39% 42%,#353b38 47% 100%); filter:blur(3px); }
+        .glass::after { content:""; position:absolute; z-index:1; inset:0; opacity:.42; background:linear-gradient(100deg,transparent 35%,#fff8df 49%,transparent 62%); }
         .slats { position:absolute; z-index:2; top:0; left:0; right:0; height:calc(100% - var(--position)); overflow:hidden; transition:height .25s ease; }
         .slats i { position:absolute; left:0; right:0; top:calc(var(--i) * 13%); height:11%; border:1px solid #4b4140; border-top-color:#77706d; background:linear-gradient(180deg,#343237,#17181b 60%,#51413a); box-shadow:0 2px 3px #0008; transform:skewY(calc((var(--tilt) - 50) * .035deg)); }
         .readout { min-width:0; }

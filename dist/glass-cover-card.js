@@ -1,5 +1,5 @@
 (() => {
-const CARD_VERSION = "1.24.0";
+const CARD_VERSION = "1.24.1";
 const clamp = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 class GlassCoverCard extends HTMLElement {
     constructor() {
@@ -237,8 +237,9 @@ class GlassCoverCard extends HTMLElement {
         .no-titles .visual { margin-top:calc(clamp(22px,5vw,36px) / 2); }
         .window { position:relative; width:var(--preview-width); aspect-ratio:1.14; padding:12px 8px 9px; border:7px solid #25262a; border-top-width:17px; border-bottom-width:9px; border-radius:4px; background:linear-gradient(180deg,rgba(23,25,29,.22),rgba(255,145,67,.1)),linear-gradient(130deg,#d9b78c,#6c665b 48%,#ead0a5); box-shadow:0 8px 16px #0008,inset 0 0 0 2px #090a0b; }
         .window::before { content:""; position:absolute; z-index:1; top:-18px; left:-9px; right:-9px; height:clamp(12px,2.5vw,20px); border:1px solid #4a4b51; border-radius:2px; background:linear-gradient(#303238,#191a1f); box-shadow:0 3px 8px #0008; }
-        .glass { position:absolute; inset:12px 7px 8px; overflow:hidden; border:2px solid #d5b591; background:radial-gradient(ellipse at 22% 35%,#fff5cd 0 3%,transparent 23%),linear-gradient(180deg,#b8ab92,#d8bb94 52%,#87674e); }
-        .glass::after { content:""; position:absolute; inset:0; opacity:.42; background:linear-gradient(100deg,transparent 35%,#fff8df 49%,transparent 62%); }
+        .glass { position:absolute; inset:12px 7px 8px; overflow:hidden; border:2px solid #d5b591; background:radial-gradient(ellipse at 70% 42%,#fff5cd 0 4%,#ffe4ae 12%,transparent 35%),linear-gradient(180deg,#aebac0 0%,#eac99b 48%,#f4bb72 70%,#61574c 100%); }
+        .glass::before { content:""; position:absolute; inset:38% -8% -18%; background:radial-gradient(ellipse at 12% 72%,#323d38 0 12%,transparent 33%),radial-gradient(ellipse at 34% 64%,#4a4a3c 0 16%,transparent 34%),radial-gradient(ellipse at 60% 73%,#343c37 0 18%,transparent 36%),radial-gradient(ellipse at 88% 62%,#45483c 0 16%,transparent 34%),linear-gradient(178deg,transparent 0 37%,#75604b 39% 42%,#353b38 47% 100%); filter:blur(3px); }
+        .glass::after { content:""; position:absolute; z-index:1; inset:0; opacity:.42; background:linear-gradient(100deg,transparent 35%,#fff8df 49%,transparent 62%); }
         .slats { position:absolute; z-index:2; top:0; left:0; right:0; height:calc(100% - var(--position)); overflow:hidden; transition:height .25s ease; }
         .slats i { position:absolute; left:0; right:0; top:calc(var(--i) * 13%); height:11%; border:1px solid #4b4140; border-top-color:#77706d; background:linear-gradient(180deg,#343237,#17181b 60%,#51413a); box-shadow:0 2px 3px #0008; transform:skewY(calc((var(--tilt) - 50) * .035deg)); }
         .readout { min-width:0; }
@@ -739,7 +740,7 @@ if (!window.customCards.some((card) => card.type === "glass-buttons-card")) {
 })();
 
 (() => {
-const CARD_VERSION = "2.0.0";
+const CARD_VERSION = "2.0.1";
 const escapePanelText = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
     "<": "&lt;",
@@ -804,8 +805,7 @@ class GlassPanelCard extends HTMLElement {
         await customElements.whenDefined("hui-vertical-stack-card");
         const stackCard = customElements.get("hui-vertical-stack-card");
         await stackCard.getConfigElement();
-        await customElements.whenDefined("hui-card-picker");
-        await customElements.whenDefined("hui-card-element-editor");
+        await customElements.whenDefined("hui-stack-card-editor");
         return document.createElement("glass-panel-card-editor");
     }
     async _loadChildren() {
@@ -867,12 +867,9 @@ class GlassPanelCardEditor extends HTMLElement {
         this._config = null;
         this._hass = null;
         this._lovelace = undefined;
-        this._selectedCard = -1;
-        this._showPicker = false;
         this._renderShell();
     }
     setConfig(config) {
-        const previousCards = JSON.stringify(this._config?.cards ?? []);
         this._config = normalizePanelConfig(config);
         const form = this.shadowRoot.querySelector("ha-form");
         if (form) {
@@ -881,151 +878,55 @@ class GlassPanelCardEditor extends HTMLElement {
             form.hass = this._hass;
             form.computeLabel = (field) => ({ panel_size: "Panel-Größe" })[field.name] || field.name;
         }
-        if (previousCards !== JSON.stringify(this._config.cards)) {
-            this._selectedCard = Math.min(this._selectedCard, this._config.cards.length - 1);
-            this._renderCardList();
-        }
-        this._syncCardEditor();
+        this._syncStackEditor();
     }
     set hass(hass) {
         this._hass = hass;
         const form = this.shadowRoot.querySelector("ha-form");
-        const picker = this.shadowRoot.querySelector("hui-card-picker");
-        const cardEditor = this.shadowRoot.querySelector("hui-card-element-editor");
+        const stackEditor = this.shadowRoot.querySelector("hui-stack-card-editor");
         if (form)
             form.hass = hass;
-        if (picker)
-            picker.hass = hass;
-        if (cardEditor)
-            cardEditor.hass = hass;
+        if (stackEditor)
+            stackEditor.hass = hass;
     }
     set lovelace(lovelace) {
         this._lovelace = lovelace;
-        const picker = this.shadowRoot.querySelector("hui-card-picker");
-        const cardEditor = this.shadowRoot.querySelector("hui-card-element-editor");
-        if (picker)
-            picker.lovelace = lovelace;
-        if (cardEditor)
-            cardEditor.lovelace = lovelace;
+        const stackEditor = this.shadowRoot.querySelector("hui-stack-card-editor");
+        if (stackEditor)
+            stackEditor.lovelace = lovelace;
     }
     _renderShell() {
         this.shadowRoot.innerHTML = `
       <style>
         .editor { display:grid; gap:20px; }
-        .cards-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-        .card-tabs { display:flex; flex:1; min-width:0; gap:6px; overflow-x:auto; }
-        .card-order { display:flex; gap:4px; }
-        button { min-height:40px; padding:8px 12px; color:var(--primary-text-color); background:var(--card-background-color,#202124); border:1px solid var(--divider-color,#555); border-radius:6px; font:inherit; cursor:pointer; }
-        button[aria-pressed="true"] { border-color:var(--primary-color,#ff8b2b); }
-        .card-editor[hidden],.card-picker[hidden] { display:none; }
-        .card-picker { min-height:300px; }
+        .stack-editor { display:block; min-width:0; }
       </style>
       <div class="editor">
         <ha-form></ha-form>
-        <section class="cards-manager">
-          <div class="cards-toolbar">
-            <div class="card-tabs"></div>
-            <div class="card-order">
-              <button type="button" class="move-before" title="Karte nach links verschieben" aria-label="Karte nach links verschieben">←</button>
-              <button type="button" class="move-after" title="Karte nach rechts verschieben" aria-label="Karte nach rechts verschieben">→</button>
-            </div>
-            <button type="button" class="remove-card" title="Ausgewählte Karte entfernen">Entfernen</button>
-            <button type="button" class="add-card">Karte hinzufügen</button>
-          </div>
-          <hui-card-element-editor class="card-editor" hidden></hui-card-element-editor>
-          <hui-card-picker class="card-picker" hide-clipboard hidden></hui-card-picker>
-        </section>
+        <hui-stack-card-editor class="stack-editor"></hui-stack-card-editor>
       </div>`;
         this.shadowRoot.querySelector("ha-form")?.addEventListener("value-changed", (event) => this._handleFormChanged(event));
-        this.shadowRoot.querySelector("hui-card-picker")?.addEventListener("config-changed", (event) => this._handleCardPicked(event));
-        this.shadowRoot.querySelector("hui-card-element-editor")?.addEventListener("config-changed", (event) => this._handleChildChanged(event));
-        this.shadowRoot.querySelector(".add-card")?.addEventListener("click", () => this._togglePicker());
-        this.shadowRoot.querySelector(".remove-card")?.addEventListener("click", () => this._removeSelectedCard());
-        this.shadowRoot.querySelector(".move-before")?.addEventListener("click", () => this._moveSelectedCard(-1));
-        this.shadowRoot.querySelector(".move-after")?.addEventListener("click", () => this._moveSelectedCard(1));
+        this.shadowRoot.querySelector("hui-stack-card-editor")?.addEventListener("config-changed", (event) => this._handleStackChanged(event));
     }
     _handleFormChanged(event) {
         this._config = { ...this._config, ...event.detail.value };
         this._notifyConfig();
     }
-    _handleCardPicked(event) {
+    _handleStackChanged(event) {
         event.stopPropagation();
-        this._config = { ...this._config, cards: [...this._config.cards, event.detail.config] };
-        this._selectedCard = this._config.cards.length - 1;
-        this._showPicker = false;
-        this._renderCardList();
-        this._syncCardEditor();
+        const stackConfig = event.detail.config ?? event.detail.value;
+        if (!Array.isArray(stackConfig?.cards))
+            return;
+        this._config = { ...this._config, cards: stackConfig.cards };
         this._notifyConfig();
     }
-    _handleChildChanged(event) {
-        event.stopPropagation();
-        if (this._selectedCard < 0)
-            return;
-        const cards = [...this._config.cards];
-        cards[this._selectedCard] = event.detail.config ?? event.detail.value;
-        this._config = { ...this._config, cards };
-        this._notifyConfig();
-    }
-    _togglePicker() {
-        this._showPicker = !this._showPicker;
-        const picker = this.shadowRoot.querySelector("hui-card-picker");
-        const editor = this.shadowRoot.querySelector("hui-card-element-editor");
-        if (picker) {
-            picker.hidden = !this._showPicker;
-            picker.hass = this._hass;
-            picker.lovelace = this._lovelace;
-        }
-        if (editor)
-            editor.hidden = this._showPicker || this._selectedCard < 0;
-    }
-    _removeSelectedCard() {
-        if (this._selectedCard < 0)
-            return;
-        const cards = this._config.cards.filter((_, index) => index !== this._selectedCard);
-        this._config = { ...this._config, cards };
-        this._selectedCard = Math.min(this._selectedCard, cards.length - 1);
-        this._renderCardList();
-        this._syncCardEditor();
-        this._notifyConfig();
-    }
-    _moveSelectedCard(offset) {
-        const target = this._selectedCard + offset;
-        if (target < 0 || target >= this._config.cards.length)
-            return;
-        const cards = [...this._config.cards];
-        [cards[this._selectedCard], cards[target]] = [cards[target], cards[this._selectedCard]];
-        this._config = { ...this._config, cards };
-        this._selectedCard = target;
-        this._renderCardList();
-        this._syncCardEditor();
-        this._notifyConfig();
-    }
-    _selectCard(index) {
-        this._selectedCard = index;
-        this._showPicker = false;
-        this._renderCardList();
-        this._syncCardEditor();
-    }
-    _renderCardList() {
-        const tabs = this.shadowRoot.querySelector(".card-tabs");
-        if (!tabs)
-            return;
-        tabs.innerHTML = this._config.cards.map((card, index) => `<button type="button" data-card-index="${index}" aria-pressed="${index === this._selectedCard}">${escapePanelText(card.type || `Karte ${index + 1}`)}</button>`).join("");
-        tabs.querySelectorAll("[data-card-index]").forEach((button) => button.addEventListener("click", () => this._selectCard(Number(button.dataset.cardIndex))));
-        const picker = this.shadowRoot.querySelector("hui-card-picker");
-        const editor = this.shadowRoot.querySelector("hui-card-element-editor");
-        if (picker)
-            picker.hidden = !this._showPicker;
-        if (editor)
-            editor.hidden = this._showPicker || this._selectedCard < 0;
-    }
-    _syncCardEditor() {
-        const editor = this.shadowRoot.querySelector("hui-card-element-editor");
-        if (!editor || this._selectedCard < 0)
+    _syncStackEditor() {
+        const editor = this.shadowRoot.querySelector("hui-stack-card-editor");
+        if (!editor || !this._config)
             return;
         editor.hass = this._hass;
         editor.lovelace = this._lovelace;
-        editor.value = this._config.cards[this._selectedCard];
+        editor.setConfig({ type: "vertical-stack", cards: this._config.cards });
         editor.hidden = this._showPicker;
     }
     _notifyConfig() {
@@ -2713,7 +2614,7 @@ if (!window.customCards.some((card) => card.type === "glass-text-card"))
 })();
 
 (() => {
-const GLASS_VALUE_VERSION = "1.0.0";
+const GLASS_VALUE_VERSION = "1.0.1";
 const VALUE_VISUAL_OPTIONS = [
     { value: "auto", label: "Automatisch" },
     { value: "fan", label: "Lüfter" },
@@ -2814,7 +2715,8 @@ class GlassValueCard extends HTMLElement {
             return `<img class="image" src="${escapeGlassValue(this._config.image)}" alt="">`;
         if (type === "cover") {
             const position = Number(this._hass?.states?.[this._config.entity]?.attributes?.current_position) || 0;
-            return `<div class="window" style="--position:${position}%"><div class="glass"><span class="slats"></span></div></div>`;
+            const slats = Array.from({ length: 7 }, (_, index) => `<i style="--i:${index}"></i>`).join("");
+            return `<div class="window" style="--position:${position}%;--tilt:50"><div class="glass"></div><div class="slats">${slats}</div><span class="cords"></span></div>`;
         }
         const icon = type === "fan" ? (running ? "mdi:fan" : "mdi:fan-off") : (this._config.icon || "mdi:chart-box-outline");
         return `<ha-icon class="visual-icon ${type === "fan" && running ? "spinning" : ""}" icon="${escapeGlassValue(icon)}" aria-hidden="true"></ha-icon>`;
@@ -2841,10 +2743,14 @@ class GlassValueCard extends HTMLElement {
         .visual-icon.spinning { animation:spin 2.4s linear infinite; }
         @keyframes spin { to { transform:rotate(360deg); } }
         .image { width:100%; height:100%; object-fit:contain; }
-        .window { position:relative; width:82%; height:100%; padding:11% 8% 8%; border:6px solid #25262a; border-top-width:12px; border-bottom-width:7px; border-radius:4px; background:linear-gradient(130deg,#d9b78c,#6c665b 48%,#ead0a5); box-shadow:inset 0 0 0 2px #090a0b,0 8px 16px #0008; }
-        .window::before { content:""; position:absolute; top:-13px; left:-8px; right:-8px; height:7px; border:1px solid #4a4b51; background:linear-gradient(#303238,#191a1f); }
-        .glass { position:absolute; inset:10px 6px 6px; overflow:hidden; border:2px solid #d5b591; background:linear-gradient(180deg,#b8ab92,#d8bb94 52%,#87674e); }
-        .slats { position:absolute; top:0; left:0; right:0; height:var(--position); background:repeating-linear-gradient(to bottom,#343237 0 8%,#77706d 9%,#17181b 12%,transparent 13%); }
+        .window { position:relative; width:100%; aspect-ratio:1.14; padding:8px 6px 6px; border:6px solid #25262a; border-top-width:13px; border-bottom-width:7px; border-radius:4px; background:linear-gradient(180deg,rgba(23,25,29,.22),rgba(255,145,67,.1)),linear-gradient(130deg,#d9b78c,#6c665b 48%,#ead0a5); box-shadow:0 8px 16px #0008,inset 0 0 0 2px #090a0b; }
+        .window::before { content:""; position:absolute; z-index:3; top:-14px; left:-8px; right:-8px; height:8px; border:1px solid #4a4b51; border-radius:2px; background:linear-gradient(#303238,#191a1f); box-shadow:0 3px 8px #0008; }
+        .glass { position:absolute; inset:8px 5px 6px; overflow:hidden; border:2px solid #d5b591; background:radial-gradient(ellipse at 70% 42%,#fff5cd 0 4%,#ffe4ae 12%,transparent 35%),linear-gradient(180deg,#aebac0 0%,#eac99b 48%,#f4bb72 70%,#61574c 100%); }
+        .glass::before { content:""; position:absolute; inset:38% -8% -18%; background:radial-gradient(ellipse at 12% 72%,#323d38 0 12%,transparent 33%),radial-gradient(ellipse at 34% 64%,#4a4a3c 0 16%,transparent 34%),radial-gradient(ellipse at 60% 73%,#343c37 0 18%,transparent 36%),radial-gradient(ellipse at 88% 62%,#45483c 0 16%,transparent 34%),linear-gradient(178deg,transparent 0 37%,#75604b 39% 42%,#353b38 47% 100%); filter:blur(3px); }
+        .glass::after { content:""; position:absolute; z-index:1; inset:0; opacity:.42; background:linear-gradient(100deg,transparent 35%,#fff8df 49%,transparent 62%); }
+        .slats { position:absolute; z-index:2; top:0; left:0; right:0; height:calc(100% - var(--position)); overflow:hidden; }
+        .slats i { position:absolute; left:0; right:0; top:calc(var(--i) * 13%); height:11%; border:1px solid #4b4140; border-top-color:#77706d; background:linear-gradient(180deg,#343237,#17181b 60%,#51413a); box-shadow:0 2px 3px #0008; transform:skewY(calc((var(--tilt) - 50) * .035deg)); }
+        .cords { position:absolute; z-index:3; inset:0; pointer-events:none; background:linear-gradient(90deg,transparent 14%,#17171a 14.3%,#9a7857 14.7%,transparent 15.1% 84%,#18181b 84.3%,#a7835c 84.7%,transparent 85.1%); }
         .readout { min-width:0; flex:1; }
         .name { color:#9295a0; font-size:clamp(13px,2.2vw,18px); line-height:1.2; overflow-wrap:anywhere; }
         .value { margin-top:5px; font-size:clamp(${30 * valueScale}px,${8 * valueScale}vw,${66 * valueScale}px); line-height:1; font-weight:700; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }

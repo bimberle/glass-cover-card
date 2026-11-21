@@ -253,7 +253,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.23.11 installiert?** Aktualisiere auf v1.24.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter. Bisherige Panel-Kopfoptionen werden beim Laden in eine Glass Text-Kindkarte übernommen.
+**Schon v1.7.0 bis v1.24.0 installiert?** Aktualisiere auf v1.24.1 und lade die Repository-Dateien in Marketplace/HACS erneut herunter. Bisherige Panel-Kopfoptionen werden beim Laden in eine Glass Text-Kindkarte übernommen.
 
 ## Manuelle Installation
 
@@ -430,7 +430,7 @@ cards:
     entity: timer.stosslueftung
 ```
 
-Im Bearbeitungsmodus wählst du über **Karte hinzufügen** den normalen Home-Assistant-Kartenpicker. Dort stehen alle Standard- und Custom Cards zur Auswahl. Die ausgewählte Karte lässt sich danach mit ihrem Standardeditor konfigurieren; Karten können entfernt, ausgewählt und sortiert werden. Die Kindkarten liegen vertikal. Für nebeneinanderliegende Karten fügst du `horizontal-stack` oder `grid` ein.
+Im Bearbeitungsmodus nutzt das Panel Home Assistants nativen Vertical-Stack-Editor: Jede Kindkarte erscheint als nummerierter Tab, über den Plus-Tab fügst du Karten aus dem normalen Kartenpicker hinzu. Die ausgewählte Karte bearbeitest du mit ihrem Standardeditor; Verschieben und Entfernen entsprechen dem `horizontal-stack`-Editor. Die Karten liegen im Panel vertikal. Für nebeneinanderliegende Karten fügst du `horizontal-stack` oder `grid` ein.
 
 | Option | Standard | Beschreibung |
 | --- | --- | --- |
