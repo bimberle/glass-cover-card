@@ -326,6 +326,17 @@ if (!window.customCards.some((card) => card.type === "glass-cover-card")) {
 })();
 
 (() => {
+function glassRoundButtonStyles(selector) {
+    return `
+    ${selector} { border:var(--glass-button-border-width,2px) solid color-mix(in srgb,var(--accent) 78%,#414348); border-radius:50%; background:linear-gradient(145deg,#222428,#131518); color:var(--accent); box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 8px 18px rgba(0,0,0,.28); transition:border-color .18s ease,color .18s ease,background .18s ease,box-shadow .18s ease,transform .18s ease; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    ${selector}:hover { transform:translateY(-2px); border-color:var(--accent); }
+    ${selector}.active { border-color:var(--accent); background:radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--accent) 24%,#1c1b19),#1c1b19 72%); box-shadow:inset 0 0 24px color-mix(in srgb,var(--accent) 18%,transparent),0 0 0 var(--glass-button-ring-width,1px) color-mix(in srgb,var(--accent) 35%,transparent),0 8px 22px rgba(0,0,0,.3); }
+    ${selector}.inactive { color:#85878b; border-color:#45474b; }
+    ${selector}.inactive:hover { border-color:#77797d; }
+    ${selector}:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+  `;
+}
+
 const CARD_VERSION = "1.7.0";
 const BUTTON_COLORS = {
     orange: "#ff8b2b",
@@ -629,11 +640,8 @@ class GlassButtonCard extends HTMLElement {
         .card.no-frame { padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
         .button-wrap { display:flex; flex-direction:column; align-items:center; gap:clamp(12px,2vw,20px); }
         .button-control { position:relative; width:var(--button-size); aspect-ratio:1; flex:none; }
-        .button { display:grid; width:100%; height:100%; place-items:center; padding:0; border:2px solid color-mix(in srgb,var(--accent) 78%,#414348); border-radius:50%; background:linear-gradient(145deg,#222428,#131518); color:var(--accent); box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 8px 18px rgba(0,0,0,.28); transition:border-color .18s ease,color .18s ease,background .18s ease,box-shadow .18s ease,transform .18s ease; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-        .button:hover { transform:translateY(-2px); border-color:var(--accent); }
-        .button.active { border-color:var(--accent); background:radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--accent) 24%,#1c1b19),#1c1b19 72%); box-shadow:inset 0 0 24px color-mix(in srgb,var(--accent) 18%,transparent),0 0 0 1px color-mix(in srgb,var(--accent) 35%,transparent),0 8px 22px rgba(0,0,0,.3); }
-        .button.inactive { color:#85878b; border-color:#45474b; }
-        .button.inactive:hover { border-color:#77797d; }
+        .button { display:grid; width:100%; height:100%; place-items:center; padding:0; }
+        ${glassRoundButtonStyles(".button.glass-round-button")}
         .button.binary-sensor.active { --accent:var(--sensor-active-color); color:var(--sensor-active-color); }
         .button.binary-sensor.inactive { color:var(--sensor-inactive-color); border-color:var(--sensor-inactive-color); }
         .button.binary-sensor.inactive:hover { border-color:var(--sensor-inactive-color); }
@@ -664,7 +672,7 @@ class GlassButtonCard extends HTMLElement {
       <article class="card ${showCardFrame ? "" : "no-frame"}" style="--accent:${BUTTON_COLORS[color]};--sensor-active-color:${activeColor};--sensor-inactive-color:${inactiveColor};--button-size:clamp(${72 * scale}px,${15 * scale}vw,${114 * scale}px);--icon-size:clamp(${Math.min(16, 72 * scale * .48)}px,${15 * scale * .48}vw,${114 * scale * .48}px)">
         <div class="button-wrap">
           <div class="button-control">
-          <button class="button ${isActive ? "active" : ""}" aria-label="${escapeHtml(name)}" title="${escapeHtml(name)}">
+          <button class="button glass-round-button ${isActive ? "active" : ""}" aria-label="${escapeHtml(name)}" title="${escapeHtml(name)}">
             <span class="button-content"><ha-icon icon="${escapeHtml(icon)}"></ha-icon><span class="brightness-value">0 %</span><span class="state-value"></span></span>
           </button>
           <svg class="dimmer" viewBox="0 0 100 100" role="slider" aria-label="Helligkeit" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-hidden="true" tabindex="-1"><circle class="dimmer-track" cx="50" cy="50" r="43"></circle><circle class="dimmer-progress" cx="50" cy="50" r="43" pathLength="100"></circle><circle class="dimmer-hit" cx="50" cy="50" r="43"></circle><circle class="dimmer-thumb" cx="50" cy="7" r="4.5"></circle></svg>
@@ -1383,7 +1391,18 @@ if (!window.customCards.some((card) => card.type === "glass-room-card"))
 })();
 
 (() => {
-const NAV_CARD_VERSION = "1.0.6";
+function glassRoundButtonStyles(selector) {
+    return `
+    ${selector} { border:var(--glass-button-border-width,2px) solid color-mix(in srgb,var(--accent) 78%,#414348); border-radius:50%; background:linear-gradient(145deg,#222428,#131518); color:var(--accent); box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 8px 18px rgba(0,0,0,.28); transition:border-color .18s ease,color .18s ease,background .18s ease,box-shadow .18s ease,transform .18s ease; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    ${selector}:hover { transform:translateY(-2px); border-color:var(--accent); }
+    ${selector}.active { border-color:var(--accent); background:radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--accent) 24%,#1c1b19),#1c1b19 72%); box-shadow:inset 0 0 24px color-mix(in srgb,var(--accent) 18%,transparent),0 0 0 var(--glass-button-ring-width,1px) color-mix(in srgb,var(--accent) 35%,transparent),0 8px 22px rgba(0,0,0,.3); }
+    ${selector}.inactive { color:#85878b; border-color:#45474b; }
+    ${selector}.inactive:hover { border-color:#77797d; }
+    ${selector}:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+  `;
+}
+
+const NAV_CARD_VERSION = "1.1.0";
 const NAV_COLORS = {
     orange: "#ff8b2b",
     white: "#f2f2f4",
@@ -1444,6 +1463,7 @@ class GlassNavigationCard extends HTMLElement {
             position: "bottom",
             scale: 100,
             color: "orange",
+            show_button_borders: true,
             items: [
                 { name: "Home", icon: "mdi:home-outline", url: "/lovelace/home" },
                 {
@@ -1472,6 +1492,7 @@ class GlassNavigationCard extends HTMLElement {
             { name: "color", default: "orange", selector: { select: { mode: "dropdown", options: NAV_COLOR_OPTIONS } } },
             { name: "position", default: "bottom", selector: { select: { mode: "dropdown", options: NAV_POSITION_OPTIONS } } },
             { name: "scale", default: 100, selector: { number: { min: 70, max: 140, step: 5, mode: "slider", unit_of_measurement: "%" } } },
+            { name: "show_button_borders", default: true, selector: { boolean: {} } },
             { name: "active", selector: { text: {} } },
         ];
         return {
@@ -1481,6 +1502,7 @@ class GlassNavigationCard extends HTMLElement {
                 color: "Farbe für Icons und Texte",
                 position: "Position der Navigationsleiste",
                 scale: "Gesamte Navigation skalieren",
+                show_button_borders: "Buttonrahmen anzeigen",
                 active: "Aktiver Hauptpunkt (Name)",
             })[field.name],
         };
@@ -1494,6 +1516,7 @@ class GlassNavigationCard extends HTMLElement {
             position: "bottom",
             scale: 100,
             active: "",
+            show_button_borders: true,
             items: [],
             ...config,
         };
@@ -1608,7 +1631,8 @@ class GlassNavigationCard extends HTMLElement {
         const chevronIcon = root
             ? ({ top: "mdi:chevron-down", bottom: "mdi:chevron-up", left: "mdi:chevron-right", right: "mdi:chevron-left" }[this._config.position])
             : "mdi:chevron-right";
-        return `<button type="button" class="nav-item ${active ? "active" : ""} ${hasChildren ? "has-children" : ""}" ${dataAttribute} ${hasChildren ? `aria-haspopup="menu" aria-expanded="${root ? this._menuRootIndex === index : false}"` : `aria-current="${active ? "page" : "false"}"`} ${!hasChildren ? `data-url="${escapeNav(url)}"` : ""} aria-label="${escapeNav(item.name)}" title="${escapeNav(item.name)}"><ha-icon icon="${escapeNav(item.icon)}"></ha-icon>${label ? `<span>${escapeNav(label)}</span>` : ""}${hasChildren ? `<span class="chevron" aria-hidden="true"><ha-icon icon="${chevronIcon}"></ha-icon></span>` : ""}</button>`;
+        const rootButtonClasses = root ? `glass-round-button ${active ? "active" : "inactive"}` : active ? "active" : "";
+        return `<button type="button" class="nav-item ${rootButtonClasses} ${hasChildren ? "has-children" : ""}" ${dataAttribute} ${hasChildren ? `aria-haspopup="menu" aria-expanded="${root ? this._menuRootIndex === index : false}"` : `aria-current="${active ? "page" : "false"}"`} ${!hasChildren ? `data-url="${escapeNav(url)}"` : ""} aria-label="${escapeNav(item.name)}" title="${escapeNav(item.name)}"><ha-icon icon="${escapeNav(item.icon)}"></ha-icon>${label ? `<span>${escapeNav(label)}</span>` : ""}${hasChildren ? `<span class="chevron" aria-hidden="true"><ha-icon icon="${chevronIcon}"></ha-icon></span>` : ""}</button>`;
     }
     _navigate(url) {
         if (/^https?:\/\//i.test(url)) {
@@ -1676,25 +1700,25 @@ class GlassNavigationCard extends HTMLElement {
         * { box-sizing:border-box; }
         button { color:inherit; font:inherit; }
         .shell { position:fixed; z-index:20; color:var(--nav-color); }
-        .shell.position-top,.shell.position-bottom { left:50%; width:min(calc(100vw - 48px),520px); transform:translateX(-50%) scale(var(--nav-scale)); }
+        .shell.position-top,.shell.position-bottom { left:50%; width:min(calc(100vw - 48px),420px); transform:translateX(-50%) scale(var(--nav-scale)); }
         .shell.position-top { top:max(12px,env(safe-area-inset-top)); transform-origin:50% 0; }
         .shell.position-bottom { bottom:calc(env(safe-area-inset-bottom) + 6px); transform-origin:50% 100%; }
         .shell.position-left,.shell.position-right { top:50%; width:max-content; max-width:calc(100vw - 24px); transform:translateY(-50%) scale(var(--nav-scale)); }
         .shell.position-left { left:max(12px,env(safe-area-inset-left)); transform-origin:0 50%; }
         .shell.position-right { right:max(12px,env(safe-area-inset-right)); transform-origin:100% 50%; }
-        .bar { position:relative; display:flex; align-items:center; justify-content:space-around; gap:4px; width:100%; min-height:clamp(72px,31vw,164px); padding:12px; border:1px solid rgba(255,255,255,.1); border-radius:100px; background:rgba(20,21,23,.96); box-shadow:0 12px 32px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06); backdrop-filter:blur(20px); }
-        .position-left .bar,.position-right .bar { flex-direction:column; width:82px; max-height:min(76dvh,680px); overflow:auto; }
+        .bar { position:relative; display:flex; align-items:center; justify-content:space-around; gap:3px; width:100%; min-height:clamp(64px,18vw,120px); padding:8px; border:1px solid rgba(255,255,255,.1); border-radius:72px; background:rgba(20,21,23,.96); box-shadow:0 12px 32px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06); backdrop-filter:blur(20px); }
+        .position-left .bar,.position-right .bar { flex-direction:column; width:72px; max-height:min(76dvh,680px); overflow:auto; }
         .nav-separator { flex:none; align-self:center; width:1px; height:42px; margin:0 8px; background:rgba(255,255,255,.18); }
         .position-left .nav-separator,.position-right .nav-separator { width:42px; height:1px; margin:8px 0; }
-        .nav-item { position:relative; display:flex; flex:1 1 0; min-width:0; max-width:142px; min-height:0; aspect-ratio:1; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:5px 8px; border:1px solid transparent; border-radius:50%; background:transparent; color:#e4e4e6; opacity:.94; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-        .nav-item > ha-icon { display:block; width:clamp(30px,9vw,48px); height:clamp(30px,9vw,48px); --mdc-icon-size:clamp(30px,9vw,48px); }
+        .nav-item { position:relative; display:flex; flex:1 1 0; min-width:0; max-width:110px; min-height:0; aspect-ratio:1; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:5px 8px; }
+        .bar .nav-item { display:grid; place-items:center; padding:4px; }
+        .nav-item > ha-icon { display:block; flex:none; width:clamp(36px,12vw,56px); height:clamp(36px,12vw,56px); font-size:clamp(36px,12vw,56px); line-height:1; --mdc-icon-size:clamp(36px,12vw,56px); }
         .nav-item span:not(.chevron) { max-width:100%; overflow:hidden; font-size:18px; line-height:1.15; text-align:center; text-overflow:ellipsis; white-space:nowrap; }
         .bar .nav-item > span:not(.chevron) { display:none; }
-        .nav-item.active { background:color-mix(in srgb,var(--nav-color) 20%,transparent); color:var(--nav-color); opacity:1; }
-        .bar .nav-item.active { border-color:color-mix(in srgb,var(--nav-color) 68%,transparent); background:radial-gradient(circle at 48% 42%,color-mix(in srgb,var(--nav-color) 34%,#28221b),color-mix(in srgb,var(--nav-color) 17%,#171719) 72%); box-shadow:0 0 28px color-mix(in srgb,var(--nav-color) 20%,transparent),inset 0 1px 2px rgba(255,255,255,.12); }
-        .bar .nav-item.has-children .chevron { top:9%; right:50%; bottom:auto; display:grid; width:24px; height:24px; place-items:center; transform:translateX(50%); color:#f2f2f4; }
-        .chevron ha-icon { display:block; width:18px; height:18px; --mdc-icon-size:18px; }
-        .nav-item:focus-visible,.menu-back:focus-visible { outline:2px solid var(--nav-color); outline-offset:2px; }
+        ${glassRoundButtonStyles(".nav-item.glass-round-button")}
+        .bar .nav-item.has-children .chevron { top:12%; right:12%; bottom:auto; display:grid; width:20px; height:20px; place-items:center; transform:none; color:#f2f2f4; }
+        .chevron ha-icon { display:block; width:18px; height:18px; font-size:18px; line-height:1; --mdc-icon-size:18px; }
+        .menu-back:focus-visible { outline:2px solid var(--nav-color); outline-offset:2px; }
         .chevron { position:absolute; top:2px; right:12px; font-size:16px; }
         .position-left .nav-item,.position-right .nav-item { flex:none; width:100%; max-width:none; min-height:68px; aspect-ratio:auto; }
         .submenu { position:absolute; width:min(720px,calc(100vw - 32px)); max-height:min(72dvh,640px); overflow:auto; padding:32px 28px 30px; border:1px solid rgba(255,255,255,.13); border-radius:28px; background:rgba(26,27,30,.97); color:var(--nav-color); box-shadow:0 16px 42px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.06); backdrop-filter:blur(24px); }
@@ -1721,9 +1745,11 @@ class GlassNavigationCard extends HTMLElement {
         .submenu-items .nav-item.active span:not(.chevron) { color:#f2f2f4; }
         .submenu-items .nav-item.has-children .chevron { top:12px; right:18px; font-size:22px; }
         @media(max-width:520px) { .shell.position-bottom { bottom:calc(env(safe-area-inset-bottom) + 6px); } .position-bottom .submenu { bottom:calc(100% + 24px); } .position-bottom .pointer { top:-24px; } .bar { min-height:clamp(72px,31vw,112px); padding:7px; border-radius:60px; } .bar .nav-item { min-height:0; padding-inline:4px; } .bar .nav-item > ha-icon { width:clamp(28px,8.5vw,36px); height:clamp(28px,8.5vw,36px); --mdc-icon-size:clamp(28px,8.5vw,36px); } .bar .nav-item.has-children .chevron { top:9%; right:50%; bottom:auto; width:20px; height:20px; transform:translateX(50%); } .bar .nav-item.has-children .chevron ha-icon { width:15px; height:15px; --mdc-icon-size:15px; } .position-left .nav-separator,.position-right .nav-separator { width:32px; } .submenu { padding:18px 14px 20px; } .submenu-header h2 { font-size:26px; } .menu-segments { width:100%; min-height:56px; margin-bottom:20px; } .segment { min-height:48px; font-size:16px; } .position-left .submenu,.position-right .submenu { width:min(440px,calc(100vw - 108px)); } .submenu-items { --menu-row-size:clamp(72px,calc((min(720px,100vw - 32px) - 42px) / 3),126px); grid-template-rows:repeat(var(--submenu-rows,1),var(--menu-row-size)); gap:6px; } .submenu-items .nav-item { width:100%; height:var(--menu-row-size); min-width:0; min-height:0; } .submenu-items .nav-item ha-icon { width:42px; height:42px; --mdc-icon-size:42px; } .submenu-items .nav-item span:not(.chevron) { right:2px; bottom:8%; left:2px; font-size:13px; } }
+        @media(max-width:520px) { .bar { min-height:clamp(58px,18vw,82px); padding:6px; border-radius:56px; } .bar .nav-item > ha-icon { width:clamp(34px,11vw,44px); height:clamp(34px,11vw,44px); --mdc-icon-size:clamp(34px,11vw,44px); } .bar .nav-item.has-children .chevron { top:10%; right:10%; bottom:auto; width:18px; height:18px; transform:none; } .bar .nav-item.has-children .chevron ha-icon { width:14px; height:14px; --mdc-icon-size:14px; } }
+        @media(max-width:520px) { .bar .nav-item > ha-icon { font-size:clamp(34px,11vw,44px); } .bar .nav-item.has-children .chevron ha-icon { font-size:14px; } }
         @media(prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto !important; } }
       </style>
-      <div class="shell position-${position}" style="--nav-color:${color};--nav-scale:${scale}">
+      <div class="shell position-${position}" style="--nav-color:${color};--nav-scale:${scale};--accent:${color};--glass-button-border-width:${this._config.show_button_borders ? 2 : 0}px;--glass-button-ring-width:${this._config.show_button_borders ? 1 : 0}px">
         ${menu}
         <nav class="bar" aria-label="Hauptnavigation">${rootItems}</nav>
       </div>`;

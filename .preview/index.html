@@ -56,6 +56,7 @@
       <aside class="column aside">
         <div class="sample"><div class="sample-label">Werte <small>Visualisierungen</small></div><div class="stack vertical"><glass-value-card id="fan-value"></glass-value-card><glass-value-card id="cover-value"></glass-value-card></div></div>
         <div class="sample"><div class="sample-label">Timer</div><glass-timer-card id="timer"></glass-timer-card></div>
+        <div class="sample"><div class="sample-label">Navigation <small>Mehrstufiges Menü</small></div><glass-navigation-card id="navigation"></glass-navigation-card></div>
       </aside>
     </section>
   </main>
@@ -163,6 +164,44 @@
       setup("fan-value", { entity: "fan.wohnzimmer", name: "Lüftung", visual_type: "auto", image_size: 4, value_size: 4 });
       setup("cover-value", { entity: "cover.wohnzimmer", name: "Beschattung", visual_type: "auto", image_size: 4, value_size: 4 });
       setup("timer", { entity: "timer.stosslueftung", name: "Stoßlüftung", icon_size: 3, text_size: 4, button_size: 3 });
+      setup("navigation", {
+        position: "bottom",
+        color: "orange",
+        scale: 100,
+        active: "Home",
+        items: [
+          { name: "Home", icon: "mdi:home-outline", url: "/lovelace/home", default: true },
+          { type: "separator" },
+          {
+            name: "Räume",
+            icon: "mdi:view-grid",
+            menu_title: "Raum wählen",
+            children: [
+              {
+                name: "Erdgeschoss",
+                label: "EG",
+                icon: "mdi:home-floor-0",
+                default: true,
+                children: [
+                  { name: "Küche", icon: "mdi:pot-steam", url: "/lovelace/kueche" },
+                  { name: "Wohnen", icon: "mdi:sofa-outline", url: "/lovelace/wohnen" },
+                ],
+              },
+              {
+                name: "Obergeschoss",
+                label: "OG",
+                icon: "mdi:home-floor-1",
+                children: [
+                  { name: "Schlafen", icon: "mdi:bed-king-outline", url: "/lovelace/schlafen" },
+                  { name: "Bad", icon: "mdi:shower", url: "/lovelace/bad" },
+                ],
+              },
+            ],
+          },
+          { name: "Fernseher", icon: "mdi:television", url: "/lovelace/medien" },
+          { name: "Mehr", icon: "mdi:dots-horizontal", url: "/lovelace/mehr" },
+        ],
+      });
     });
   </script>
   <script src="../dist/glass-cover-card.js"></script>

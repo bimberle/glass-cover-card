@@ -7,6 +7,9 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cardsDirectory = join(root, "cards");
 const outputDirectory = join(root, "dist");
 const sharedTypes = join(cardsDirectory, "glass-types.d.ts");
+const sharedButtonStyles = ts.transpileModule(await readFile(join(cardsDirectory, "glass-button-styles.ts"), "utf8"), {
+  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None },
+}).outputText;
 
 await mkdir(outputDirectory, { recursive: true });
 for (const name of await readdir(outputDirectory)) {
@@ -44,7 +47,12 @@ for (const directory of cardDirectories) {
     }
     const result = program.emit();
     if (result.emitSkipped) throw new Error(`TypeScript compilation failed for ${source}`);
-    sources.set(fileName, await readFile(output, "utf8"));
+    let compiledSource = await readFile(output, "utf8");
+    if (["glass-button-card.js", "glass-navigation-card.js"].includes(fileName)) {
+      compiledSource = `${sharedButtonStyles}\n${compiledSource}`;
+      await writeFile(output, compiledSource);
+    }
+    sources.set(fileName, compiledSource);
   } else {
     sources.set(fileName, await readFile(source, "utf8"));
     await copyFile(source, output);

@@ -1,6 +1,8 @@
 export {};
 
 declare global {
+  function glassRoundButtonStyles(selector: string): string;
+
 interface GlassEntityState {
   state: string;
   attributes: Record<string, any>;
