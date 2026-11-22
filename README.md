@@ -150,7 +150,7 @@ cards:
 
   ### Glass RGB Card
 
-  Steuert ein farbfaehiges Licht ueber einen Farbkreis und einen Helligkeitsregler. Die Mitte schaltet das Licht ein oder aus; bis zu sechs Farb-Presets koennen in der Kartenkonfiguration festgelegt werden. Fuer RGBW- und RGBWW-Leuchten mit Farbtemperatur steht zusaetzlich ein Warm/Kalt-Regler bereit. Ein Beispiel und alle Optionen findest du unter [Glass RGB Card](#glass-rgb-card-1).
+  Steuert ein farbfaehiges Licht ueber einen Farbkreis und einen Helligkeitsregler. Die Mitte schaltet das Licht ein oder aus; bis zu sechs Farb-Presets koennen in der Kartenkonfiguration festgelegt werden. Wenn die Leuchte `color_temp` unterstuetzt, erscheint zusaetzlich ein Warm/Kalt-Regler. Kompakte Darstellung und Kartenrahmen lassen sich separat konfigurieren. Ein Beispiel und alle Optionen findest du unter [Glass RGB Card](#glass-rgb-card-1).
 
 ### Glass Room Card
 
@@ -255,7 +255,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.25.0 installiert?** Aktualisiere auf v1.26.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter. Bisherige Panel-Kopfoptionen werden beim Laden in eine Glass Text-Kindkarte übernommen.
+**Schon v1.7.0 bis v1.26.0 installiert?** Aktualisiere auf v1.27.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter. Bisherige Panel-Kopfoptionen werden beim Laden in eine Glass Text-Kindkarte übernommen.
 
 ## Manuelle Installation
 
@@ -370,7 +370,7 @@ Steuert Farbton und Helligkeit eines farbfaehigen Lichts. Der innere Ring und da
 
 Frueher im Browser gespeicherte Presets werden nicht mehr verwendet; lege die gewuenschten Farben in der Kartenkonfiguration neu fest.
 
-Die RGB-Icons verwenden direkt berechnete Groessen statt verschachtelter Prozentwerte, auch im ausgeschalteten Zustand, um Groessenrueckkopplungen im Editor zu vermeiden.
+Die RGB-Karte kann kompakt dargestellt und ohne äußeren Rahmen verwendet werden. Die Farbtemperatursteuerung wird angezeigt, sobald Home Assistant `color_temp` als unterstützten Farbmodus meldet. Die RGB-Icons verwenden direkt berechnete Groessen statt verschachtelter Prozentwerte, auch im ausgeschalteten Zustand, um Groessenrueckkopplungen im Editor zu vermeiden.
 
 ```yaml
 type: custom:glass-rgb-card
@@ -395,8 +395,10 @@ preset_2: [0, 180, 255]
 | `icon` | `mdi:lightbulb-outline` | Icon des Schaltbuttons |
 | `turn_on_text` | `RGB` | Text unter dem Icon beim Einschalten; leer zum Ausblenden |
 | `show_action_button` | `true` | Kopfbutton zum Ein-/Ausschalten anzeigen; bei leerem Titel und Namen verschwindet damit die ganze Kopfzeile |
-| `title_size` | `5` | Beschriftungsgröße von `1` bis `5` |
-| `button_size` | `5` | Groesse des Kopfbuttons von `1` bis `5` |
+| `title_size` | `4` | Beschriftungsgröße von `1` bis `5` |
+| `button_size` | `4` | Groesse des Kopfbuttons von `1` bis `5` |
+| `compact` | `true` | Kompaktere Karte mit kleinerem Farbkreis und engeren Abständen |
+| `show_card_border` | `true` | Äußeren Kartenrahmen anzeigen |
 | `show_presets` | `false` | Konfigurierte Farb-Presets anzeigen |
 | `preset_1` bis `preset_6` | keine | Optionale RGB-Farbe als Liste mit drei Werten von `0` bis `255` |
 
