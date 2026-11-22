@@ -959,7 +959,7 @@ if (!window.customCards.some((card) => card.type === "glass-panel-card")) {
 (() => {
 (() => {
     "use strict";
-    const RGB_CARD_VERSION = "1.3.0";
+    const RGB_CARD_VERSION = "1.3.1";
     const RGB_PRESET_COUNT = 6;
     const escapeRgb = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
     const clamp = (value, min, max, fallback) => Number.isFinite(Number(value)) ? Math.min(max, Math.max(min, Number(value))) : fallback;
@@ -1007,7 +1007,7 @@ if (!window.customCards.some((card) => card.type === "glass-panel-card")) {
                     { name: "show_presets", default: false, selector: { boolean: {} } },
                     ...Array.from({ length: RGB_PRESET_COUNT }, (_, i) => ({ name: `preset_${i + 1}`, selector: { color_rgb: {} } }))
                 ],
-                computeLabel: field => ({ entity: "Licht", title: "Titel", name: "Beschriftung", icon: "Icon", turn_on_text: "Text unter dem Einschalt-Icon", compact: "Kompakte Darstellung", show_card_border: "Kartenrahmen anzeigen", show_action_button: "Kopfbutton anzeigen", title_size: "Beschriftungsgröße", button_size: "Button-Größe", show_presets: "Farb-Presets anzeigen" })[field.name] || (field.name.startsWith("preset_") ? `Farb-Preset ${field.name.slice(7)}` : field.name)
+                computeLabel: field => ({ entity: "Licht", title: "Titel (leer = gesamte Kopfzeile ausblenden)", name: "Beschriftung", icon: "Icon", turn_on_text: "Text unter dem Einschalt-Icon", compact: "Kompakte Darstellung", show_card_border: "Kartenrahmen und Hintergrund anzeigen", show_action_button: "Kopfbutton anzeigen", title_size: "Beschriftungsgröße", button_size: "Button-Größe", show_presets: "Farb-Presets anzeigen" })[field.name] || (field.name.startsWith("preset_") ? `Farb-Preset ${field.name.slice(7)}` : field.name)
             };
         }
         setConfig(config) {
@@ -1089,11 +1089,13 @@ if (!window.customCards.some((card) => card.type === "glass-panel-card")) {
             header.classList.toggle('active', s?.state === 'on');
             header.classList.toggle('inactive', off);
             q('.action-state').textContent = s?.state === 'on' ? 'An' : off ? 'Aus' : '';
+            const title = String(this._config.title ?? '').trim();
             const name = String(this._config.name ?? '').trim();
             q('.subtitle').textContent = name;
             q('.subtitle').hidden = !name;
-            q('.titles').hidden = !String(this._config.title ?? '').trim() && !name;
-            q('.header').hidden = q('.titles').hidden && header.hidden;
+            // Ein leerer Titel entfernt die gesamte Kopfzeile samt Abstand.
+            q('.titles').hidden = !title;
+            q('.header').hidden = !title;
             q('.controls').hidden = !color || !available;
             q('.controls').classList.toggle('is-off', off);
             q('.turn-on').hidden = !off;
@@ -1130,6 +1132,7 @@ if (!window.customCards.some((card) => card.type === "glass-panel-card")) {
                 return;
             const c = this._config, titleScale = .65 + ((c.title_size - 1) / 4) * .35, menuScale = .5 + (1 / 3 + ((c.button_size - 1) / 4) * (2 / 3)) * .5;
             const icon = escapeRgb(c.icon || 'mdi:lightbulb-outline');
+            const hasTitle = !!String(c.title ?? '').trim();
             this.shadowRoot.innerHTML = `
   <style>
    :host{display:block;width:100%;color:var(--primary-text-color,#f3f3f5);font-family:var(--paper-font-body1_-_font-family,Arial,sans-serif)}
@@ -1137,8 +1140,8 @@ if (!window.customCards.some((card) => card.type === "glass-panel-card")) {
    [hidden]{display:none!important}
    .card{--wheel-size:360px;--card-padding:clamp(20px,4.7vw,38px);--header-gap:clamp(20px,3vw,30px);--icon-size:clamp(42px,18vw,96px);--preset-size:42px;--section-gap:28px;width:100%;padding:var(--card-padding);border:1px solid #ffffff1a;border-radius:28px;background:radial-gradient(ellipse at 48% 0,#22252a 0,#15171a 62%,#101214 100%);box-shadow:inset 0 1px 1px #ffffff0f,0 12px 30px #0003}
    .card.compact{--wheel-size:290px;--card-padding:clamp(16px,3vw,24px);--header-gap:16px;--icon-size:clamp(38px,13vw,72px);--preset-size:34px;--section-gap:18px;border-radius:25px}
-   /* Nur die äußere Kontur entfernen, Innenbedienung unverändert lassen. */
-   .card.no-border{border-color:transparent;box-shadow:0 12px 30px #0003}
+   /* Rahmenlos bedeutet auch: kein Kartenhintergrund und kein Schatten. */
+   .card.no-border{border-color:transparent;background:transparent;box-shadow:none}
    .header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:var(--header-gap)}
    .header:has(>.titles[hidden]){justify-content:flex-end}
    .titles{min-width:0}.title{color:#9295a0;font-size:clamp(11px,2.1vw,15px);font-weight:700;letter-spacing:.12em;text-transform:uppercase;overflow-wrap:anywhere}
@@ -1169,7 +1172,7 @@ if (!window.customCards.some((card) => card.type === "glass-panel-card")) {
    @media(max-width:380px){.card{--card-padding:18px}.card.compact{--card-padding:14px}.presets{gap:6px}}
   </style>
   <article class="card ${c.compact !== false ? 'compact' : ''} ${c.show_card_border === false ? 'no-border' : ''}" style="--subtitle-font:clamp(${22 * titleScale}px,${4.8 * titleScale}vw,${38 * titleScale}px);--header-action-size:clamp(${56 * menuScale * (c.compact !== false ? .88 : 1)}px,${11 * menuScale}vw,${88 * menuScale * (c.compact !== false ? .88 : 1)}px);--header-icon-size:calc((var(--header-action-size) - 16px)*.46)">
-   <header class="header"><div class="titles">${String(c.title ?? '').trim() ? `<div class="title">${escapeRgb(String(c.title).trim())}</div>` : ''}<h2 class="subtitle" hidden></h2></div><button type="button" class="header-action" aria-label="Licht ein- oder ausschalten" title="Licht ein- oder ausschalten"><ha-icon icon="${icon}"></ha-icon><span class="action-state"></span></button></header>
+   <header class="header" ${hasTitle ? '' : 'hidden'}><div class="titles">${hasTitle ? `<div class="title">${escapeRgb(String(c.title).trim())}</div>` : ''}<h2 class="subtitle" hidden></h2></div><button type="button" class="header-action" aria-label="Licht ein- oder ausschalten" title="Licht ein- oder ausschalten"><ha-icon icon="${icon}"></ha-icon><span class="action-state"></span></button></header>
    <p class="unavailable" hidden></p>
    <div class="controls" hidden><div class="color-control"><div class="wheel" role="slider" tabindex="0" aria-label="Farbton" aria-valuemin="0" aria-valuemax="359" aria-valuenow="0"><span class="wheel-marker"></span></div><button type="button" class="turn-off" aria-label="Licht ausschalten" title="Licht ausschalten" hidden><ha-icon icon="${icon}" aria-hidden="true"></ha-icon></button><button type="button" class="turn-on" aria-label="Licht einschalten" title="Licht einschalten" hidden><ha-icon icon="${icon}"></ha-icon>${String(c.turn_on_text ?? 'RGB').trim() ? `<span class="turn-on-label">${escapeRgb(String(c.turn_on_text).trim())}</span>` : ''}</button><div class="brightness-control"><input class="brightness" type="range" min="0" max="100" aria-label="Helligkeit"><span class="brightness-number">0 %</span></div></div>
    ${c.show_presets && this._presets.length ? `<div class="presets">${this._presets.map(p => `<button class="preset" type="button" title="Farb-Preset ${p.slot}" aria-label="Farb-Preset ${p.slot}" aria-pressed="false"></button>`).join('')}</div>` : ''}
@@ -1206,7 +1209,7 @@ if (!window.customCards.some((card) => card.type === "glass-panel-card")) {
     if (!customElements.get('glass-rgb-card'))
         customElements.define('glass-rgb-card', GlassRgbCard);
     window.customCards = window.customCards || [];
-    const metadata = { type: 'glass-rgb-card', name: 'Glass RGB Card', description: 'Kompakte RGB-Lichtsteuerung mit optionalem Kartenrahmen und Farb-Presets.', preview: true, version: RGB_CARD_VERSION };
+    const metadata = { type: 'glass-rgb-card', name: 'Glass RGB Card', description: 'Kompakte RGB-Lichtsteuerung mit optionalem Kartenhintergrund, Rahmen und Farb-Presets.', preview: true, version: RGB_CARD_VERSION };
     const existing = window.customCards.find(card => card.type === metadata.type);
     if (existing)
         Object.assign(existing, metadata);

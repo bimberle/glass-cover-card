@@ -255,7 +255,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.26.0 installiert?** Aktualisiere auf v1.27.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter. Bisherige Panel-Kopfoptionen werden beim Laden in eine Glass Text-Kindkarte übernommen.
+**Schon v1.7.0 bis v1.27.0 installiert?** Aktualisiere auf v1.27.1 und lade die Repository-Dateien in Marketplace/HACS erneut herunter. Bisherige Panel-Kopfoptionen werden beim Laden in eine Glass Text-Kindkarte übernommen.
 
 ## Manuelle Installation
 
@@ -370,7 +370,7 @@ Steuert Farbton und Helligkeit eines farbfaehigen Lichts. Der innere Ring und da
 
 Frueher im Browser gespeicherte Presets werden nicht mehr verwendet; lege die gewuenschten Farben in der Kartenkonfiguration neu fest.
 
-Die RGB-Karte kann kompakt dargestellt und ohne äußeren Rahmen verwendet werden. Die Farbtemperatursteuerung wird angezeigt, sobald Home Assistant `color_temp` als unterstützten Farbmodus meldet. Die RGB-Icons verwenden direkt berechnete Groessen statt verschachtelter Prozentwerte, auch im ausgeschalteten Zustand, um Groessenrueckkopplungen im Editor zu vermeiden.
+Die RGB-Karte kann kompakt und ohne Kartenhintergrund, Rahmen oder Schatten dargestellt werden. Ein leerer Titel blendet die gesamte Kopfzeile einschliesslich Beschriftung und Kopfbutton aus. Die Farbtemperatursteuerung wird angezeigt, sobald Home Assistant `color_temp` als unterstützten Farbmodus meldet. Die RGB-Icons verwenden direkt berechnete Groessen statt verschachtelter Prozentwerte, auch im ausgeschalteten Zustand, um Groessenrueckkopplungen im Editor zu vermeiden.
 
 ```yaml
 type: custom:glass-rgb-card
@@ -398,7 +398,7 @@ preset_2: [0, 180, 255]
 | `title_size` | `4` | Beschriftungsgröße von `1` bis `5` |
 | `button_size` | `4` | Groesse des Kopfbuttons von `1` bis `5` |
 | `compact` | `true` | Kompaktere Karte mit kleinerem Farbkreis und engeren Abständen |
-| `show_card_border` | `true` | Äußeren Kartenrahmen anzeigen |
+| `show_card_border` | `true` | Kartenrahmen, Hintergrund und Schatten anzeigen |
 | `show_presets` | `false` | Konfigurierte Farb-Presets anzeigen |
 | `preset_1` bis `preset_6` | keine | Optionale RGB-Farbe als Liste mit drei Werten von `0` bis `255` |
 
