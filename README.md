@@ -181,7 +181,7 @@ view_layout:
 
 ### Glass Navigation Card
 
-Eine feste Navigationsleiste fuer Home Assistant. Menüpunkte können beliebig verschachtelt werden: Gruppen öffnen eine weitere Auswahl, Einträge mit `url` navigieren. Gruppen haben nur `children`, Blatt-Einträge nur `url`. Raumkacheln erscheinen in drei Spalten; fünf Räume werden zum Beispiel als drei plus zwei Kacheln angeordnet. Die Hauptpunkte verwenden dieselbe runde Button-Gestaltung wie die Glass Buttons Card; aktive Punkte nehmen die gewählte Farbe an, inaktive sind grau. Die Position dockt die Leiste am oberen oder unteren Bildschirmrand horizontal beziehungsweise links oder rechts vertikal an.
+Eine kompakte, fest positionierte Navigationsleiste fuer Home Assistant. Menüpunkte können beliebig verschachtelt werden: Gruppen öffnen eine weitere Auswahl, Einträge mit `url` navigieren. Gruppen haben nur `children`, Blatt-Einträge nur `url`. Raumkacheln erscheinen in drei Spalten. Die Haupticons sitzen mittig in den abgerundeten Buttons; aktive Punkte heben sich mit der gewählten Akzentfarbe vom dunklen Glas ab. Mit `show_button_borders` lässt sich der Rahmen des aktiven Hauptpunkts ein- oder ausblenden. Die Position dockt die Leiste am oberen oder unteren Bildschirmrand horizontal beziehungsweise links oder rechts vertikal an.
 
 Im visuellen Karteneditor zeigt eine Vorschau die Leiste. Über **Karte bearbeiten** öffnest du die Optionen und bearbeitest Links, Gruppen, Beschriftungen, Icons und URLs strukturiert, ohne den YAML-Modus des ganzen Dashboards zu öffnen.
 
@@ -255,7 +255,7 @@ Das oeffentliche Repository heisst weiterhin `glass-cover-card`, damit HACS die 
 
 Fuege danach im Dashboard-Editor eine benutzerdefinierte Karte mit `type: custom:glass-button-card` hinzu.
 
-**Schon v1.7.0 bis v1.24.1 installiert?** Aktualisiere auf v1.25.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter. Bisherige Panel-Kopfoptionen werden beim Laden in eine Glass Text-Kindkarte übernommen.
+**Schon v1.7.0 bis v1.25.0 installiert?** Aktualisiere auf v1.26.0 und lade die Repository-Dateien in Marketplace/HACS erneut herunter. Bisherige Panel-Kopfoptionen werden beim Laden in eine Glass Text-Kindkarte übernommen.
 
 ## Manuelle Installation
 
